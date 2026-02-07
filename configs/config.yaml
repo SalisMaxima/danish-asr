@@ -1,20 +1,19 @@
 defaults:
-  - model: default
-  - data: default
+  - model: wav2vec2
+  - data: coral
   - train: default
   - _self_
 
 seed: 42
-experiment_name: danish_asr
-output_dir: outputs/${experiment_name}
+experiment_name: danish-asr-baseline
 
 wandb:
   project: danish-asr
-  entity:
+  entity: ""
   mode: online
-  tags: []
 
 paths:
-  data_dir: data
-  models_dir: models
-  logs_dir: logs
+  data_dir: data/raw
+  output_dir: outputs
+  checkpoint_dir: outputs/checkpoints
+  log_dir: outputs/logs

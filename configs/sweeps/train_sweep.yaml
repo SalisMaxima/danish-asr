@@ -1,14 +1,14 @@
-name: danish_asr-sweep
+name: danish-asr-sweep
 method: bayes
-run_cap: 50
+run_cap: 30
 
 metric:
-  name: test_acc
-  goal: maximize
+  name: val_wer
+  goal: minimize
 
 early_terminate:
   type: hyperband
-  min_iter: 5
+  min_iter: 3
   eta: 3
 
 parameters:
@@ -21,9 +21,13 @@ parameters:
     min: 1e-6
     max: 1e-2
   batch_size:
+    values: [4, 8, 16]
+  lora_r:
+    values: [4, 8, 16]
+  lora_alpha:
     values: [8, 16, 32]
   max_epochs:
-    values: [10, 20]
+    values: [10, 20, 30]
 
 command:
   - ${env}
