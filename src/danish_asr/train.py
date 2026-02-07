@@ -128,9 +128,9 @@ def train_model(cfg: DictConfig, output_dir: str, wandb_logger: WandbLogger | No
     pl.seed_everything(cfg.seed, workers=True)
 
     # Data
-    from danish_asr.data import BaseDataModule
+    from danish_asr.data import CoRalDataModule
 
-    datamodule = BaseDataModule(cfg)
+    datamodule = CoRalDataModule(cfg)
     datamodule.setup(stage="fit")
 
     # Model
