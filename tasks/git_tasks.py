@@ -25,7 +25,7 @@ def commit(ctx: Context, message: str) -> None:
 def branch(ctx: Context, name: str, message: str, files: str = ".") -> None:
     """Create a new branch, commit changes, and push to remote."""
     from tasks.quality import ruff
-    
+
     print("Running ruff to format and lint code...")
     ruff(ctx)
     print("\nRunning pre-commit hooks to fix formatting issues...")
