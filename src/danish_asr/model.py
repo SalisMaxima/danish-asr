@@ -52,7 +52,7 @@ class Wav2Vec2ASR(nn.Module):
     def __init__(
         self,
         model_name: str = "facebook/wav2vec2-large-xlsr-53",
-        revision: str = "main",
+        revision: str | None = None,
         num_labels: int = 32,
         use_lora: bool = True,
         lora_r: int = 8,
@@ -64,12 +64,15 @@ class Wav2Vec2ASR(nn.Module):
         super().__init__()
         from transformers import Wav2Vec2ForCTC
 
-        self.model = Wav2Vec2ForCTC.from_pretrained(  # nosec B615 - revision pinned via config
-            model_name,
-            revision=revision,
-            ctc_loss_reduction="mean",
-            pad_token_id=0,
-        )
+        # Build kwargs for from_pretrained
+        kwargs = {
+            "ctc_loss_reduction": "mean",
+            "pad_token_id": 0,
+        }
+        if revision is not None:
+            kwargs["revision"] = revision
+
+        self.model = Wav2Vec2ForCTC.from_pretrained(model_name, **kwargs)
 
         if freeze_feature_extractor:
             self.model.freeze_feature_encoder()
@@ -127,7 +130,7 @@ class WhisperASR(nn.Module):
     def __init__(
         self,
         model_name: str = "openai/whisper-large-v3",
-        revision: str = "main",
+        revision: str | None = None,
         language: str = "da",
         use_lora: bool = True,
         lora_r: int = 8,
@@ -138,9 +141,12 @@ class WhisperASR(nn.Module):
         super().__init__()
         from transformers import WhisperForConditionalGeneration
 
-        self.model = WhisperForConditionalGeneration.from_pretrained(  # nosec B615 - revision pinned via config
-            model_name, revision=revision
-        )
+        # Build kwargs for from_pretrained
+        kwargs = {}
+        if revision is not None:
+            kwargs["revision"] = revision
+
+        self.model = WhisperForConditionalGeneration.from_pretrained(model_name, **kwargs)
         self.language = language
 
         if use_lora:

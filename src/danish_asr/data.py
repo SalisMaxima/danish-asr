@@ -115,7 +115,7 @@ class CoRalDataModule(pl.LightningDataModule):
         self.target_sample_rate = cfg.get("sample_rate", 16000)
         self.max_duration = cfg.get("max_duration", 30.0)
         self.subset = cfg.get("subset", "read_aloud")
-        self.dataset_revision = cfg.get("dataset_revision", "main")
+        self.dataset_revision = cfg.get("dataset_revision", None)
         self.processor = None
         self.train_dataset: CoRalDataset | None = None
         self.val_dataset: CoRalDataset | None = None
@@ -127,11 +127,17 @@ class CoRalDataModule(pl.LightningDataModule):
 
         logger.info(f"Loading CoRal dataset (subset={self.subset})...")
 
-        dataset = load_dataset(  # nosec B615 - revision pinned via config
+        # Build kwargs for load_dataset
+        kwargs = {
+            "trust_remote_code": True,
+        }
+        if self.dataset_revision is not None:
+            kwargs["revision"] = self.dataset_revision
+
+        dataset = load_dataset(
             "alexandrainst/coral",
             self.subset,
-            trust_remote_code=True,
-            revision=self.dataset_revision,
+            **kwargs,
         )
 
         if stage == "fit" or stage is None:
