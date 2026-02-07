@@ -1,6 +1,7 @@
 # OpenAI Whisper Large V3 with LoRA fine-tuning
 name: whisper_asr
 model_name: openai/whisper-large-v3
+revision: null  # Use null for latest, or specify a commit SHA/tag for pinned revision
 language: da
 use_lora: true
 lora_r: 8
