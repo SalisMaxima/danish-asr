@@ -52,6 +52,7 @@ class Wav2Vec2ASR(nn.Module):
     def __init__(
         self,
         model_name: str = "facebook/wav2vec2-large-xlsr-53",
+        revision: str = "main",
         num_labels: int = 32,
         use_lora: bool = True,
         lora_r: int = 8,
@@ -63,8 +64,9 @@ class Wav2Vec2ASR(nn.Module):
         super().__init__()
         from transformers import Wav2Vec2ForCTC
 
-        self.model = Wav2Vec2ForCTC.from_pretrained(
+        self.model = Wav2Vec2ForCTC.from_pretrained(  # nosec B615 - revision pinned via config
             model_name,
+            revision=revision,
             ctc_loss_reduction="mean",
             pad_token_id=0,
         )
@@ -103,6 +105,7 @@ class Wav2Vec2ASR(nn.Module):
     def from_config(cls, cfg: dict[str, Any]) -> Wav2Vec2ASR:
         return cls(
             model_name=cfg.get("model_name", "facebook/wav2vec2-large-xlsr-53"),
+            revision=cfg.get("revision", "main"),
             num_labels=cfg.get("num_labels", 32),
             use_lora=cfg.get("use_lora", True),
             lora_r=cfg.get("lora_r", 8),
@@ -124,6 +127,7 @@ class WhisperASR(nn.Module):
     def __init__(
         self,
         model_name: str = "openai/whisper-large-v3",
+        revision: str = "main",
         language: str = "da",
         use_lora: bool = True,
         lora_r: int = 8,
@@ -134,7 +138,9 @@ class WhisperASR(nn.Module):
         super().__init__()
         from transformers import WhisperForConditionalGeneration
 
-        self.model = WhisperForConditionalGeneration.from_pretrained(model_name)
+        self.model = WhisperForConditionalGeneration.from_pretrained(  # nosec B615 - revision pinned via config
+            model_name, revision=revision
+        )
         self.language = language
 
         if use_lora:
@@ -165,6 +171,7 @@ class WhisperASR(nn.Module):
     def from_config(cls, cfg: dict[str, Any]) -> WhisperASR:
         return cls(
             model_name=cfg.get("model_name", "openai/whisper-large-v3"),
+            revision=cfg.get("revision", "main"),
             language=cfg.get("language", "da"),
             use_lora=cfg.get("use_lora", True),
             lora_r=cfg.get("lora_r", 8),
