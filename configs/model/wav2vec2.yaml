@@ -1,6 +1,7 @@
 # Wav2Vec2 XLSR-53 with LoRA fine-tuning
 name: wav2vec2_asr
 model_name: facebook/wav2vec2-large-xlsr-53
+revision: null  # Use null for latest, or specify a commit SHA/tag for pinned revision
 num_labels: 32
 use_lora: true
 lora_r: 8

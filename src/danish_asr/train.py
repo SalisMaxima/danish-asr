@@ -130,7 +130,7 @@ def train_model(cfg: DictConfig, output_dir: str, wandb_logger: WandbLogger | No
     # Data
     from danish_asr.data import CoRalDataModule
 
-    datamodule = CoRalDataModule(cfg)
+    datamodule = CoRalDataModule(cfg.data)
     datamodule.setup(stage="fit")
 
     # Model
