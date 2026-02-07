@@ -1,0 +1,100 @@
+"""W&B sweep-compatible training entrypoint.
+
+Maps sweep CLI flags into Hydra config overrides.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import hydra
+import typer
+import wandb
+from loguru import logger
+from omegaconf import DictConfig, OmegaConf
+from pytorch_lightning.loggers import WandbLogger
+
+from danish_asr.train import configure_logging, train_model
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_CONFIG_DIR = str(_PROJECT_ROOT / "configs")
+
+
+def _resolve_output_base(cfg: DictConfig) -> Path:
+    resolved = OmegaConf.to_container(cfg, resolve=True)
+    out = resolved.get("output_dir", "outputs") if isinstance(resolved, dict) else "outputs"
+    out_path = Path(out)
+    if out_path.is_absolute():
+        return out_path
+    return (_PROJECT_ROOT / out_path).resolve()
+
+
+def sweep_train(
+    lr: float = typer.Option(None, help="Learning rate"),
+    weight_decay: float = typer.Option(None, "--weight_decay", "--weight-decay", help="Weight decay"),
+    batch_size: int = typer.Option(None, "--batch_size", "--batch-size", help="Batch size"),
+    model: str = typer.Option(None, help="Model config group"),
+    max_epochs: int = typer.Option(None, "--max_epochs", "--max-epochs", help="Max epochs"),
+    seed: int = typer.Option(None, help="Random seed"),
+    wandb_project: str = typer.Option(None, "--wandb_project", "--wandb-project", help="Override W&B project"),
+    wandb_entity: str = typer.Option(None, "--wandb_entity", "--wandb-entity", help="Override W&B entity"),
+    wandb_mode: str = typer.Option(None, "--wandb_mode", "--wandb-mode", help="online | offline | disabled"),
+    dropout: float = typer.Option(None, help="Dropout rate"),
+) -> None:
+    """Train one run (designed to be launched by `wandb agent`)."""
+    overrides: list[str] = []
+    if model:
+        overrides.append(f"model={model}")
+    if lr is not None:
+        overrides.append(f"train.optimizer.lr={lr}")
+    if weight_decay is not None:
+        overrides.append(f"train.optimizer.weight_decay={weight_decay}")
+    if batch_size is not None:
+        overrides.append(f"data.batch_size={batch_size}")
+    if max_epochs is not None:
+        overrides.append(f"train.max_epochs={max_epochs}")
+    if seed is not None:
+        overrides.append(f"seed={seed}")
+    if wandb_project:
+        overrides.append(f"wandb.project={wandb_project}")
+    if wandb_entity:
+        overrides.append(f"wandb.entity={wandb_entity}")
+    if wandb_mode:
+        overrides.append(f"wandb.mode={wandb_mode}")
+    if dropout is not None:
+        overrides.append(f"model.dropout={dropout}")
+
+    with hydra.initialize_config_dir(config_dir=_CONFIG_DIR, version_base="1.3"):
+        cfg = hydra.compose(config_name="config", overrides=overrides)
+
+    run = wandb.init(
+        project=cfg.wandb.project,
+        entity=cfg.wandb.get("entity"),
+        tags=list(cfg.wandb.get("tags", [])),
+        mode=cfg.wandb.get("mode", "online"),
+        job_type="train",
+        config=OmegaConf.to_container(cfg, resolve=True),
+    )
+
+    try:
+        output_base = _resolve_output_base(cfg)
+        output_dir = output_base / "sweeps" / run.id
+        output_dir.mkdir(parents=True, exist_ok=True)
+        configure_logging(str(output_dir))
+
+        wandb_logger = WandbLogger(experiment=run, save_dir=str(output_dir))
+        model_path = train_model(cfg, str(output_dir), wandb_logger)
+        logger.info(f"Sweep training complete. Model saved to {model_path}")
+    except Exception as e:
+        logger.exception(f"Sweep run failed: {e}")
+        raise
+    finally:
+        wandb.finish()
+
+
+def main() -> None:
+    typer.run(sweep_train)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,20 @@
+defaults:
+  - model: default
+  - data: default
+  - train: default
+  - _self_
+
+seed: 42
+experiment_name: danish_asr
+output_dir: outputs/${experiment_name}
+
+wandb:
+  project: danish-asr
+  entity:
+  mode: online
+  tags: []
+
+paths:
+  data_dir: data
+  models_dir: models
+  logs_dir: logs

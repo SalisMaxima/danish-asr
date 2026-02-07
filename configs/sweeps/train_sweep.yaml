@@ -1,0 +1,35 @@
+name: danish_asr-sweep
+method: bayes
+run_cap: 50
+
+metric:
+  name: test_acc
+  goal: maximize
+
+early_terminate:
+  type: hyperband
+  min_iter: 5
+  eta: 3
+
+parameters:
+  lr:
+    distribution: log_uniform_values
+    min: 1e-5
+    max: 3e-3
+  weight_decay:
+    distribution: log_uniform_values
+    min: 1e-6
+    max: 1e-2
+  batch_size:
+    values: [8, 16, 32]
+  max_epochs:
+    values: [10, 20]
+
+command:
+  - ${env}
+  - uv
+  - run
+  - python
+  - -m
+  - danish_asr.sweep_train
+  - ${args}

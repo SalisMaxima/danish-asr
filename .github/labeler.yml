@@ -1,0 +1,21 @@
+"source-code":
+  - changed-files:
+      - any-glob-to-any-file: "src/**/*"
+
+"tests":
+  - changed-files:
+      - any-glob-to-any-file: "tests/**/*"
+
+"ci-cd":
+  - changed-files:
+      - any-glob-to-any-file: ".github/**/*"
+
+"dependencies":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pyproject.toml"
+          - "uv.lock"
+
+"documentation":
+  - changed-files:
+      - any-glob-to-any-file: "**/*.md"
