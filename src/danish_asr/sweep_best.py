@@ -48,6 +48,48 @@ def _normalize_sweep_id(sweep_id: str, entity: str | None, project: str | None) 
     return f"{entity}/{project}/{sweep_id}"
 
 
+def _is_better_value(value: float, best_value: float | None, goal: str) -> bool:
+    """Return True if *value* improves on *best_value* for the given goal."""
+    if best_value is None:
+        return True
+    if goal == "minimize":
+        return value < best_value
+    return value > best_value
+
+
+def _find_best_run(runs, metric: str, goal: str) -> tuple[Any, float] | None:
+    """Return (run, metric_value) for the best finished run, or None."""
+    best_run = None
+    best_value: float | None = None
+    for run in runs:
+        if getattr(run, "state", "") != "finished":
+            continue
+        value = _get_summary_metric(run, metric)
+        if value is None:
+            continue
+        if _is_better_value(value, best_value, goal):
+            best_run, best_value = run, value
+    if best_run is None or best_value is None:
+        return None
+    return best_run, best_value
+
+
+def _build_result(
+    normalized: str, metric: str, goal: str, best_run: Any, best_value: float, include_config: bool
+) -> dict[str, Any]:
+    """Build the JSON-serialisable result dict."""
+    result: dict[str, Any] = {
+        "sweep_id": normalized,
+        "metric": metric,
+        "goal": goal,
+        "best": {"run_id": best_run.id, "run_name": best_run.name, "url": best_run.url, "value": best_value},
+    }
+    if include_config:
+        cfg = dict(getattr(best_run, "config", {}) or {})
+        result["best"]["config"] = {k: v for k, v in cfg.items() if not k.startswith("_")}
+    return result
+
+
 def best(
     sweep_id: str = typer.Argument(..., help="Sweep id: ENTITY/PROJECT/SWEEP_ID"),
     entity: str = typer.Option(None, help="W&B entity"),
@@ -64,33 +106,12 @@ def best(
     except Exception as exc:
         raise typer.BadParameter(f"Could not find sweep '{normalized}'.") from exc
 
-    best_run = None
-    best_value: float | None = None
-    for run in sweep.runs:
-        if getattr(run, "state", "") != "finished":
-            continue
-        value = _get_summary_metric(run, metric)
-        if value is None:
-            continue
-        if (
-            best_value is None
-            or (goal == "minimize" and value < best_value)
-            or (goal != "minimize" and value > best_value)
-        ):
-            best_run, best_value = run, value
-
-    if best_run is None or best_value is None:
+    found = _find_best_run(sweep.runs, metric, goal)
+    if found is None:
         raise typer.BadParameter("No finished runs with the requested metric found.")
 
-    result: dict[str, Any] = {
-        "sweep_id": normalized,
-        "metric": metric,
-        "goal": goal,
-        "best": {"run_id": best_run.id, "run_name": best_run.name, "url": best_run.url, "value": best_value},
-    }
-    if include_config:
-        cfg = dict(getattr(best_run, "config", {}) or {})
-        result["best"]["config"] = {k: v for k, v in cfg.items() if not k.startswith("_")}
+    best_run, best_value = found
+    result = _build_result(normalized, metric, goal, best_run, best_value, include_config)
     print(json.dumps(result, indent=2))
 
 

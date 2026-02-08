@@ -6,6 +6,7 @@ Maps sweep CLI flags into Hydra config overrides.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import hydra
 import typer
@@ -18,6 +19,24 @@ from danish_asr.train import configure_logging, train_model
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _CONFIG_DIR = str(_PROJECT_ROOT / "configs")
+
+_OVERRIDE_MAP: list[tuple[str, str]] = [
+    ("model", "model"),
+    ("lr", "train.optimizer.lr"),
+    ("weight_decay", "train.optimizer.weight_decay"),
+    ("batch_size", "data.batch_size"),
+    ("max_epochs", "train.max_epochs"),
+    ("seed", "seed"),
+    ("wandb_project", "wandb.project"),
+    ("wandb_entity", "wandb.entity"),
+    ("wandb_mode", "wandb.mode"),
+    ("dropout", "model.dropout"),
+]
+
+
+def _build_overrides(**kwargs: Any) -> list[str]:
+    """Build Hydra config overrides from non-None CLI parameters."""
+    return [f"{cfg_key}={kwargs[param]}" for param, cfg_key in _OVERRIDE_MAP if kwargs.get(param) is not None]
 
 
 def _resolve_output_base(cfg: DictConfig) -> Path:
@@ -42,27 +61,18 @@ def sweep_train(
     dropout: float = typer.Option(None, help="Dropout rate"),
 ) -> None:
     """Train one run (designed to be launched by `wandb agent`)."""
-    overrides: list[str] = []
-    if model:
-        overrides.append(f"model={model}")
-    if lr is not None:
-        overrides.append(f"train.optimizer.lr={lr}")
-    if weight_decay is not None:
-        overrides.append(f"train.optimizer.weight_decay={weight_decay}")
-    if batch_size is not None:
-        overrides.append(f"data.batch_size={batch_size}")
-    if max_epochs is not None:
-        overrides.append(f"train.max_epochs={max_epochs}")
-    if seed is not None:
-        overrides.append(f"seed={seed}")
-    if wandb_project:
-        overrides.append(f"wandb.project={wandb_project}")
-    if wandb_entity:
-        overrides.append(f"wandb.entity={wandb_entity}")
-    if wandb_mode:
-        overrides.append(f"wandb.mode={wandb_mode}")
-    if dropout is not None:
-        overrides.append(f"model.dropout={dropout}")
+    overrides = _build_overrides(
+        model=model,
+        lr=lr,
+        weight_decay=weight_decay,
+        batch_size=batch_size,
+        max_epochs=max_epochs,
+        seed=seed,
+        wandb_project=wandb_project,
+        wandb_entity=wandb_entity,
+        wandb_mode=wandb_mode,
+        dropout=dropout,
+    )
 
     with hydra.initialize_config_dir(config_dir=_CONFIG_DIR, version_base="1.3"):
         cfg = hydra.compose(config_name="config", overrides=overrides)

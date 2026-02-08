@@ -1,0 +1,4 @@
+# Create this in each new project root
+.venv/
+__pycache__/
+.git/

@@ -20,7 +20,7 @@ def download(ctx: Context, subset: str = "read_aloud") -> None:
     ctx.run(
         f'uv run python -c "'
         f"from datasets import load_dataset; "
-        f"ds = load_dataset('alexandrainst/coral', '{subset}', trust_remote_code=True); "
+        f"ds = load_dataset('CoRal-project/coral-v2', '{subset}', trust_remote_code=True); "
         f"print(f'Downloaded: {{{{len(ds)}}}} splits'); "
         f"[print(f'  {{{{k}}}}: {{{{len(v)}}}} samples') for k, v in ds.items()]"
         f'"',
@@ -39,7 +39,7 @@ def stats(ctx: Context, subset: str = "read_aloud") -> None:
     ctx.run(
         f'uv run python -c "'
         f"from datasets import load_dataset; "
-        f"ds = load_dataset('alexandrainst/coral', '{subset}', trust_remote_code=True); "
+        f"ds = load_dataset('CoRal-project/coral-v2', '{subset}', trust_remote_code=True); "
         f"print('CoRal Dataset Statistics'); "
         f"print('=' * 60); "
         f"for split, data in ds.items(): "
@@ -63,7 +63,7 @@ def validate(ctx: Context) -> None:
     ctx.run(
         'uv run python -c "'
         "from datasets import load_dataset; "
-        "ds = load_dataset('alexandrainst/coral', 'read_aloud', trust_remote_code=True, split='train[:10]'); "
+        "ds = load_dataset('CoRal-project/coral-v2', 'read_aloud', trust_remote_code=True, split='train[:10]'); "
         "errors = 0; "
         "for i, item in enumerate(ds): "
         "    audio = item['audio']; "

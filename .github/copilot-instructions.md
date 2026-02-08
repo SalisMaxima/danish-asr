@@ -1,10 +1,10 @@
-# Danish ASR
+# Danish ASR - Copilot Instructions
 
 Fine-tuning Meta's omnilingual ASR (`omniASR_CTC_300M`) for Danish using CoRal-v2 (480h Danish speech).
 
 **Course:** 5 ECTS Special Course (Feb-May 2026) at DTU
 
-## IMPORTANT
+## IMPORTANT RULES
 - **ALWAYS activate environment first: `source .venv/bin/activate`**
 - **After code changes run: `invoke quality.ruff`**
 - **After changing CLAUDE.md run: `invoke core.sync-ai-config` to sync copilot-instructions.md (do not edit copilot-instructions.md directly; CLAUDE.md is the source of truth)**

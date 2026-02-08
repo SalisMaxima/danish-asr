@@ -67,39 +67,38 @@ class CoRalDataset(Dataset):
         return result
 
 
+def _pad_1d_tensors(tensors: list[torch.Tensor]) -> tuple[torch.Tensor, list[int]]:
+    """Pad variable-length 1D tensors to uniform length with trailing zeros.
+
+    Returns (stacked_tensor, original_lengths).
+    """
+    max_len = max(t.shape[-1] for t in tensors)
+    lengths = []
+    padded = []
+    for t in tensors:
+        length = t.shape[-1]
+        lengths.append(length)
+        if length < max_len:
+            t = torch.cat([t, torch.zeros(max_len - length)])
+        padded.append(t)
+    return torch.stack(padded), lengths
+
+
 def collate_fn(batch: list[dict]) -> dict:
     """Custom collate function for variable-length audio."""
-    # Pad audio to max length in batch
     audios = [item["audio"] for item in batch]
-    max_len = max(a.shape[-1] for a in audios)
-
-    padded_audios = []
-    audio_lengths = []
-    for audio in audios:
-        length = audio.shape[-1]
-        audio_lengths.append(length)
-        if length < max_len:
-            pad = torch.zeros(max_len - length)
-            audio = torch.cat([audio, pad])
-        padded_audios.append(audio)
+    stacked_audio, audio_lengths = _pad_1d_tensors(audios)
 
     result = {
-        "audio": torch.stack(padded_audios),
+        "audio": stacked_audio,
         "audio_lengths": torch.tensor(audio_lengths),
         "text": [item["text"] for item in batch],
     }
 
-    # Handle processor outputs if present
     if "input_values" in batch[0]:
         input_values = [item["input_values"] for item in batch]
-        max_iv_len = max(iv.shape[-1] for iv in input_values)
-        padded_iv = []
-        for iv in input_values:
-            if iv.shape[-1] < max_iv_len:
-                pad = torch.zeros(max_iv_len - iv.shape[-1])
-                iv = torch.cat([iv, pad])
-            padded_iv.append(iv)
-        result["input_values"] = torch.stack(padded_iv)
+        stacked_iv, _ = _pad_1d_tensors(input_values)
+        result["input_values"] = stacked_iv
 
     return result
 
@@ -116,10 +115,18 @@ class CoRalDataModule(pl.LightningDataModule):
         self.max_duration = cfg.get("max_duration", 30.0)
         self.subset = cfg.get("subset", "read_aloud")
         self.dataset_revision = cfg.get("dataset_revision", None)
+        self.dataset_name = cfg.get("dataset_name", "CoRal-project/coral-v2")
         self.processor = None
         self.train_dataset: CoRalDataset | None = None
         self.val_dataset: CoRalDataset | None = None
         self.test_dataset: CoRalDataset | None = None
+
+    def set_processor(self, processor) -> None:
+        """Set the feature processor for model-specific input preparation.
+
+        Must be called before setup() for the processor to be used.
+        """
+        self.processor = processor
 
     def setup(self, stage: str | None = None) -> None:
         """Load and prepare CoRal dataset splits."""
@@ -135,7 +142,7 @@ class CoRalDataModule(pl.LightningDataModule):
             kwargs["revision"] = self.dataset_revision
 
         dataset = load_dataset(
-            "alexandrainst/coral",
+            self.dataset_name,
             self.subset,
             **kwargs,
         )
@@ -148,7 +155,7 @@ class CoRalDataModule(pl.LightningDataModule):
                 max_duration=self.max_duration,
             )
             self.val_dataset = CoRalDataset(
-                dataset["val"],
+                dataset["validation"],
                 processor=self.processor,
                 target_sample_rate=self.target_sample_rate,
                 max_duration=self.max_duration,
