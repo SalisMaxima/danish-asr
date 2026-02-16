@@ -21,6 +21,7 @@ jobs:
       - run: pre-commit autoupdate
       - uses: peter-evans/create-pull-request@v8
         with:
+          token: ${{ secrets.PAT }}
           branch: update/pre-commit-autoupdate
           title: Auto-update pre-commit hooks
           commit-message: Auto-update pre-commit hooks
