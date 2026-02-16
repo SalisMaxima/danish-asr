@@ -141,7 +141,9 @@ class CoRalDataModule(pl.LightningDataModule):
         if self.dataset_revision is not None:
             kwargs["revision"] = self.dataset_revision
 
-        dataset = load_dataset(
+        # Security note: dataset_revision can be None (use latest) or a pinned commit SHA.
+        # For research/development, using latest is intentional. Pin via config for reproducibility.
+        dataset = load_dataset(  # nosec B615
             self.dataset_name,
             self.subset,
             **kwargs,
