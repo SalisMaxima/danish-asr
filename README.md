@@ -1,16 +1,50 @@
 # Danish ASR
 
-Fine-tuning and Evaluation of Modern ASR Models for Danish
+Fine-tuning Meta's Omnilingual ASR for Danish Speech Recognition
 
 ## Overview
 
-This project fine-tunes state-of-the-art ASR models for Danish speech recognition using the [CoRal dataset](https://huggingface.co/datasets/alexandrainst/coral) (480+ hours of Danish speech). It uses parameter-efficient fine-tuning (LoRA) to adapt large pretrained models with minimal compute.
+This project fine-tunes [Meta's omniASR_CTC_300M](https://github.com/facebookresearch/omnilingual-asr) (325M parameters) for Danish speech recognition using the [CoRal-v3 dataset](https://huggingface.co/datasets/CoRal-project/coral-v3) (~710 hours of Danish speech).
 
-**Models:**
-- **Wav2Vec2 XLSR-53** - CTC-based ASR with LoRA fine-tuning
-- **Whisper Large V3** - Encoder-decoder ASR with LoRA fine-tuning
+**Course:** 5 ECTS Special Course at DTU (Feb-May 2026)
 
-**Dataset:** CoRal (read-aloud + conversational Danish speech)
+### Why This Project?
+
+Danish ASR remains a challenge — existing models often struggle with regional dialects and non-standard speech. Research presented at the CoRal 2026 conference highlighted that ASR models perform significantly worse for elderly speakers with strong dialects compared to younger speakers using standard Danish ("rigsdansk"). This raises fairness concerns when deploying ASR in contexts like elder care.
+
+The CoRal project addresses this by providing a diverse, high-quality dataset with rich demographic metadata, enabling both improved model training and systematic fairness evaluation across speaker groups.
+
+### Why omniASR (CTC) Over Whisper?
+
+| | omniASR CTC | Whisper |
+|---|---|---|
+| Architecture | Encoder-only (CTC head) | Encoder-Decoder |
+| Hallucination | Cannot hallucinate (predicts per-frame) | Decoder can hallucinate (generates freely) |
+| Model size | 325M parameters | 1.5B+ parameters (Large V3) |
+| Inference | Fast, parallel output | Slower, autoregressive |
+| Framework | fairseq2 | HuggingFace Transformers |
+
+CTC models predict one character per audio frame and collapse repeated predictions, making them structurally incapable of hallucination — a known issue with Whisper, especially on domain-specific terminology. The CoRal team's own benchmarks showed that their large Whisper model achieved the best overall accuracy on Danish, but CTC-based models provide a more predictable and lightweight alternative.
+
+### The CoRal Dataset
+
+The [CoRal project](https://huggingface.co/CoRal-project) collected Danish speech data primarily through libraries across Denmark, chosen as cultural gathering points to maximize demographic diversity. Over 1,000 Danes donated approximately 2 hours each, contributing:
+
+- **Read-aloud recordings** (3 x 2-hour sessions per speaker)
+- **Conversational recordings** (pairs of speakers from the same dialect region)
+
+The final dataset contains ~710 hours of material after quality filtering (~20% removed from the ~1,000-hour collection target). Dialect representation was captured through multiple signals: interview location, current address, self-reported dialect, school postal code, and childhood region.
+
+**Known dataset characteristics:**
+- Women are overrepresented (~65/35 split)
+- Lolland-Falster is underrepresented
+- Some coverage gaps on the west coast of Jutland
+- Studio-quality audio (no "real-life" noisy conditions — no bad microphones, echo, etc.)
+- Non-native Danish speakers were recruited via university students
+
+**License:** Open for most uses, except synthetic speech generation and person identification.
+
+**V3 is now released** (as of Feb 2026), with V3.1 expected.
 
 ## Quick Start
 
@@ -30,24 +64,34 @@ invoke --list
 ## Data
 
 ```bash
-invoke data.download                  # Download CoRal dataset (cached by HuggingFace)
-invoke data.stats                     # Show split sizes and audio duration stats
-invoke data.validate                  # Check audio integrity
+invoke data.download    # Download CoRal-v3 dataset (cached by HuggingFace)
+invoke data.stats       # Show split sizes and audio duration stats
 ```
 
 ## Training
 
+Training uses fairseq2's CTC finetuning recipe (full fine-tuning, not LoRA):
+
 ```bash
-# Train Wav2Vec2 with LoRA (default)
-invoke train.train
+# Convert CoRal-v3 to Parquet format (required by fairseq2)
+uv run python scripts/convert_coral_to_parquet.py
 
-# Train Whisper with LoRA
-invoke train.train --args "model=whisper"
-
-# Hyperparameter sweep
-invoke train.sweep                    # Create W&B sweep
-invoke train.sweep-agent --sweep-id <SWEEP_ID>
+# Run finetuning on single GPU
+uv run python -m workflows.recipes.wav2vec2.asr $OUTPUT_DIR \
+    --config-file configs/omniasr/ctc-finetune-danish.yaml
 ```
+
+See [docs/finetuning-recipe.md](docs/finetuning-recipe.md) for full configuration details and HPC job scripts.
+
+## Evaluation
+
+The primary evaluation focuses on both overall accuracy and demographic fairness:
+
+- **WER** (Word Error Rate) — primary metric
+- **CER** (Character Error Rate) — secondary metric
+- **Per-group analysis:** WER/CER broken down by dialect, age group, and gender
+
+Research by Anders Sogaard (KU) presented at the CoRal conference showed that enforcing equal performance across demographic groups can actually improve overall model performance — a finding that motivates our fairness-focused evaluation approach.
 
 ## Development
 
@@ -57,56 +101,53 @@ invoke quality.test    # Run tests
 invoke quality.ci      # Full CI pipeline
 ```
 
-## Deployment
-
-```bash
-invoke deploy.api       # Run API server
-invoke docker.build     # Build Docker image
-```
-
 ## Project Structure
 
 ```
 danish_asr/
 ├── src/danish_asr/                     # Source code
-│   ├── model.py                       # Wav2Vec2ASR + WhisperASR with LoRA
 │   ├── data.py                        # CoRalDataset + CoRalDataModule
+│   ├── model.py                       # Wav2Vec2/Whisper baselines (comparison only)
 │   ├── metrics.py                     # WER/CER via jiwer
-│   ├── train.py                       # Lightning training pipeline
-│   ├── losses.py                      # Loss functions
-│   ├── api.py                         # FastAPI server
-│   ├── sweep_train.py                 # W&B sweep bridge
-│   ├── sweep_best.py                  # Best sweep run finder
-│   ├── monitoring/                    # Drift detection
+│   ├── train.py                       # Legacy training template (not used)
 │   └── analysis/                      # Model analysis CLI
-├── configs/                           # Hydra configs
-│   ├── config.yaml                    # Main config
-│   ├── model/wav2vec2.yaml           # Wav2Vec2 XLSR-53 + LoRA
-│   ├── model/whisper.yaml            # Whisper Large V3 + LoRA
+├── configs/                           # Configuration files
 │   ├── data/coral.yaml               # CoRal dataset config
-│   ├── train/default.yaml            # ASR training config
-│   └── sweeps/train_sweep.yaml       # Sweep configuration
-├── tasks/                             # Invoke task modules (12 namespaces)
-├── tests/                             # Unit tests
-├── dockerfiles/                       # Docker images (train, API, CUDA)
-├── .github/workflows/                 # CI/CD (7 workflows)
-└── docs/                              # MkDocs documentation
+│   └── omniasr/                      # fairseq2 finetuning configs
+├── scripts/                           # Data conversion + HPC job scripts
+├── tasks/                             # Invoke task modules
+├── tests/                             # Unit tests (11 passing)
+├── .github/workflows/                 # CI/CD
+└── docs/                              # Documentation
 ```
 
 ## Stack
 
 | Category | Tools |
 |----------|-------|
-| ML Framework | PyTorch Lightning, HuggingFace Transformers |
-| Fine-tuning | PEFT/LoRA, bitsandbytes |
-| Audio | torchaudio, librosa, soundfile |
+| ASR Framework | fairseq2 + omnilingual-asr |
+| Fine-tuning | Full fine-tuning via fairseq2 (no LoRA) |
+| Audio | torchaudio, soundfile |
 | Metrics | jiwer (WER/CER) |
-| Config | Hydra, OmegaConf |
 | Experiment Tracking | Weights & Biases |
-| Data Versioning | DVC + GCS |
+| Data Versioning | DVC |
 | Package Manager | uv |
 | Task Runner | invoke |
-| Code Quality | ruff, mypy, pre-commit, bandit |
-| API | FastAPI, uvicorn |
-| Containerization | Docker (CPU + CUDA) |
+| Code Quality | ruff, pre-commit |
 | CI/CD | GitHub Actions |
+| HPC | DTU HPC (A100 GPUs via LSF) |
+
+## Documentation
+
+- [Project Roadmap](docs/project-roadmap.md) — phases, timelines, resource budget
+- [Omnilingual ASR Overview](docs/omnilingual-asr-overview.md) — model architecture, installation
+- [CoRal Dataset](docs/coral-dataset.md) — splits, fields, demographics, collection methodology
+- [Data Preparation](docs/data-preparation.md) — CoRal-v3 to Parquet conversion
+- [Finetuning Recipe](docs/finetuning-recipe.md) — configs, hyperparameters
+- [DTU HPC Setup](docs/dtu-hpc-setup.md) — GPU queues, LSF job scripts
+
+## References
+
+- [CoRal Project](https://huggingface.co/CoRal-project) — Danish speech dataset
+- [omnilingual-asr](https://github.com/facebookresearch/omnilingual-asr) — Meta's ASR framework
+- [fairseq2](https://github.com/facebookresearch/fairseq2) — Meta's sequence modeling toolkit

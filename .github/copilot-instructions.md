@@ -1,6 +1,6 @@
 # Danish ASR - Copilot Instructions
 
-Fine-tuning Meta's omnilingual ASR (`omniASR_CTC_300M`) for Danish using CoRal-v2 (480h Danish speech).
+Fine-tuning Meta's omnilingual ASR (`omniASR_CTC_300M`) for Danish using CoRal-v3 (~710h Danish speech).
 
 **Course:** 5 ECTS Special Course (Feb-May 2026) at DTU
 
@@ -24,14 +24,14 @@ Fine-tuning Meta's omnilingual ASR (`omniASR_CTC_300M`) for Danish using CoRal-v
 - Existing Wav2Vec2/Whisper code in `model.py` is baseline comparison only
 
 ## Dataset
-- **Source:** `CoRal-project/coral-v2` on HuggingFace (NOT `alexandrainst/coral`)
-- **Subsets:** `read_aloud` (425h) + `conversational` (48h) — both used
+- **Source:** `CoRal-project/coral-v3` on HuggingFace (NOT `alexandrainst/coral`)
+- **Subsets:** `read_aloud` + `conversation` — both used
 - **Splits:** `train` / `validation` / `test` (HF naming; map `validation` → `dev` for fairseq2)
 - **Audio:** 48kHz native, resample to 16kHz
-- See [docs/coral-v2-dataset.md](docs/coral-v2-dataset.md) for fields and demographics
+- See [docs/coral-dataset.md](docs/coral-dataset.md) for fields and demographics
 
 ## Key Paths
-- `src/danish_asr/data.py` — CoRalDataset + CoRalDataModule (loads coral-v2)
+- `src/danish_asr/data.py` — CoRalDataset + CoRalDataModule (loads coral-v3)
 - `src/danish_asr/model.py` — Wav2Vec2/Whisper baselines (LoRA)
 - `src/danish_asr/metrics.py` — WER/CER via jiwer (reusable)
 - `src/danish_asr/train.py` — BROKEN classification template, not used for omnilingual ASR
@@ -54,10 +54,10 @@ invoke utils.check-gpu      # GPU availability
 Detailed guides in `docs/`:
 - [Project Roadmap](docs/project-roadmap.md) — phases, timelines, resource budget
 - [Omnilingual ASR Overview](docs/omnilingual-asr-overview.md) — model details, installation
-- [Data Preparation](docs/data-preparation.md) — CoRal-v2 → Parquet conversion
+- [Data Preparation](docs/data-preparation.md) — CoRal-v3 → Parquet conversion
 - [Finetuning Recipe](docs/finetuning-recipe.md) — configs, hyperparameters
 - [DTU HPC Setup](docs/dtu-hpc-setup.md) — GPU queues, LSF job scripts
-- [CoRal-v2 Dataset](docs/coral-v2-dataset.md) — splits, fields, demographics
+- [CoRal Dataset](docs/coral-dataset.md) — splits, fields, demographics
 
 ## Key Metrics
 - **WER** (Word Error Rate) — primary
