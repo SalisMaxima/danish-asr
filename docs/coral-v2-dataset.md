@@ -6,9 +6,55 @@ Source: [CoRal-project/coral-v2](https://huggingface.co/datasets/CoRal-project/c
 
 Danish ASR dataset covering **dialects, accents, genders, and age groups**. Two subsets: read-aloud (scripted) and conversational (spontaneous).
 
-License: OpenRAIL-D (commercial use allowed; speech synthesis and biometric ID prohibited).
+License: OpenRAIL-D — open for most uses, **except** speech synthesis and biometric person identification.
 
 Access requires HuggingFace login + data sharing agreement.
+
+## Collection Methodology
+
+*Based on presentations at the CoRal 2026 conference.*
+
+Data was collected by the CoRal project (Alexandra Institute and collaborators). The collection methodology was designed to maximize dialect diversity across Denmark:
+
+- **Collection sites:** Primarily public libraries across Denmark, chosen as cultural gathering points that attract diverse local populations
+- **Participants:** Over 1,000 Danes donated approximately 2 hours of their time
+- **Read-aloud subset:** Each participant completed 3 x 2-hour recording sessions of scripted text
+- **Conversational subset:** Pairs of speakers from the same dialect region had unstructured conversations; pairing same-dialect speakers reinforces natural dialect use
+  - Note: Conversation participants did not know each other beforehand, which creates a particular conversational pattern
+- **Geographic coverage:** Data was collected from across Denmark, with some gaps on the west coast of Jutland
+- **Validation:** Read-aloud recordings were originally planned for manual validation but were validated electronically due to the scale of the task. All conversations were manually reviewed and segmented
+
+### Data Volume
+
+The target was approximately 1,000 hours of recorded material. The final released dataset contains **~710 hours** after quality filtering — roughly a 20% reduction from removing problematic audio clips.
+
+### Dialect Classification
+
+Dialect information was captured through multiple signals per speaker:
+
+- Recording location (where the interview took place)
+- Current residential address
+- Self-reported dialect ("which dialect do you think you speak?")
+- Postal code of school attendance
+- Childhood region
+- Many subcategories available in metadata
+
+### Challenges in Data Collection
+
+- **Legal framework:** Datatilsynet (Danish Data Protection Agency) has a restrictive stance on data for AI development under GDPR. A new legislative proposal is underway to provide legal basis for projects like CoRal (presented by Marlene Winter, DLA Piper)
+- **Perfectionism:** Some participants wanted to review and re-record their own recordings. This option was removed to prevent self-censoring of natural speech
+- **Non-native speakers:** Recruiting speakers with Danish as a second language was difficult. Solved partly through university students
+- **Contracts:** Individual contracts were established with each participant after consulting with Datatilsynet
+
+## Dataset Versions
+
+| Version | Status | Notes |
+|---|---|---|
+| CoRal-v2 | Released | Used in this project |
+| CoRal-v3 | Released (Feb 2026) | Latest version |
+| CoRal-v3.1 | Expected | Upcoming |
+
+This project currently uses **v2**. V3 was announced at the CoRal 2026 conference.
 
 ## Splits & Statistics
 
@@ -68,7 +114,24 @@ Access requires HuggingFace login + data sharing agreement.
 ## Demographics (read_aloud train)
 
 - **Gender:** Female 70.6%, Male 27.5%, Non-binary 2.0%
+  - Note: The overall collection has ~65/35 female/male split according to CoRal conference presentation
 - **Age:** 50+ 56.4%, 25-49 37.2%, 0-24 6.4%
+
+### Known Representation Gaps
+
+- **Lolland-Falster:** Underrepresented in the dataset
+- **West coast of Jutland:** Some coverage gaps
+- **Non-native speakers:** Limited, partly addressed via university students
+- **Audio conditions:** All recordings are studio-quality. Companies using CoRal have noted a lack of "real-life" audio conditions (bad microphones, echo, background noise). Data augmentation during training can partly address this
+
+## Industry Feedback
+
+*From Sif (anthropologist, Alexandra Institute) at the CoRal 2026 conference:*
+
+- Companies report that CoRal captures the Danish language niche better than Microsoft's offerings
+- Dataset is used both for model training and for validation/benchmarking
+- Companies value the diversity of the dataset and audio quality
+- Wish list: more "real-life" noisy audio, and domain-specific data with specialized terminology
 
 ## Loading
 
@@ -92,12 +155,24 @@ dialect = sample["dialect"]
 - Language code for omnilingual ASR: **`dan_Latn`**
 - Text field: `text` — needs normalization (lowercasing, punctuation removal) via omnilingual ASR's `text_normalize()`
 - Split naming: HF uses `validation`, omnilingual ASR expects `dev` — map during Parquet conversion
-- Rich metadata (dialect, age, gender) enables per-group evaluation
+- Rich metadata (dialect, age, gender) enables per-group evaluation and fairness analysis
 - Conversational subset adds spontaneous speech diversity (different acoustic conditions, disfluencies)
+- CoRal team's own benchmarks on coral_v3-conversation show CER of 15-25% for their fine-tuned models
 
 ## Related Pre-trained Models
 
-Models already trained on CoRal-v2 (can serve as comparison baselines):
+Models already trained on CoRal (can serve as comparison baselines):
+
 - `roest-wav2vec2-315m-v2` (315M params)
 - `roest-wav2vec2-1B-v2` (1.0B params)
 - `roest-wav2vec2-2B-v2` (2.0B params)
+
+The CoRal team also trained Whisper models — their largest Whisper model outperformed all comparable Danish ASR models on their benchmarks.
+
+### Dialect-Specific Training Findings (CoRal Conference)
+
+Research presented at the conference explored whether dialect-specific models outperform general models:
+
+- **Fynsk:** A model trained on all dialects actually performed better than a dialect-focused model (possibly because Fynsk is close to rigsdansk)
+- **Sonderjysk:** A dialect-focused model performed better than a general model of the same data size, but the full-data general model (with more total training data) still performed best
+- **Conclusion:** Data volume and diversity generally provide better robustness for ASR models. Using all available data is recommended over restricting to a single dialect
