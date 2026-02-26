@@ -1028,7 +1028,7 @@ dev = [
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "pytest-cov", specifier = ">=4.1.0" },
     { name = "ruff", specifier = ">=0.8.0" },
-    { name = "zensical", specifier = ">=0.0.23" },
+    { name = "zensical", specifier = ">=0.0.23,<0.1.0" },
 ]
 
 [[package]]
