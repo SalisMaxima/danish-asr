@@ -64,7 +64,7 @@ invoke --list
 ## Data
 
 ```bash
-invoke data.download    # Download CoRal-v2 dataset (cached by HuggingFace)
+invoke data.download    # Download CoRal-v3 dataset (cached by HuggingFace)
 invoke data.stats       # Show split sizes and audio duration stats
 ```
 
@@ -73,7 +73,7 @@ invoke data.stats       # Show split sizes and audio duration stats
 Training uses fairseq2's CTC finetuning recipe (full fine-tuning, not LoRA):
 
 ```bash
-# Convert CoRal-v2 to Parquet format (required by fairseq2)
+# Convert CoRal-v3 to Parquet format (required by fairseq2)
 python scripts/convert_coral_to_parquet.py
 
 # Run finetuning on single GPU

@@ -63,7 +63,7 @@ See [data-preparation.md](data-preparation.md) for full details.
 
 ### Conversion field mapping
 
-| Parquet Field | CoRal-v2 Source | Transform |
+| Parquet Field | CoRal Source | Transform |
 |---|---|---|
 | `text` | `sample["text"]` | `text_normalize()` (lowercase, remove punctuation/numbers) |
 | `audio_bytes` | `sample["audio"]` | Resample 48 to 16kHz, FLAC encode, `list<int8>` |
@@ -123,7 +123,7 @@ Note: The CoRal team found that data augmentation (audio distortion to simulate 
 | Step | Task |
 |---|---|
 | 6A.1 | Evaluate best checkpoint on test set (overall WER/CER) |
-| 6A.2 | Per-subset comparison: read_aloud vs conversational performance |
+| 6A.2 | Per-subset comparison: read_aloud vs conversation performance |
 | 6A.3 | Compare: zero-shot baseline vs fine-tuned |
 
 ### 6B: Demographic Fairness Analysis
@@ -151,7 +151,7 @@ CoRal's rich metadata enables systematic fairness evaluation. Anders Sogaard's r
 - Does fine-tuning on CoRal-v3 reduce the performance gap between standard Danish and dialect speakers?
 - Which dialects benefit most from fine-tuning?
 - Are there demographic groups (age, gender, dialect combinations) where the model still underperforms?
-- How does conversational speech performance compare to read-aloud?
+- How does conversation speech performance compare to read-aloud?
 
 ## Phase 7: Report & Wrap-up
 
