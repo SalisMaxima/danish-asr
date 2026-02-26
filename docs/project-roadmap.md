@@ -1,6 +1,6 @@
 # Project Roadmap
 
-End-to-end plan for fine-tuning `omniASR_CTC_300M` on CoRal-v2 Danish speech.
+End-to-end plan for fine-tuning `omniASR_CTC_300M` on CoRal-v3 Danish speech.
 
 ## Motivation
 
@@ -13,7 +13,7 @@ Danish ASR models face challenges with dialect diversity. Research by Anders Sog
 
 The CoRal team's own experiments showed that training on the full diverse dataset (all dialects) produces more robust models than training on dialect-specific subsets — with the exception of very distinct dialects like Sonderjysk, where focused training helps at equal data sizes. However, the full dataset still wins when all data is available.
 
-Our project fine-tunes Meta's omniASR_CTC_300M on CoRal-v2 and evaluates performance across demographic groups to understand how well the model serves different Danish speaker populations.
+Our project fine-tunes Meta's omniASR_CTC_300M on CoRal-v3 and evaluates performance across demographic groups to understand how well the model serves different Danish speaker populations.
 
 ### Why CTC (omniASR) Instead of Whisper?
 
@@ -26,7 +26,7 @@ The CoRal team trained both Whisper and Wav2Vec2 (CTC) models. Their largest Whi
 
 ## Phase 1: Data Pipeline (DONE)
 
-- [x] Updated `data.py` to load `CoRal-project/coral-v2`
+- [x] Updated `data.py` to load `CoRal-project/coral-v3`
 - [x] Fixed split naming (`validation`, not `val`)
 - [x] Created `tests/test_data.py` (11 tests passing)
 - [ ] HuggingFace authentication + data download verification
@@ -40,12 +40,12 @@ The CoRal team trained both Whisper and Wav2Vec2 (CTC) models. Their largest Whi
 |---|---|---|
 | 2.1 | `uv add omnilingual-asr` + verify import | 30 min |
 | 2.2 | Download `omniASR_CTC_300M` checkpoint (~1.3 GiB) | 10 min |
-| 2.3 | Run zero-shot inference on CoRal-v2 test set | 1-2 hours |
+| 2.3 | Run zero-shot inference on CoRal-v3 test set | 1-2 hours |
 | 2.4 | Compute baseline WER/CER (overall + per-dialect) | 30 min |
 
 **Output:** Baseline WER numbers for the pre-trained model on Danish.
 
-## Phase 3: Data Conversion (CoRal-v2 to Parquet)
+## Phase 3: Data Conversion (CoRal-v3 to Parquet)
 
 **Goal:** Convert HuggingFace dataset to omnilingual ASR's required Parquet format.
 
@@ -56,10 +56,10 @@ See [data-preparation.md](data-preparation.md) for full details.
 | 3.1 | Write `scripts/convert_coral_to_parquet.py` | 2-4 hours |
 | 3.2 | Run conversion (474h audio, both subsets to Parquet) | 5-10 hours (CPU job on HPC) |
 | 3.3 | Generate `language_distribution_0.tsv` stats | 15 min |
-| 3.4 | Create fairseq2 asset card `coral_v2_danish.yaml` | 15 min |
+| 3.4 | Create fairseq2 asset card `coral_v3_danish.yaml` | 15 min |
 | 3.5 | Verify with dataloader example script | 30 min |
 
-**Output:** Parquet dataset at `data/parquet/version=0/corpus=coral_v2_*/` + asset card.
+**Output:** Parquet dataset at `data/parquet/version=0/corpus=coral_v3_*/` + asset card.
 
 ### Conversion field mapping
 
@@ -68,7 +68,7 @@ See [data-preparation.md](data-preparation.md) for full details.
 | `text` | `sample["text"]` | `text_normalize()` (lowercase, remove punctuation/numbers) |
 | `audio_bytes` | `sample["audio"]` | Resample 48 to 16kHz, FLAC encode, `list<int8>` |
 | `audio_size` | computed | `len(resampled_waveform)` |
-| `corpus` | subset name | `"coral_v2_read_aloud"` or `"coral_v2_conversational"` |
+| `corpus` | subset name | `"coral_v3_read_aloud"` or `"coral_v3_conversation"` |
 | `split` | split name | `validation` to `dev` |
 | `language` | constant | `"dan_Latn"` |
 
@@ -148,7 +148,7 @@ CoRal's rich metadata enables systematic fairness evaluation. Anders Sogaard's r
 
 ### Key Questions for Evaluation
 
-- Does fine-tuning on CoRal-v2 reduce the performance gap between standard Danish and dialect speakers?
+- Does fine-tuning on CoRal-v3 reduce the performance gap between standard Danish and dialect speakers?
 - Which dialects benefit most from fine-tuning?
 - Are there demographic groups (age, gender, dialect combinations) where the model still underperforms?
 - How does conversational speech performance compare to read-aloud?

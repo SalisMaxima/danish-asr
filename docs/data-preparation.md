@@ -1,6 +1,6 @@
-# Data Preparation: CoRal-v2 to Omnilingual ASR Parquet
+# Data Preparation: CoRal-v3 to Omnilingual ASR Parquet
 
-Guide for converting CoRal-v2 (HuggingFace format) to the Parquet format required by the omnilingual ASR training pipeline.
+Guide for converting CoRal-v3 (HuggingFace format) to the Parquet format required by the omnilingual ASR training pipeline.
 
 ## Target Format
 
@@ -10,7 +10,7 @@ The omnilingual ASR dataloader expects Parquet files in a specific directory hie
 
 ```
 data/parquet/version=0/
-├── corpus=coral_v2_read_aloud/
+├── corpus=coral_v3_read_aloud/
 │   ├── split=train/
 │   │   └── language=dan_Latn/
 │   │       ├── part-00000.parquet
@@ -21,7 +21,7 @@ data/parquet/version=0/
 │   └── split=test/
 │       └── language=dan_Latn/
 │           └── part-00000.parquet
-└── corpus=coral_v2_conversational/
+└── corpus=coral_v3_conversation/
     ├── split=train/
     │   └── language=dan_Latn/
     │       └── part-00000.parquet
@@ -33,7 +33,7 @@ data/parquet/version=0/
             └── part-00000.parquet
 ```
 
-Using separate corpus names (`coral_v2_read_aloud`, `coral_v2_conversational`) lets the dataloader weight them via `beta_corpus`.
+Using separate corpus names (`coral_v3_read_aloud`, `coral_v3_conversation`) lets the dataloader weight them via `beta_corpus`.
 
 ### Required Schema (PyArrow)
 
@@ -42,21 +42,21 @@ Using separate corpus names (`coral_v2_read_aloud`, `coral_v2_conversational`) l
 | `text` | `pa.string()` | Normalized transcription |
 | `audio_bytes` | `pa.list_(pa.int8())` | Compressed audio (FLAC), stored as int8 list |
 | `audio_size` | `pa.int64()` | Decoded waveform length (samples). Duration = `audio_size / 16_000` |
-| `corpus` | `pa.dictionary(pa.int32(), pa.string())` | Dataset name: `"coral_v2"` |
+| `corpus` | `pa.dictionary(pa.int32(), pa.string())` | Dataset name: `"coral_v3"` |
 | `split` | `pa.dictionary(pa.int32(), pa.string())` | Partition: `"train"`, `"dev"`, `"test"` |
 | `language` | `pa.dictionary(pa.int32(), pa.string())` | Language code: `"dan_Latn"` |
 
 **Parquet settings:** `row_group_size=100` (required for efficient shuffling + memory control).
 
-## Field Mapping: CoRal-v2 → Parquet
+## Field Mapping: CoRal-v3 to Parquet
 
 | Target Field | Source | Transformation |
 |---|---|---|
 | `text` | `sample["text"]` | `text_normalize(text, "dan", lower_case=True, remove_numbers=True)` |
-| `audio_bytes` | `sample["audio"]["array"]` | Resample 48kHz→16kHz, encode to FLAC, convert to `list<int8>` via `binary_to_list_int8()` |
+| `audio_bytes` | `sample["audio"]["array"]` | Resample 48kHz to 16kHz, encode to FLAC, convert to `list<int8>` via `binary_to_list_int8()` |
 | `audio_size` | computed | Length of decoded 16kHz waveform (= `len(resampled_array)`) |
-| `corpus` | subset name | `"coral_v2_read_aloud"` or `"coral_v2_conversational"` |
-| `split` | split name | Map: `"train"→"train"`, `"validation"→"dev"`, `"test"→"test"` |
+| `corpus` | subset name | `"coral_v3_read_aloud"` or `"coral_v3_conversation"` |
+| `split` | split name | Map: `"train"` to `"train"`, `"validation"` to `"dev"`, `"test"` to `"test"` |
 | `language` | constant | `"dan_Latn"` |
 
 ## Text Normalization
@@ -121,15 +121,15 @@ def process_audio(audio_dict):
 `scripts/convert_coral_to_parquet.py`:
 
 ```python
-"""Convert CoRal-v2 HuggingFace dataset to omnilingual ASR Parquet format."""
+"""Convert CoRal-v3 HuggingFace dataset to omnilingual ASR Parquet format."""
 
 from datasets import load_dataset
 import pyarrow as pa
 import pyarrow.parquet as pq
 
 SUBSETS = {
-    "read_aloud": "coral_v2_read_aloud",
-    "conversational": "coral_v2_conversational",
+    "read_aloud": "coral_v3_read_aloud",
+    "conversation": "coral_v3_conversation",
 }
 SPLIT_MAP = {"train": "train", "validation": "dev", "test": "test"}
 ROWS_PER_FILE = 5000  # samples per Parquet part file
@@ -146,7 +146,7 @@ SCHEMA = pa.schema([
 
 for hf_subset, corpus_name in SUBSETS.items():
     for hf_split, parquet_split in SPLIT_MAP.items():
-        ds = load_dataset("CoRal-project/coral-v2", hf_subset, split=hf_split)
+        ds = load_dataset("CoRal-project/coral-v3", hf_subset, split=hf_split)
 
         # Process in chunks → write part-XXXXX.parquet files
         # Each file: ROWS_PER_FILE samples, row_group_size=100
@@ -166,31 +166,31 @@ python hf_dataset_ingestion_example.py compute_stats \
 
 Or create it manually — it's a TSV with columns: `corpus`, `language`, `split`, `num_samples`, `total_audio_seconds`.
 
-Example for our single-language, two-corpus setup:
+Example for our single-language, two-corpus setup (sample counts TBD after download):
 
 ```tsv
 corpus	language	split	num_samples	total_audio_seconds
-coral_v2_read_aloud	dan_Latn	train	250108	1533240.0
-coral_v2_read_aloud	dan_Latn	dev	2046	12528.0
-coral_v2_read_aloud	dan_Latn	test	9123	62280.0
-coral_v2_conversational	dan_Latn	train	TBD	175860.0
-coral_v2_conversational	dan_Latn	dev	TBD	4176.0
-coral_v2_conversational	dan_Latn	test	TBD	5040.0
+coral_v3_read_aloud	dan_Latn	train	TBD	TBD
+coral_v3_read_aloud	dan_Latn	dev	TBD	TBD
+coral_v3_read_aloud	dan_Latn	test	TBD	TBD
+coral_v3_conversation	dan_Latn	train	TBD	TBD
+coral_v3_conversation	dan_Latn	dev	TBD	TBD
+coral_v3_conversation	dan_Latn	test	TBD	TBD
 ```
 
 ## fairseq2 Asset Card
 
-Create `src/omnilingual_asr/cards/datasets/coral_v2_danish.yaml`:
+Create `src/omnilingual_asr/cards/datasets/coral_v3_danish.yaml`:
 
 ```yaml
-name: coral_v2_danish
+name: coral_v3_danish
 dataset_family: mixture_parquet_asr_dataset
 dataset_config:
   data: /path/to/data/parquet/version=0
 tokenizer_ref: omniASR_tokenizer_v1
 ```
 
-The `data` path must point to the directory containing the `corpus=coral_v2_*/` subdirectories.
+The `data` path must point to the directory containing the `corpus=coral_v3_*/` subdirectories.
 
 ## Verification
 
@@ -205,11 +205,11 @@ python -m workflows.dataprep.dataloader_example \
 
 ## Estimated Storage
 
-- CoRal-v2 both subsets raw: ~60-100 GB (HF cache, 48kHz audio)
-- Parquet output (16kHz FLAC compressed): ~30-50 GB estimated
-- Plan for **~150 GB** total disk space (raw + converted)
+- CoRal-v3 both subsets raw: ~80-120 GB (HF cache, 48kHz audio)
+- Parquet output (16kHz FLAC compressed): ~40-60 GB estimated
+- Plan for **~180 GB** total disk space (raw + converted)
 
 ## Processing Time Estimate
 
-- ~474h of audio at ~1-2x realtime processing: **5-10 hours** on a single machine
+- ~710h of audio at ~1-2x realtime processing: **8-15 hours** on a single machine
 - Consider using Ray for parallel processing on DTU HPC (see [dtu-hpc-setup.md](dtu-hpc-setup.md))

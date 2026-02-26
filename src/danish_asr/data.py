@@ -115,7 +115,7 @@ class CoRalDataModule(pl.LightningDataModule):
         self.max_duration = cfg.get("max_duration", 30.0)
         self.subset = cfg.get("subset", "read_aloud")
         self.dataset_revision = cfg.get("dataset_revision", None)
-        self.dataset_name = cfg.get("dataset_name", "CoRal-project/coral-v2")
+        self.dataset_name = cfg.get("dataset_name", "CoRal-project/coral-v3")
         self.processor = None
         self.train_dataset: CoRalDataset | None = None
         self.val_dataset: CoRalDataset | None = None

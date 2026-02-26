@@ -1,5 +1,5 @@
 # CoRal Danish speech dataset
-dataset_name: CoRal-project/coral-v2
+dataset_name: CoRal-project/coral-v3
 subset: read_aloud
 sample_rate: 16000
 max_duration: 30.0

@@ -1,10 +1,10 @@
-# CoRal-v2 Dataset Reference
+# CoRal Dataset Reference
 
-Source: [CoRal-project/coral-v2](https://huggingface.co/datasets/CoRal-project/coral-v2) on HuggingFace.
+Source: [CoRal-project/coral-v3](https://huggingface.co/datasets/CoRal-project/coral-v3) on HuggingFace.
 
 ## Overview
 
-Danish ASR dataset covering **dialects, accents, genders, and age groups**. Two subsets: read-aloud (scripted) and conversational (spontaneous).
+Danish ASR dataset covering **dialects, accents, genders, and age groups**. Two subsets: read-aloud (scripted) and conversation (spontaneous).
 
 License: OpenRAIL-D — open for most uses, **except** speech synthesis and biometric person identification.
 
@@ -50,11 +50,11 @@ Dialect information was captured through multiple signals per speaker:
 
 | Version | Status | Notes |
 |---|---|---|
-| CoRal-v2 | Released | Used in this project |
-| CoRal-v3 | Released (Feb 2026) | Latest version |
+| CoRal-v2 | Released | Previous version |
+| CoRal-v3 | Released (Feb 2026) | Used in this project |
 | CoRal-v3.1 | Expected | Upcoming |
 
-This project currently uses **v2**. V3 was announced at the CoRal 2026 conference.
+This project uses **v3**, released at the CoRal 2026 conference. Note: the subset previously called `conversational` in v2 is now called `conversation` in v3.
 
 ## Splits & Statistics
 
@@ -66,7 +66,7 @@ This project currently uses **v2**. V3 was announced at the CoRal 2026 conferenc
 | validation | 3.48 h | 11 | 2,046 |
 | test | 17.30 h | 35 | 9,123 |
 
-### conversational
+### conversation
 
 | Split | Duration | Speakers |
 |---|---|---|
@@ -138,8 +138,8 @@ This project currently uses **v2**. V3 was announced at the CoRal 2026 conferenc
 ```python
 from datasets import load_dataset
 
-coral_read = load_dataset("CoRal-project/coral-v2", "read_aloud")
-coral_conv = load_dataset("CoRal-project/coral-v2", "conversational")
+coral_read = load_dataset("CoRal-project/coral-v3", "read_aloud")
+coral_conv = load_dataset("CoRal-project/coral-v3", "conversation")
 
 sample = coral_read["train"][0]
 audio_array = sample["audio"]["array"]      # numpy float32 waveform
@@ -150,7 +150,7 @@ dialect = sample["dialect"]
 
 ## Key Notes for Our Project
 
-- **Both subsets used:** `read_aloud` (425h) + `conversational` (48h) = ~474h total
+- **Both subsets used:** `read_aloud` + `conversation`
 - Audio sample rate is **48kHz** — must be resampled to **16kHz** for omnilingual ASR
 - Language code for omnilingual ASR: **`dan_Latn`**
 - Text field: `text` — needs normalization (lowercasing, punctuation removal) via omnilingual ASR's `text_normalize()`

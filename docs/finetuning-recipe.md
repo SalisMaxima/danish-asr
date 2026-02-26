@@ -1,6 +1,6 @@
 # CTC Finetuning Recipe
 
-Guide for fine-tuning `omniASR_CTC_300M` on CoRal-v2 Danish data using the omnilingual ASR training recipe.
+Guide for fine-tuning `omniASR_CTC_300M` on CoRal-v3 Danish data using the omnilingual ASR training recipe.
 
 ## Prerequisites
 
@@ -27,7 +27,7 @@ model:
   name: "omniASR_CTC_300M"
 
 dataset:
-  name: "example_dataset"           # → replace with "coral_v2_danish"
+  name: "example_dataset"           # → replace with "coral_v3_danish"
   train_split: "train"
   valid_split: "dev"
   storage_mode: "MIXTURE_PARQUET"
@@ -77,7 +77,7 @@ model:
   name: "omniASR_CTC_300M"
 
 dataset:
-  name: "coral_v2_danish"
+  name: "coral_v3_danish"
   train_split: "train"
   valid_split: "dev"
   storage_mode: "MIXTURE_PARQUET"

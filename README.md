@@ -4,7 +4,7 @@ Fine-tuning Meta's Omnilingual ASR for Danish Speech Recognition
 
 ## Overview
 
-This project fine-tunes [Meta's omniASR_CTC_300M](https://github.com/facebookresearch/omnilingual-asr) (325M parameters) for Danish speech recognition using the [CoRal-v2 dataset](https://huggingface.co/datasets/CoRal-project/coral-v2) (~480 hours of Danish speech).
+This project fine-tunes [Meta's omniASR_CTC_300M](https://github.com/facebookresearch/omnilingual-asr) (325M parameters) for Danish speech recognition using the [CoRal-v3 dataset](https://huggingface.co/datasets/CoRal-project/coral-v3) (~710 hours of Danish speech).
 
 **Course:** 5 ECTS Special Course at DTU (Feb-May 2026)
 
@@ -30,8 +30,8 @@ CTC models predict one character per audio frame and collapse repeated predictio
 
 The [CoRal project](https://huggingface.co/CoRal-project) collected Danish speech data primarily through libraries across Denmark, chosen as cultural gathering points to maximize demographic diversity. Over 1,000 Danes donated approximately 2 hours each, contributing:
 
-- **Read-aloud recordings** (3 x 2-hour sessions per speaker): 425 hours
-- **Conversational recordings** (pairs of speakers from the same dialect region): 48 hours
+- **Read-aloud recordings** (3 x 2-hour sessions per speaker)
+- **Conversational recordings** (pairs of speakers from the same dialect region)
 
 The final dataset contains ~710 hours of material after quality filtering (~20% removed from the ~1,000-hour collection target). Dialect representation was captured through multiple signals: interview location, current address, self-reported dialect, school postal code, and childhood region.
 
@@ -141,8 +141,8 @@ danish_asr/
 
 - [Project Roadmap](docs/project-roadmap.md) — phases, timelines, resource budget
 - [Omnilingual ASR Overview](docs/omnilingual-asr-overview.md) — model architecture, installation
-- [CoRal-v2 Dataset](docs/coral-v2-dataset.md) — splits, fields, demographics, collection methodology
-- [Data Preparation](docs/data-preparation.md) — CoRal-v2 to Parquet conversion
+- [CoRal Dataset](docs/coral-dataset.md) — splits, fields, demographics, collection methodology
+- [Data Preparation](docs/data-preparation.md) — CoRal-v3 to Parquet conversion
 - [Finetuning Recipe](docs/finetuning-recipe.md) — configs, hyperparameters
 - [DTU HPC Setup](docs/dtu-hpc-setup.md) — GPU queues, LSF job scripts
 
