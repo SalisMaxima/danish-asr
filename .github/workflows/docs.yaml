@@ -3,13 +3,24 @@ name: Docs
 on:
   push:
     branches: [main, master]
+    paths:
+      - docs/**
+      - mkdocs.yaml
+      - .github/workflows/docs.yaml
   pull_request:
     branches: [main, master]
+    paths:
+      - docs/**
+      - mkdocs.yaml
+      - .github/workflows/docs.yaml
+  workflow_dispatch: {}
 
 jobs:
   build:
     name: Build docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
@@ -19,7 +30,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dev dependencies
-        run: uv sync --group dev
+        run: uv sync --frozen --group dev
       - name: Build docs
         run: uv run zensical build --strict
 
