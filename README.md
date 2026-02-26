@@ -74,10 +74,10 @@ Training uses fairseq2's CTC finetuning recipe (full fine-tuning, not LoRA):
 
 ```bash
 # Convert CoRal-v3 to Parquet format (required by fairseq2)
-python scripts/convert_coral_to_parquet.py
+uv run python scripts/convert_coral_to_parquet.py
 
 # Run finetuning on single GPU
-python -m workflows.recipes.wav2vec2.asr $OUTPUT_DIR \
+uv run python -m workflows.recipes.wav2vec2.asr $OUTPUT_DIR \
     --config-file configs/omniasr/ctc-finetune-danish.yaml
 ```
 

@@ -17,8 +17,8 @@ Access requires HuggingFace login + data sharing agreement.
 Data was collected by the CoRal project (Alexandra Institute and collaborators). The collection methodology was designed to maximize dialect diversity across Denmark:
 
 - **Collection sites:** Primarily public libraries across Denmark, chosen as cultural gathering points that attract diverse local populations
-- **Participants:** Over 1,000 Danes donated approximately 2 hours of their time
-- **Read-aloud subset:** Each participant completed 3 x 2-hour recording sessions of scripted text
+- **Participants:** Over 1,000 Danes donated between roughly 2 and 6 hours of their time, depending on how many recording sessions they completed
+- **Read-aloud subset:** Each participant completed up to 3 x 2-hour recording sessions of scripted text
 - **Conversational subset:** Pairs of speakers from the same dialect region had unstructured conversations; pairing same-dialect speakers reinforces natural dialect use
   - Note: Conversation participants did not know each other beforehand, which creates a particular conversational pattern
 - **Geographic coverage:** Data was collected from across Denmark, with some gaps on the west coast of Jutland
@@ -57,6 +57,8 @@ Dialect information was captured through multiple signals per speaker:
 This project uses **v3**, released at the CoRal 2026 conference. Note: the subset previously called `conversational` in v2 is now called `conversation` in v3.
 
 ## Splits & Statistics
+
+*Note: Split statistics below are approximate figures from the HuggingFace dataset card. The total (~498h across the tables) is less than the full ~710h corpus; the remainder reflects audio filtered out during quality processing or not yet finalised in individual splits.*
 
 ### read_aloud
 

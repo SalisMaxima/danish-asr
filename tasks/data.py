@@ -7,6 +7,7 @@ from loguru import logger
 
 WINDOWS = os.name == "nt"
 PROJECT_NAME = "danish_asr"
+VALID_SUBSETS = {"read_aloud", "conversation"}
 
 
 @task
@@ -16,6 +17,8 @@ def download(ctx: Context, subset: str = "read_aloud") -> None:
     Args:
         subset: Dataset subset (read_aloud or conversation)
     """
+    if subset not in VALID_SUBSETS:
+        raise ValueError(f"Invalid subset {subset!r}. Must be one of: {VALID_SUBSETS}")
     logger.info(f"Downloading CoRal dataset (subset={subset})...")
     ctx.run(
         f'uv run python -c "'
@@ -36,6 +39,8 @@ def stats(ctx: Context, subset: str = "read_aloud") -> None:
     Args:
         subset: Dataset subset
     """
+    if subset not in VALID_SUBSETS:
+        raise ValueError(f"Invalid subset {subset!r}. Must be one of: {VALID_SUBSETS}")
     ctx.run(
         f'uv run python -c "'
         f"from datasets import load_dataset; "

@@ -54,7 +54,7 @@ See [data-preparation.md](data-preparation.md) for full details.
 | Step | Task | Estimated Time |
 |---|---|---|
 | 3.1 | Write `scripts/convert_coral_to_parquet.py` | 2-4 hours |
-| 3.2 | Run conversion (474h audio, both subsets to Parquet) | 5-10 hours (CPU job on HPC) |
+| 3.2 | Run conversion (~710h audio, both subsets to Parquet) | 5-10 hours (CPU job on HPC) |
 | 3.3 | Generate `language_distribution_0.tsv` stats | 15 min |
 | 3.4 | Create fairseq2 asset card `coral_v3_danish.yaml` | 15 min |
 | 3.5 | Verify with dataloader example script | 30 min |
