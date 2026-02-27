@@ -1,0 +1,13 @@
+site_name: Danish ASR
+docs_dir: docs
+site_dir: site
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Project Roadmap: project-roadmap.md
+  - Omnilingual ASR: omnilingual-asr-overview.md
+  - Data Preparation: data-preparation.md
+  - Finetuning Recipe: finetuning-recipe.md
+  - DTU HPC Setup: dtu-hpc-setup.md
+  - CoRal Dataset: coral-dataset.md

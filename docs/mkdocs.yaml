@@ -1,6 +1,0 @@
-site_name: Danish ASR
-docs_dir: .
-theme:
-  name: material
-nav:
-  - Home: index.md
