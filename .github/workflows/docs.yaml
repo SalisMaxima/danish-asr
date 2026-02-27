@@ -64,4 +64,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
       - name: Deploy docs
-        run: uv run zensical gh-deploy --force
+        run: uv run ghp-import -n -p -f site
