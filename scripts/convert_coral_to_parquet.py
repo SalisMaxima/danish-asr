@@ -28,7 +28,7 @@ SUBSETS = {
     "read_aloud": "coral_v3_read_aloud",
     "conversation": "coral_v3_conversation",
 }
-SPLIT_MAP = {"train": "train", "validation": "dev", "test": "test"}
+SPLIT_MAP = {"train": "train", "val": "dev", "test": "test"}
 ROW_GROUP_SIZE = 100
 TARGET_SR = 16000
 LANGUAGE = "dan_Latn"
@@ -119,7 +119,7 @@ def convert_split(
 
     logger.info(f"Loading {hf_subset}/{hf_split}...")
     try:
-        load_kwargs: dict[str, object] = {"trust_remote_code": True}
+        load_kwargs: dict[str, object] = {}
         if cache_dir is not None:
             load_kwargs["cache_dir"] = cache_dir
         ds = load_dataset("CoRal-project/coral-v3", hf_subset, split=hf_split, **load_kwargs)

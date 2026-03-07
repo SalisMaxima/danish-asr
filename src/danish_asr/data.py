@@ -159,17 +159,13 @@ class CoRalDataModule(pl.LightningDataModule):
         logger.info(f"Loading CoRal dataset (subset={self.subset})...")
 
         # Build kwargs for load_dataset
-        kwargs = {
-            "trust_remote_code": True,
-        }
+        kwargs: dict[str, object] = {}
         if self.dataset_revision is not None:
             kwargs["revision"] = self.dataset_revision
         if self.hf_cache_dir is not None:
             kwargs["cache_dir"] = self.hf_cache_dir
 
-        # Security note: dataset_revision can be None (use latest) or a pinned commit SHA.
-        # For research/development, using latest is intentional. Pin via config for reproducibility.
-        dataset = load_dataset(  # nosec B615
+        dataset = load_dataset(
             self.dataset_name,
             self.subset,
             **kwargs,
@@ -184,7 +180,7 @@ class CoRalDataModule(pl.LightningDataModule):
                 max_duration=self.max_duration,
             )
             self.val_dataset = CoRalDataset(
-                dataset["validation"],
+                dataset["val"],
                 processor=self.processor,
                 tokenizer=self.tokenizer,
                 target_sample_rate=self.target_sample_rate,
