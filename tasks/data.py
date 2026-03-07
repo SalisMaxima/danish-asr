@@ -6,11 +6,12 @@ from pathlib import Path
 from invoke import Context, task
 from loguru import logger
 
+_PROJECT_ROOT = Path(__file__).parent.parent
 WINDOWS = os.name == "nt"
 PROJECT_NAME = "danish_asr"
 VALID_SUBSETS = {"read_aloud", "conversation"}
 VALID_CONVERT_SUBSETS = {"read_aloud", "conversation", "all"}
-HF_CACHE_DIR = "/media/salismaxima/41827d46-03ee-4c8d-9636-12e2cf1281c3/Projects/danish_asr/.cache/huggingface"
+HF_CACHE_DIR = str(_PROJECT_ROOT / ".cache" / "huggingface")
 
 
 def _hf_env_prefix() -> str:
@@ -161,14 +162,13 @@ def convert_parquet(
     """
     if subset not in VALID_CONVERT_SUBSETS:
         raise ValueError(f"Invalid subset {subset!r}. Must be one of: {VALID_CONVERT_SUBSETS}")
-    # Normalise output_dir through Path to reject shell metacharacters
     safe_output_dir = str(Path(output_dir))
     cmd = (
         _hf_env_prefix() + f"uv run python scripts/convert_coral_to_parquet.py"
         f" --subset {subset}"
-        f" --output-dir {safe_output_dir}"
+        f" --output-dir '{safe_output_dir}'"
         f" --rows-per-file {rows_per_file}"
-        f" --cache-dir {HF_CACHE_DIR}"
+        f" --cache-dir '{HF_CACHE_DIR}'"
     )
     if max_samples is not None:
         cmd += f" --max-samples {max_samples}"

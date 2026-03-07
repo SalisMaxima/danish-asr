@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip("pyarrow", reason="pyarrow not installed (omni group); skipping parquet tests")
+
 import numpy as np
 import pyarrow.parquet as pq
 
@@ -137,7 +141,7 @@ class TestWriteStatsTsv:
 class TestNormalizeText:
     def test_normalize_text(self):
         """Test text normalization via omnilingual ASR."""
-        omnilingual_asr = __import__("pytest").importorskip("omnilingual_asr")  # noqa: F841
+        pytest.importorskip("omnilingual_asr")
         from scripts.convert_coral_to_parquet import normalize_text
 
         result = normalize_text("Hej Verden")
