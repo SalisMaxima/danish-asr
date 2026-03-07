@@ -254,7 +254,7 @@ export FAIRSEQ2_CACHE_DIR=/work3/<user>/danish_asr/fairseq2_cache
 ## Workflow Summary
 
 1. **First time:** Set up environment + download model checkpoint
-2. **Data conversion:** Submit CPU job to convert CoRal-v2 → Parquet (8-12h)
+2. **Data conversion:** Submit CPU job to convert CoRal-v3 → Parquet (8-12h)
 3. **Smoke test:** Interactive GPU session to verify training starts
 4. **Training:** Submit GPU job (A100, 24h walltime)
 5. **Evaluation:** Submit eval job after training completes

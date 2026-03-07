@@ -1,10 +1,12 @@
-# CoRal Danish speech dataset
+# CoRal Danish speech dataset — Whisper configuration
 dataset_name: CoRal-project/coral-v3
 subset: read_aloud
 sample_rate: 16000
 max_duration: 30.0
-dataset_revision: null  # Use null for latest, or specify a commit SHA/tag for pinned revision
-batch_size: 8
+dataset_revision: null
+batch_size: 4
 num_workers: 4
 data_dir: data/raw
 hf_cache_dir: null  # Use null to let HuggingFace pick the default cache dir
+processor_name: openai/whisper-large-v3
+language: da

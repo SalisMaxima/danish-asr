@@ -42,9 +42,11 @@ The final dataset contains ~710 hours of material after quality filtering (~20% 
 - Studio-quality audio (no "real-life" noisy conditions — no bad microphones, echo, etc.)
 - Non-native Danish speakers were recruited via university students
 
-**License:** Open for most uses, except synthetic speech generation and person identification.
+**License:** [OpenRAIL-D](https://choosealicense.com/licenses/openrail/) — open for most uses, **except** speech synthesis and biometric person identification.
 
 **V3 is now released** (as of Feb 2026), with V3.1 expected.
+
+**Funded by:** Danish Innovation Fund (Innovationsfonden). Partners: Alexandra Institute, University of Copenhagen, Agency for Digital Government, Alvenir, Corti.
 
 ## Quick Start
 
@@ -145,6 +147,19 @@ danish_asr/
 - [Data Preparation](docs/data-preparation.md) — CoRal-v3 to Parquet conversion
 - [Finetuning Recipe](docs/finetuning-recipe.md) — configs, hyperparameters
 - [DTU HPC Setup](docs/dtu-hpc-setup.md) — GPU queues, LSF job scripts
+
+## Citation
+
+If you use the CoRal dataset, please cite:
+
+```bibtex
+@dataset{coral2024,
+  author    = {Dan Saattrup Smart and Sif Bernstorff Lehmann and Simon Rands Leminen and Anders Jess Pedersen and Anna Katrine van Zee and Torben Blach},
+  title     = {CoRal: A Diverse Danish ASR Dataset Covering Dialects, Accents, Genders, and Age Groups},
+  year      = {2024},
+  url       = {https://hf.co/datasets/CoRal-project/coral-v3},
+}
+```
 
 ## References
 
