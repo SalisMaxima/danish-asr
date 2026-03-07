@@ -25,7 +25,7 @@ Access requires HuggingFace login + data sharing agreement.
   author    = {Dan Saattrup Smart and Sif Bernstorff Lehmann and Simon Rands Leminen and Anders Jess Pedersen and Anna Katrine van Zee and Torben Blach},
   title     = {CoRal: A Diverse Danish ASR Dataset Covering Dialects, Accents, Genders, and Age Groups},
   year      = {2024},
-  url       = {https://hf.co/datasets/alexandrainst/coral},
+  url       = {https://hf.co/datasets/CoRal-project/coral-v3},
 }
 ```
 

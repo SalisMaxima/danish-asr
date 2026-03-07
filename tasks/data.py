@@ -1,6 +1,7 @@
 """Data management tasks for Danish ASR."""
 
 import os
+from pathlib import Path
 
 from invoke import Context, task
 from loguru import logger
@@ -8,6 +9,7 @@ from loguru import logger
 WINDOWS = os.name == "nt"
 PROJECT_NAME = "danish_asr"
 VALID_SUBSETS = {"read_aloud", "conversation"}
+VALID_CONVERT_SUBSETS = {"read_aloud", "conversation", "all"}
 HF_CACHE_DIR = "/media/salismaxima/41827d46-03ee-4c8d-9636-12e2cf1281c3/Projects/danish_asr/.cache/huggingface"
 
 
@@ -157,10 +159,14 @@ def convert_parquet(
         rows_per_file: Number of samples per Parquet part file
         max_samples: Max samples per split (for testing)
     """
+    if subset not in VALID_CONVERT_SUBSETS:
+        raise ValueError(f"Invalid subset {subset!r}. Must be one of: {VALID_CONVERT_SUBSETS}")
+    # Normalise output_dir through Path to reject shell metacharacters
+    safe_output_dir = str(Path(output_dir))
     cmd = (
         _hf_env_prefix() + f"uv run python scripts/convert_coral_to_parquet.py"
         f" --subset {subset}"
-        f" --output-dir {output_dir}"
+        f" --output-dir {safe_output_dir}"
         f" --rows-per-file {rows_per_file}"
         f" --cache-dir {HF_CACHE_DIR}"
     )

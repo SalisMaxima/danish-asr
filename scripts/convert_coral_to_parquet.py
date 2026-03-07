@@ -138,7 +138,7 @@ def convert_split(
     total_samples = 0
     total_audio_seconds = 0.0
     skipped = 0
-    if max_samples:
+    if max_samples is not None:
         ds = ds.select(range(min(len(ds), max_samples)))
 
     total_to_process = len(ds)
