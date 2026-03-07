@@ -118,7 +118,7 @@ def check_auth(ctx: Context) -> None:
             _hf_env_prefix() + 'uv run python -c "'
             "from huggingface_hub import whoami; "
             "info = whoami(); "
-            "print(f'Authenticated as: {info[\"name\"]}'); "
+            "print('Authenticated as:', info['name']); "
             '"',
             echo=True,
             pty=not WINDOWS,
