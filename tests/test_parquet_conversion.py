@@ -132,3 +132,14 @@ class TestWriteStatsTsv:
         assert len(lines) == 2  # header + 1 data row
         assert "corpus\tlanguage\tsplit\tnum_samples\ttotal_audio_seconds" in lines[0]
         assert "coral_v3_read_aloud\tdan_Latn\ttrain\t100\t500.0" in lines[1]
+
+
+class TestNormalizeText:
+    def test_normalize_text(self):
+        """Test text normalization via omnilingual ASR."""
+        omnilingual_asr = __import__("pytest").importorskip("omnilingual_asr")  # noqa: F841
+        from scripts.convert_coral_to_parquet import normalize_text
+
+        result = normalize_text("Hej Verden")
+        assert isinstance(result, str)
+        assert len(result) > 0

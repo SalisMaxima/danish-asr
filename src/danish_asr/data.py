@@ -137,6 +137,7 @@ class CoRalDataModule(pl.LightningDataModule):
         self.subset = cfg.get("subset", "read_aloud")
         self.dataset_revision = cfg.get("dataset_revision", None)
         self.dataset_name = cfg.get("dataset_name", "CoRal-project/coral-v3")
+        self.hf_cache_dir = cfg.get("hf_cache_dir", None)
         self.processor = None
         self.tokenizer = None
         self.train_dataset: CoRalDataset | None = None
@@ -163,6 +164,8 @@ class CoRalDataModule(pl.LightningDataModule):
         }
         if self.dataset_revision is not None:
             kwargs["revision"] = self.dataset_revision
+        if self.hf_cache_dir is not None:
+            kwargs["cache_dir"] = self.hf_cache_dir
 
         # Security note: dataset_revision can be None (use latest) or a pinned commit SHA.
         # For research/development, using latest is intentional. Pin via config for reproducibility.

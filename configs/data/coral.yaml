@@ -7,3 +7,4 @@ dataset_revision: null  # Use null for latest, or specify a commit SHA/tag for p
 batch_size: 8
 num_workers: 4
 data_dir: data/raw
+hf_cache_dir: /media/salismaxima/41827d46-03ee-4c8d-9636-12e2cf1281c3/Projects/danish_asr/.cache/huggingface

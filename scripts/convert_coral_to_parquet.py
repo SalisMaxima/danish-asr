@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import csv
 import io
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -31,6 +32,7 @@ SPLIT_MAP = {"train": "train", "validation": "dev", "test": "test"}
 ROW_GROUP_SIZE = 100
 TARGET_SR = 16000
 LANGUAGE = "dan_Latn"
+MAX_SKIP_RATE = 0.05
 
 SCHEMA = pa.schema(
     [
@@ -107,6 +109,7 @@ def convert_split(
     output_dir: Path,
     rows_per_file: int,
     max_samples: int | None = None,
+    cache_dir: str | None = None,
 ) -> dict:
     """Convert one HF split to Parquet part files.
 
@@ -115,7 +118,18 @@ def convert_split(
     from datasets import load_dataset
 
     logger.info(f"Loading {hf_subset}/{hf_split}...")
-    ds = load_dataset("CoRal-project/coral-v3", hf_subset, split=hf_split, trust_remote_code=True)
+    try:
+        load_kwargs: dict[str, object] = {"trust_remote_code": True}
+        if cache_dir is not None:
+            load_kwargs["cache_dir"] = cache_dir
+        ds = load_dataset("CoRal-project/coral-v3", hf_subset, split=hf_split, **load_kwargs)
+    except Exception as e:
+        logger.error(
+            f"Failed to load dataset {hf_subset}/{hf_split}: {e}. "
+            "Check your network connection and HF authentication "
+            "(run 'huggingface-cli login' or set HF_TOKEN env var)."
+        )
+        raise
 
     split_dir = output_dir / f"corpus={corpus_name}" / f"split={parquet_split}" / f"language={LANGUAGE}"
 
@@ -123,15 +137,19 @@ def convert_split(
     part_idx = 0
     total_samples = 0
     total_audio_seconds = 0.0
+    skipped = 0
     if max_samples:
         ds = ds.select(range(min(len(ds), max_samples)))
+
+    total_to_process = len(ds)
 
     for i, sample in enumerate(ds):
         try:
             normalized_text = normalize_text(sample["text"])
             audio_int8, audio_size = process_audio(sample["audio"])
-        except (ValueError, RuntimeError, OSError) as e:
+        except (ValueError, RuntimeError, OSError, KeyError, TypeError, AttributeError) as e:
             logger.warning(f"Skipping sample {i} in {hf_subset}/{hf_split}: {type(e).__name__}: {e}")
+            skipped += 1
             continue
 
         rows.append(
@@ -155,7 +173,7 @@ def convert_split(
             part_idx += 1
 
         if (i + 1) % 1000 == 0:
-            logger.info(f"  Processed {i + 1}/{len(ds)} samples...")
+            logger.info(f"  Processed {i + 1}/{total_to_process} samples...")
 
     # Write remaining rows
     if rows:
@@ -163,7 +181,17 @@ def convert_split(
         write_parquet(rows, part_path)
         logger.info(f"Wrote {len(rows)} rows to {part_path}")
 
-    logger.info(f"Done {corpus_name}/{parquet_split}: {total_samples} samples, {total_audio_seconds:.1f}s audio")
+    # Check skip rate
+    if total_to_process > 0 and skipped / total_to_process > MAX_SKIP_RATE:
+        raise RuntimeError(
+            f"Skip rate {skipped}/{total_to_process} ({skipped / total_to_process:.1%}) "
+            f"exceeds maximum allowed {MAX_SKIP_RATE:.0%} for {hf_subset}/{hf_split}"
+        )
+
+    logger.info(
+        f"Done {corpus_name}/{parquet_split}: {total_samples} samples, "
+        f"{total_audio_seconds:.1f}s audio, {skipped} skipped"
+    )
     return {
         "corpus": corpus_name,
         "language": LANGUAGE,
@@ -188,6 +216,13 @@ def write_stats_tsv(stats: list[dict], path: Path) -> None:
 
 
 def main() -> None:
+    # Early check for omnilingual_asr dependency
+    try:
+        from omnilingual_asr.data.text_tools import text_normalize  # noqa: F401
+    except ImportError:
+        logger.error("omnilingual-asr not installed. Run: uv sync --group omni")
+        sys.exit(1)
+
     parser = argparse.ArgumentParser(description="Convert CoRal-v3 to omnilingual ASR Parquet format")
     parser.add_argument(
         "--subset",
@@ -218,6 +253,12 @@ def main() -> None:
         action="store_true",
         help="Skip generating language_distribution_0.tsv",
     )
+    parser.add_argument(
+        "--cache-dir",
+        type=str,
+        default=None,
+        help="HuggingFace cache directory (default: HF_HOME or ~/.cache/huggingface)",
+    )
     args = parser.parse_args()
 
     subsets_to_process = SUBSETS if args.subset == "all" else {args.subset: SUBSETS[args.subset]}
@@ -233,6 +274,7 @@ def main() -> None:
                 output_dir=args.output_dir,
                 rows_per_file=args.rows_per_file,
                 max_samples=args.max_samples,
+                cache_dir=args.cache_dir,
             )
             all_stats.append(stats)
 

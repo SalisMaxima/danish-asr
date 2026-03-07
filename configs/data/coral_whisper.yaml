@@ -7,5 +7,6 @@ dataset_revision: null
 batch_size: 4
 num_workers: 4
 data_dir: data/raw
+hf_cache_dir: /media/salismaxima/41827d46-03ee-4c8d-9636-12e2cf1281c3/Projects/danish_asr/.cache/huggingface
 processor_name: openai/whisper-large-v3
 language: da

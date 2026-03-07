@@ -154,6 +154,26 @@ class TestCollateFn:
         assert batch["labels"].shape == (2, 3)
         assert batch["labels"][1].tolist() == [4, 5, -100]
 
+    def test_collate_fn_empty_batch(self):
+        """Empty batch should return empty dict."""
+        assert collate_fn([]) == {}
+
+    def test_text_fallback_to_sentence(self):
+        """Items with 'sentence' key instead of 'text' should still work."""
+        items = [
+            {
+                "audio": {
+                    "array": torch.randn(16000).numpy(),
+                    "sampling_rate": 16000,
+                },
+                "sentence": "dette er en sætning",
+            }
+        ]
+        dataset = CoRalDataset(items, target_sample_rate=16000)
+        item = dataset[0]
+
+        assert item["text"] == "dette er en sætning"
+
 
 class TestWhisperProcessor:
     """Tests for Whisper processor and tokenizer integration."""
@@ -196,3 +216,25 @@ class TestWhisperProcessor:
         assert "input_features" not in item
         assert "input_values" not in item
         assert "labels" not in item
+
+    def test_combined_processor_and_tokenizer(self):
+        """Both processor and tokenizer set should produce input_features and labels."""
+        fake_ds = _make_fake_hf_dataset(n=1)
+
+        mock_processor = MagicMock()
+        mock_result = MagicMock()
+        mock_result.input_features = torch.randn(1, 80, 3000)
+        mock_result.input_values = None
+        mock_result.attention_mask = None
+        mock_processor.return_value = mock_result
+
+        mock_tokenizer = MagicMock()
+        mock_tokenizer.return_value = MagicMock(input_ids=torch.tensor([[1, 2, 3]]))
+
+        dataset = CoRalDataset(fake_ds, processor=mock_processor, tokenizer=mock_tokenizer)
+        item = dataset[0]
+
+        assert "input_features" in item
+        assert item["input_features"].shape == (80, 3000)
+        assert "labels" in item
+        assert item["labels"].tolist() == [1, 2, 3]
