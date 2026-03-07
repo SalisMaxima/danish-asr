@@ -4,11 +4,40 @@ Source: [CoRal-project/coral-v3](https://huggingface.co/datasets/CoRal-project/c
 
 ## Overview
 
-Danish ASR dataset covering **dialects, accents, genders, and age groups**. Two subsets: read-aloud (scripted) and conversation (spontaneous).
-
-License: OpenRAIL-D — open for most uses, **except** speech synthesis and biometric person identification.
+CoRal (Danish **Co**nversational and **R**ead-**al**oud Dataset) is a comprehensive ASR dataset covering **dialects, accents, genders, and age groups**. Two subsets: read-aloud (scripted) and conversation (spontaneous).
 
 Access requires HuggingFace login + data sharing agreement.
+
+## License & Terms
+
+**License:** [OpenRAIL-D](https://choosealicense.com/licenses/openrail/) (adapted from OpenRAIL-M)
+
+- Commercial use is permitted with restrictions
+- **Forbidden use cases:**
+  - Speech synthesis
+  - Biometric person identification
+  - See Addition 4 in the full license for complete restrictions
+
+## Citation
+
+```bibtex
+@dataset{coral2024,
+  author    = {Dan Saattrup Smart and Sif Bernstorff Lehmann and Simon Rands Leminen and Anders Jess Pedersen and Anna Katrine van Zee and Torben Blach},
+  title     = {CoRal: A Diverse Danish ASR Dataset Covering Dialects, Accents, Genders, and Age Groups},
+  year      = {2024},
+  url       = {https://hf.co/datasets/alexandrainst/coral},
+}
+```
+
+## Funding & Partners
+
+CoRal is funded by the **Danish Innovation Fund** (Innovationsfonden) and developed by the following partner organisations:
+
+- **Alexandra Institute** (lead)
+- **University of Copenhagen**
+- **Agency for Digital Government** (Digitaliseringsstyrelsen)
+- **Alvenir**
+- **Corti**
 
 ## Collection Methodology
 
@@ -64,7 +93,7 @@ This project uses **v3**, released at the CoRal 2026 conference. Note: the subse
 
 | Split | Duration | Speakers | Unique Sentences |
 |---|---|---|---|
-| train | 425.90 h | 657 | 250,108 |
+| train | 521.46 h | 808+ | 250,108 |
 | validation | 3.48 h | 11 | 2,046 |
 | test | 17.30 h | 35 | 9,123 |
 
@@ -72,9 +101,9 @@ This project uses **v3**, released at the CoRal 2026 conference. Note: the subse
 
 | Split | Duration | Speakers |
 |---|---|---|
-| train | 48.85 h | 160 |
-| validation | 1.16 h | 4 |
-| test | 1.40 h | 5 |
+| train | 156.27 h | 160 |
+| validation | 2.45 h | 4 |
+| test | 8.74 h | 5 |
 
 ## Data Fields
 

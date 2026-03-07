@@ -1,0 +1,11 @@
+# CoRal Danish speech dataset — Whisper configuration
+dataset_name: CoRal-project/coral-v3
+subset: read_aloud
+sample_rate: 16000
+max_duration: 30.0
+dataset_revision: null
+batch_size: 4
+num_workers: 4
+data_dir: data/raw
+processor_name: openai/whisper-large-v3
+language: da

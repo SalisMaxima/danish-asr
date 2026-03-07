@@ -21,11 +21,13 @@ class CoRalDataset(Dataset):
         self,
         hf_dataset,
         processor=None,
+        tokenizer=None,
         target_sample_rate: int = 16000,
         max_duration: float = 30.0,
     ):
         self.dataset = hf_dataset
         self.processor = processor
+        self.tokenizer = tokenizer
         self.target_sample_rate = target_sample_rate
         self.max_samples = int(max_duration * target_sample_rate)
 
@@ -60,15 +62,23 @@ class CoRalDataset(Dataset):
                 return_tensors="pt",
                 padding=False,
             )
-            result["input_values"] = inputs.input_values.squeeze(0)
+            if hasattr(inputs, "input_features") and inputs.input_features is not None:
+                result["input_features"] = inputs.input_features.squeeze(0)
+            elif hasattr(inputs, "input_values") and inputs.input_values is not None:
+                result["input_values"] = inputs.input_values.squeeze(0)
             if hasattr(inputs, "attention_mask") and inputs.attention_mask is not None:
                 result["attention_mask"] = inputs.attention_mask.squeeze(0)
+
+        # If tokenizer is available, tokenize labels
+        if self.tokenizer is not None:
+            labels = self.tokenizer(text, return_tensors="pt", padding=False)
+            result["labels"] = labels.input_ids.squeeze(0)
 
         return result
 
 
-def _pad_1d_tensors(tensors: list[torch.Tensor]) -> tuple[torch.Tensor, list[int]]:
-    """Pad variable-length 1D tensors to uniform length with trailing zeros.
+def _pad_1d_tensors(tensors: list[torch.Tensor], pad_value: float = 0.0) -> tuple[torch.Tensor, list[int]]:
+    """Pad variable-length 1D tensors to uniform length.
 
     Returns (stacked_tensor, original_lengths).
     """
@@ -79,13 +89,16 @@ def _pad_1d_tensors(tensors: list[torch.Tensor]) -> tuple[torch.Tensor, list[int
         length = t.shape[-1]
         lengths.append(length)
         if length < max_len:
-            t = torch.cat([t, torch.zeros(max_len - length)])
+            t = torch.cat([t, torch.full((max_len - length,), pad_value, dtype=t.dtype)])
         padded.append(t)
     return torch.stack(padded), lengths
 
 
 def collate_fn(batch: list[dict]) -> dict:
     """Custom collate function for variable-length audio."""
+    if not batch:
+        return {}
+
     audios = [item["audio"] for item in batch]
     stacked_audio, audio_lengths = _pad_1d_tensors(audios)
 
@@ -99,6 +112,14 @@ def collate_fn(batch: list[dict]) -> dict:
         input_values = [item["input_values"] for item in batch]
         stacked_iv, _ = _pad_1d_tensors(input_values)
         result["input_values"] = stacked_iv
+
+    if "input_features" in batch[0]:
+        result["input_features"] = torch.stack([item["input_features"] for item in batch])
+
+    if "labels" in batch[0]:
+        label_tensors = [item["labels"] for item in batch]
+        stacked_labels, _ = _pad_1d_tensors(label_tensors, pad_value=-100)
+        result["labels"] = stacked_labels
 
     return result
 
@@ -117,16 +138,18 @@ class CoRalDataModule(pl.LightningDataModule):
         self.dataset_revision = cfg.get("dataset_revision", None)
         self.dataset_name = cfg.get("dataset_name", "CoRal-project/coral-v3")
         self.processor = None
+        self.tokenizer = None
         self.train_dataset: CoRalDataset | None = None
         self.val_dataset: CoRalDataset | None = None
         self.test_dataset: CoRalDataset | None = None
 
-    def set_processor(self, processor) -> None:
-        """Set the feature processor for model-specific input preparation.
+    def set_processor_and_tokenizer(self, processor, tokenizer=None) -> None:
+        """Set the feature processor and optional tokenizer.
 
         Must be called before setup() for the processor to be used.
         """
         self.processor = processor
+        self.tokenizer = tokenizer
 
     def setup(self, stage: str | None = None) -> None:
         """Load and prepare CoRal dataset splits."""
@@ -153,12 +176,14 @@ class CoRalDataModule(pl.LightningDataModule):
             self.train_dataset = CoRalDataset(
                 dataset["train"],
                 processor=self.processor,
+                tokenizer=self.tokenizer,
                 target_sample_rate=self.target_sample_rate,
                 max_duration=self.max_duration,
             )
             self.val_dataset = CoRalDataset(
                 dataset["validation"],
                 processor=self.processor,
+                tokenizer=self.tokenizer,
                 target_sample_rate=self.target_sample_rate,
                 max_duration=self.max_duration,
             )
@@ -167,6 +192,7 @@ class CoRalDataModule(pl.LightningDataModule):
             self.test_dataset = CoRalDataset(
                 dataset["test"],
                 processor=self.processor,
+                tokenizer=self.tokenizer,
                 target_sample_rate=self.target_sample_rate,
                 max_duration=self.max_duration,
             )

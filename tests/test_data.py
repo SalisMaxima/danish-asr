@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import torch
 
 from danish_asr.data import CoRalDataset, collate_fn
@@ -128,3 +130,69 @@ class TestCollateFn:
 
         assert batch["audio"].shape == (2, 16000)
         assert batch["audio_lengths"].tolist() == [16000, 16000]
+
+    def test_collate_fn_stacks_input_features(self):
+        """Whisper input_features (fixed-size mel-specs) should be stacked."""
+        items = [
+            {"audio": torch.randn(16000), "text": "a", "input_features": torch.randn(80, 3000)},
+            {"audio": torch.randn(16000), "text": "b", "input_features": torch.randn(80, 3000)},
+        ]
+        batch = collate_fn(items)
+
+        assert "input_features" in batch
+        assert batch["input_features"].shape == (2, 80, 3000)
+
+    def test_collate_fn_pads_labels_with_ignore_index(self):
+        """Labels should be padded with -100."""
+        items = [
+            {"audio": torch.randn(16000), "text": "a", "labels": torch.tensor([1, 2, 3])},
+            {"audio": torch.randn(16000), "text": "b", "labels": torch.tensor([4, 5])},
+        ]
+        batch = collate_fn(items)
+
+        assert "labels" in batch
+        assert batch["labels"].shape == (2, 3)
+        assert batch["labels"][1].tolist() == [4, 5, -100]
+
+
+class TestWhisperProcessor:
+    """Tests for Whisper processor and tokenizer integration."""
+
+    def test_whisper_processor_returns_input_features(self):
+        """Processor returning input_features should populate that key."""
+        fake_ds = _make_fake_hf_dataset(n=1)
+        mock_processor = MagicMock()
+        mock_result = MagicMock()
+        mock_result.input_features = torch.randn(1, 80, 3000)
+        mock_result.input_values = None
+        mock_result.attention_mask = None
+        mock_processor.return_value = mock_result
+
+        dataset = CoRalDataset(fake_ds, processor=mock_processor)
+        item = dataset[0]
+
+        assert "input_features" in item
+        assert item["input_features"].shape == (80, 3000)
+        assert "input_values" not in item
+
+    def test_tokenizer_produces_labels(self):
+        """Tokenizer should produce labels key with token IDs."""
+        fake_ds = _make_fake_hf_dataset(n=1)
+        mock_tokenizer = MagicMock()
+        mock_tokenizer.return_value = MagicMock(input_ids=torch.tensor([[1, 2, 3, 4]]))
+
+        dataset = CoRalDataset(fake_ds, tokenizer=mock_tokenizer)
+        item = dataset[0]
+
+        assert "labels" in item
+        assert item["labels"].tolist() == [1, 2, 3, 4]
+
+    def test_no_input_features_without_processor(self):
+        """Without processor, neither input_features nor input_values should be present."""
+        fake_ds = _make_fake_hf_dataset(n=1)
+        dataset = CoRalDataset(fake_ds)
+        item = dataset[0]
+
+        assert "input_features" not in item
+        assert "input_values" not in item
+        assert "labels" not in item

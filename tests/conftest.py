@@ -1,8 +1,12 @@
 """Pytest configuration and fixtures."""
 
+import sys
 from pathlib import Path
 
 import pytest
+
+# Make scripts/ importable for tests
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 @pytest.fixture

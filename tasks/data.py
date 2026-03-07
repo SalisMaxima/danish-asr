@@ -82,7 +82,65 @@ def validate(ctx: Context) -> None:
 
 
 @task
-def preprocess(ctx: Context) -> None:
-    """Preprocess audio data (resample, normalize)."""
-    logger.info("Audio preprocessing is handled on-the-fly by CoRalDataset.")
-    logger.info("No separate preprocessing step needed.")
+def preprocess(ctx: Context, target: str = "whisper") -> None:
+    """Preprocess audio data.
+
+    Args:
+        target: Processing target ('whisper' for on-the-fly, 'omniasr' for Parquet conversion)
+    """
+    if target == "whisper":
+        logger.info("Whisper preprocessing is handled on-the-fly by CoRalDataset.")
+        logger.info("No separate preprocessing step needed.")
+    elif target == "omniasr":
+        logger.info("Run 'invoke data.convert-parquet' for omnilingual ASR Parquet conversion.")
+    else:
+        raise ValueError(f"Invalid target {target!r}. Must be 'whisper' or 'omniasr'.")
+
+
+@task(name="check-auth")
+def check_auth(ctx: Context) -> None:
+    """Verify HuggingFace authentication."""
+    ctx.run(
+        'uv run python -c "'
+        "from huggingface_hub import whoami; "
+        "info = whoami(); "
+        "print(f'Authenticated as: {info[\"name\"]}'); "
+        '"',
+        echo=True,
+        pty=not WINDOWS,
+    )
+
+
+@task(name="download-all")
+def download_all(ctx: Context) -> None:
+    """Download both CoRal subsets (read_aloud + conversation)."""
+    for subset in ("read_aloud", "conversation"):
+        logger.info(f"Downloading {subset}...")
+        download(ctx, subset=subset)
+
+
+@task(name="convert-parquet")
+def convert_parquet(
+    ctx: Context,
+    subset: str = "all",
+    output_dir: str = "data/parquet/version=0",
+    rows_per_file: int = 5000,
+    max_samples: int | None = None,
+) -> None:
+    """Convert CoRal-v3 to omnilingual ASR Parquet format.
+
+    Args:
+        subset: Which subset to convert (read_aloud, conversation, or all)
+        output_dir: Output directory for Parquet files
+        rows_per_file: Number of samples per Parquet part file
+        max_samples: Max samples per split (for testing)
+    """
+    cmd = (
+        f"uv run python scripts/convert_coral_to_parquet.py"
+        f" --subset {subset}"
+        f" --output-dir {output_dir}"
+        f" --rows-per-file {rows_per_file}"
+    )
+    if max_samples is not None:
+        cmd += f" --max-samples {max_samples}"
+    ctx.run(cmd, echo=True, pty=not WINDOWS)
