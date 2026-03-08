@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import torch
 from omegaconf import OmegaConf
 
@@ -39,6 +41,12 @@ class _DummySeq2SeqModel(torch.nn.Module):
     def forward(self, input_features: torch.Tensor, labels: torch.Tensor) -> dict:
         del input_features, labels
         return {"loss": torch.tensor(0.25), "logits": torch.randn(1, 3, 4)}
+
+
+class _DummyCTCModel(torch.nn.Module):
+    def forward(self, input_values: torch.Tensor, attention_mask=None, labels: torch.Tensor | None = None) -> dict:
+        del attention_mask, labels
+        return {"loss": torch.tensor(0.25), "logits": torch.randn(input_values.shape[0], 4, 4)}
 
 
 def test_seq2seq_eval_uses_configured_language(monkeypatch):
@@ -124,3 +132,83 @@ def test_epoch_end_metrics_clear_accumulators(monkeypatch):
     assert lit_model._val_references == []
     assert lit_model._test_predictions == []
     assert lit_model._test_references == []
+
+
+def test_ctc_build_processor_uses_vocab_asset(monkeypatch, tmp_path):
+    vocab_path = tmp_path / "vocab.json"
+    vocab_path.write_text(json.dumps({"[PAD]": 0, "[UNK]": 1, "|": 2, "a": 3, "b": 4}) + "\n")
+
+    cfg = OmegaConf.create(
+        {
+            "model": {
+                "name": "wav2vec2_asr",
+                "model_name": "facebook/wav2vec2-large-xlsr-53",
+                "feature_extractor_name": "facebook/wav2vec2-large-xlsr-53",
+                "vocab_path": str(vocab_path),
+                "pad_token": "[PAD]",
+                "unk_token": "[UNK]",
+                "word_delimiter_token": "|",
+                "do_lower_case": True,
+            },
+            "train": {
+                "optimizer": {"lr": 1e-4, "weight_decay": 0.01, "betas": [0.9, 0.999]},
+                "scheduler": {"warmup_steps": 10},
+            },
+            "hardware": {},
+        }
+    )
+
+    monkeypatch.setattr(train_module, "build_model", lambda cfg: _DummyCTCModel())
+
+    from transformers import Wav2Vec2FeatureExtractor
+
+    feature_extractor = Wav2Vec2FeatureExtractor(
+        feature_size=1,
+        sampling_rate=16000,
+        padding_value=0.0,
+        do_normalize=True,
+        return_attention_mask=True,
+    )
+    monkeypatch.setattr(Wav2Vec2FeatureExtractor, "from_pretrained", lambda *args, **kwargs: feature_extractor)
+
+    lit_model = train_module.ASRLitModel(cfg)
+
+    assert lit_model.tokenizer.get_vocab()["a"] == 3
+    tokenized = lit_model.tokenizer("ab ab", return_tensors="pt")
+    assert tokenized.input_ids.numel() > 0
+
+
+def test_ctc_validation_prefers_normalized_references(monkeypatch):
+    cfg = OmegaConf.create(
+        {
+            "model": {
+                "name": "wav2vec2_asr",
+                "model_name": "facebook/wav2vec2-large-xlsr-53",
+            },
+            "train": {
+                "optimizer": {"lr": 1e-4, "weight_decay": 0.01, "betas": [0.9, 0.999]},
+                "scheduler": {"warmup_steps": 10},
+            },
+            "hardware": {},
+        }
+    )
+
+    monkeypatch.setattr(train_module, "build_model", lambda cfg: _DummyCTCModel())
+    monkeypatch.setattr(
+        train_module.ASRLitModel, "_build_processor", lambda self: (_DummyProcessor(), _DummyTokenizer())
+    )
+
+    lit_model = train_module.ASRLitModel(cfg)
+    lit_model.log = lambda *args, **kwargs: None
+    batch = {
+        "input_values": torch.randn(1, 1600),
+        "labels": torch.tensor([[1, 2, 3]]),
+        "text": ["Hej Verden"],
+        "normalized_text": ["hej verden"],
+    }
+
+    lit_model.validation_step(batch, 0)
+    lit_model.test_step(batch, 0)
+
+    assert lit_model._val_references == ["hej verden"]
+    assert lit_model._test_references == ["hej verden"]

@@ -94,19 +94,34 @@ def validate(ctx: Context) -> None:
 
 
 @task
-def preprocess(ctx: Context, target: str = "whisper") -> None:
-    """Preprocess audio data.
+def preprocess(
+    ctx: Context,
+    subset: str = "all",
+    target: str = "all",
+    max_samples: int | None = None,
+) -> None:
+    """Unified preprocessing: resample + FLAC-encode CoRal-v3 once.
 
     Args:
-        target: Processing target ('whisper' for on-the-fly, 'omniasr' for Parquet conversion)
+        subset: Which subset (read_aloud, conversation, or all)
+        target: Output format (fairseq2, universal, or all)
+        max_samples: Max samples per split (for testing)
     """
-    if target == "whisper":
-        logger.info("Whisper preprocessing is handled on-the-fly by CoRalDataset.")
-        logger.info("No separate preprocessing step needed.")
-    elif target == "omniasr":
-        logger.info("Run 'invoke data.convert-parquet' for omnilingual ASR Parquet conversion.")
-    else:
-        raise ValueError(f"Invalid target {target!r}. Must be 'whisper' or 'omniasr'.")
+    valid_targets = {"fairseq2", "universal", "all"}
+    if target not in valid_targets:
+        raise ValueError(f"Invalid target {target!r}. Must be one of: {valid_targets}")
+    if subset not in VALID_CONVERT_SUBSETS:
+        raise ValueError(f"Invalid subset {subset!r}. Must be one of: {VALID_CONVERT_SUBSETS}")
+
+    cmd = (
+        _hf_env_prefix() + f"uv run python -m danish_asr.preprocessing"
+        f" --subset {subset}"
+        f" --target {target}"
+        f" --cache-dir '{HF_CACHE_DIR}'"
+    )
+    if max_samples is not None:
+        cmd += f" --max-samples {max_samples}"
+    ctx.run(cmd, echo=True, pty=not WINDOWS)
 
 
 @task(name="check-auth")
@@ -162,9 +177,10 @@ def convert_parquet(
         raise ValueError(f"Invalid subset {subset!r}. Must be one of: {VALID_CONVERT_SUBSETS}")
     safe_output_dir = str(Path(output_dir))
     cmd = (
-        _hf_env_prefix() + f"uv run python scripts/convert_coral_to_parquet.py"
+        _hf_env_prefix() + f"uv run python -m danish_asr.preprocessing"
         f" --subset {subset}"
-        f" --output-dir '{safe_output_dir}'"
+        f" --target fairseq2"
+        f" --fairseq2-dir '{safe_output_dir}'"
         f" --rows-per-file {rows_per_file}"
         f" --cache-dir '{HF_CACHE_DIR}'"
     )

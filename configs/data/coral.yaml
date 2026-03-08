@@ -7,4 +7,6 @@ dataset_revision: null  # Use null for latest, or specify a commit SHA/tag for p
 batch_size: 8
 num_workers: 4
 data_dir: data/raw
-hf_cache_dir: null  # Use null to let HuggingFace pick the default cache dir
+hf_cache_dir: .cache/huggingface  # Keep large dataset/cache files on the project drive
+use_preprocessed: false  # Set true to load from preprocessed Parquet instead of HF
+preprocessed_dir: data/preprocessed  # Universal Parquet output from preprocessing

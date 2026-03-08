@@ -1,39 +1,69 @@
-# Data Preparation: CoRal-v3 to Omnilingual ASR Parquet
+# Data Preparation: CoRal-v3 Preprocessing
 
-Guide for converting CoRal-v3 (HuggingFace format) to the Parquet format required by the omnilingual ASR training pipeline.
+Unified preprocessing pipeline for CoRal-v3. Resamples audio (48→16kHz) and FLAC-encodes **once**, producing output for all three models.
 
-## Target Format
+## Quick Start
 
-The omnilingual ASR dataloader expects Parquet files in a specific directory hierarchy with a fixed PyArrow schema.
+```bash
+# Both formats (fairseq2 + universal)
+invoke data.preprocess --subset all --target all
 
-### Directory Structure
+# Universal only (Wav2Vec2/Whisper baselines, no omnilingual-asr dep)
+invoke data.preprocess --subset read_aloud --target universal
 
-```
-data/parquet/version=0/
-├── corpus=coral_v3_read_aloud/
-│   ├── split=train/
-│   │   └── language=dan_Latn/
-│   │       ├── part-00000.parquet
-│   │       └── ...
-│   ├── split=dev/
-│   │   └── language=dan_Latn/
-│   │       └── part-00000.parquet
-│   └── split=test/
-│       └── language=dan_Latn/
-│           └── part-00000.parquet
-└── corpus=coral_v3_conversation/
-    ├── split=train/
-    │   └── language=dan_Latn/
-    │       └── part-00000.parquet
-    ├── split=dev/
-    │   └── language=dan_Latn/
-    │       └── part-00000.parquet
-    └── split=test/
-        └── language=dan_Latn/
-            └── part-00000.parquet
+# fairseq2 only (equivalent to old convert-parquet)
+invoke data.preprocess --subset all --target fairseq2
+
+# Small test run
+invoke data.preprocess --subset read_aloud --target universal --max-samples 50
 ```
 
-Using separate corpus names (`coral_v3_read_aloud`, `coral_v3_conversation`) lets the dataloader weight them via `beta_corpus`.
+Or directly:
+```bash
+uv run python -m danish_asr.preprocessing --subset all --target all --max-samples 50
+```
+
+## Two Output Formats
+
+| | fairseq2 format | Universal format |
+|---|---|---|
+| Text | Normalized via `text_normalize()` | Original (unnormalized) |
+| Audio | `list<int8>` (FLAC bytes) | `binary` (FLAC bytes) |
+| Splits | `validation` → `dev` | Keep HF naming (`validation`) |
+| Metadata | None (strict schema) | speaker_id, gender, age, dialect |
+| Use | omniASR training | Wav2Vec2/Whisper baselines |
+
+## Output Directory Structure
+
+```
+data/
+├── parquet/version=0/                     # fairseq2
+│   ├── corpus=coral_v3_read_aloud/
+│   │   ├── split=train/language=dan_Latn/
+│   │   ├── split=dev/language=dan_Latn/
+│   │   └── split=test/language=dan_Latn/
+│   ├── corpus=coral_v3_conversation/...
+│   └── language_distribution_0.tsv
+└── preprocessed/                          # universal
+    ├── read_aloud/
+    │   ├── train/part-00000.parquet
+    │   ├── validation/part-00000.parquet
+    │   └── test/part-00000.parquet
+    └── conversation/...
+```
+
+Using separate corpus names (`coral_v3_read_aloud`, `coral_v3_conversation`) lets the fairseq2 dataloader weight them via `beta_corpus`.
+
+## Using Preprocessed Data with Baselines
+
+After preprocessing, set `use_preprocessed: true` in `configs/data/coral.yaml`:
+
+```yaml
+use_preprocessed: true
+preprocessed_dir: data/preprocessed
+```
+
+This makes `CoRalDataModule` load from Parquet via `PreprocessedCoRalDataset` instead of resampling on-the-fly from HuggingFace each epoch.
 
 ### Required Schema (PyArrow)
 
