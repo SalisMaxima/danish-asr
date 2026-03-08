@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytorch_lightning as pl
 import soundfile as sf
@@ -105,7 +106,16 @@ class PreprocessedCoRalDataset(Dataset):
         max_duration: float = 30.0,
         sample_rate: int = 16000,
     ):
-        import pyarrow.parquet as pq
+        try:
+            import pyarrow.parquet as pq
+        except ImportError as exc:
+            raise ImportError(
+                "PreprocessedCoRalDataset requires the 'pyarrow' package. "
+                "Install the 'omni' dependency group or add pyarrow explicitly, e.g.:\n"
+                "  uv sync --group omni\n"
+                "or:\n"
+                "  uv add pyarrow"
+            ) from exc
 
         parquet_dir = Path(parquet_dir)
         part_files = sorted(parquet_dir.glob("part-*.parquet"))
@@ -129,6 +139,9 @@ class PreprocessedCoRalDataset(Dataset):
         self.tokenizer = tokenizer
         self.text_normalizer = text_normalizer
         self.sample_rate = sample_rate
+        # Cache for the most-recently-used row group: (file_idx, rg_idx, table)
+        # Avoids redundant IO when consecutive samples share the same row group.
+        self._rg_cache: tuple[int, int, Any] | None = None
 
     def __len__(self) -> int:
         return len(self._indices)
@@ -136,7 +149,16 @@ class PreprocessedCoRalDataset(Dataset):
     def __getitem__(self, idx: int) -> dict:
         file_idx, rg_idx, row_idx = self._indices[idx]
         pf = self._files[file_idx]
-        table = pf.read_row_group(rg_idx)
+        if self._rg_cache is not None:
+            cached_file_idx, cached_rg_idx, cached_table = self._rg_cache
+            if cached_file_idx == file_idx and cached_rg_idx == rg_idx:
+                table = cached_table
+            else:
+                table = pf.read_row_group(rg_idx)
+                self._rg_cache = (file_idx, rg_idx, table)
+        else:
+            table = pf.read_row_group(rg_idx)
+            self._rg_cache = (file_idx, rg_idx, table)
         row = {col: table.column(col)[row_idx].as_py() for col in table.column_names}
 
         # Decode FLAC bytes to float32 waveform

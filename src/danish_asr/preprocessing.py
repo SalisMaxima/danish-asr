@@ -47,7 +47,7 @@ def _require_pyarrow():
             "pyarrow is required for Parquet output but is not installed.\n"
             "Install it with one of the following commands:\n"
             "  uv add pyarrow\n"
-            "  or install the 'omni' extra: uv sync --group omni"
+            "  or sync the 'omni' dependency group: uv sync --group omni"
         )
         raise ImportError(msg)
     return pa, pq  # type: ignore[return-value]

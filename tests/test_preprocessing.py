@@ -513,6 +513,116 @@ class TestPreprocessedCoRalDataset:
         with pytest.raises(FileNotFoundError):
             PreprocessedCoRalDataset(tmp_path / "nonexistent")
 
+    def test_missing_pyarrow_raises_import_error_with_install_hints(self, monkeypatch, tmp_path: Path):
+        """Constructing without pyarrow re-raises ImportError with actionable install hints."""
+        import builtins
+        import sys
+
+        from danish_asr.data import PreprocessedCoRalDataset
+
+        # Remove pyarrow from sys.modules so the deferred import is forced to go
+        # through __import__ rather than returning a cached module.
+        for mod in [k for k in sys.modules if "pyarrow" in k]:
+            monkeypatch.delitem(sys.modules, mod)
+
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if "pyarrow" in name:
+                raise ImportError(f"No module named '{name}'")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+
+        with pytest.raises(ImportError) as exc_info:
+            PreprocessedCoRalDataset(tmp_path)
+
+        msg = str(exc_info.value)
+        assert "uv sync --group omni" in msg
+        assert "uv add pyarrow" in msg
+
+    def test_row_group_cache_reduces_reads(self, tmp_path: Path):
+        """Cache ensures read_row_group is called once per row-group, not per sample."""
+        import io as _io
+
+        import numpy as np
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+        import soundfile as sf
+
+        from danish_asr.data import PreprocessedCoRalDataset
+
+        # Write a 4-row parquet with row_group_size=2 → 2 row groups (rows 0-1, rows 2-3)
+        rng = np.random.default_rng(0)
+
+        def make_flac() -> bytes:
+            wave = np.clip(rng.standard_normal(8000) * 0.3, -0.99, 0.99).astype(np.float32)
+            buf = _io.BytesIO()
+            sf.write(buf, wave, 16000, format="FLAC")
+            return buf.getvalue()
+
+        rows = [
+            {
+                "text": f"s{i}",
+                "audio": make_flac(),
+                "audio_samples": 8000,
+                "duration_s": 0.5,
+                "subset": "read_aloud",
+                "split": "train",
+                "speaker_id": f"spk_{i}",
+                "gender": "male",
+                "age": "25",
+                "dialect": "copenhagen",
+            }
+            for i in range(4)
+        ]
+        out_dir = tmp_path / "train"
+        out_dir.mkdir(parents=True)
+        path = out_dir / "part-00000.parquet"
+        arrays = {
+            "text": pa.array([r["text"] for r in rows], type=pa.string()),
+            "audio": pa.array([r["audio"] for r in rows], type=pa.binary()),
+            "audio_samples": pa.array([r["audio_samples"] for r in rows], type=pa.int64()),
+            "duration_s": pa.array([r["duration_s"] for r in rows], type=pa.float32()),
+            "subset": pa.array([r["subset"] for r in rows], type=pa.string()),
+            "split": pa.array([r["split"] for r in rows], type=pa.string()),
+            "speaker_id": pa.array([r["speaker_id"] for r in rows], type=pa.string()),
+            "gender": pa.array([r["gender"] for r in rows], type=pa.string()),
+            "age": pa.array([r["age"] for r in rows], type=pa.string()),
+            "dialect": pa.array([r["dialect"] for r in rows], type=pa.string()),
+        }
+        pq.write_table(pa.table(arrays, schema=UNIVERSAL_SCHEMA), path, row_group_size=2)
+
+        ds = PreprocessedCoRalDataset(out_dir, max_duration=999.0)
+        assert len(ds) == 4  # all 4 rows within max_duration
+
+        # Attach a spy to the ParquetFile instance *after* the index is built
+        # so init-time duration-column reads are not counted.
+        pf = ds._files[0]
+        original_read = pf.read_row_group
+        call_log: list[int] = []
+
+        def spy(rg_idx, **kwargs):
+            call_log.append(rg_idx)
+            return original_read(rg_idx, **kwargs)
+
+        pf.read_row_group = spy  # type: ignore[assignment]
+        # _rg_cache is already None after __init__; the spy is installed post-init
+        # so no artificial reset is needed.
+
+        # ds[0] and ds[1] are both in row group 0 → only one IO call
+        _ = ds[0]
+        _ = ds[1]
+        assert len(call_log) == 1, "Expected 1 read for 2 items from the same row group"
+
+        # ds[2] is in row group 1 → triggers a new IO call
+        _ = ds[2]
+        assert len(call_log) == 2, "Expected a new read when switching row groups"
+
+        # ds[3] is also in row group 1 → cache hit, no new IO call
+        _ = ds[3]
+        assert len(call_log) == 2, "Expected cache hit for a second item in the same row group"
+
 
 # ---------------------------------------------------------------------------
 # TestSplitMap
