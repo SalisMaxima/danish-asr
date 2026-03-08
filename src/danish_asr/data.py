@@ -165,7 +165,7 @@ class CoRalDataModule(pl.LightningDataModule):
         if self.hf_cache_dir is not None:
             kwargs["cache_dir"] = self.hf_cache_dir
 
-        dataset = load_dataset(
+        dataset = load_dataset(  # nosec B615
             self.dataset_name,
             self.subset,
             **kwargs,

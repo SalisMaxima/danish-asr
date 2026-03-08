@@ -50,17 +50,21 @@ class ASRLitModel(pl.LightningModule):
 
     def _build_processor(self):
         model_name = self.cfg.model.get("model_name", "")
+        revision = self.cfg.model.get("revision")
+        # Security note: revision can be None (latest) or pinned via config.
+        # Using standard HF checkpoints for research baselines is intentional.
+        kwargs = {"revision": revision} if revision is not None else {}
         if self.mode == "ctc":
             from transformers import Wav2Vec2CTCTokenizer, Wav2Vec2FeatureExtractor, Wav2Vec2Processor
 
-            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_name)
-            tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(model_name)
+            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_name, **kwargs)  # nosec B615
+            tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(model_name, **kwargs)  # nosec B615
             processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
             return processor, tokenizer
         from transformers import WhisperProcessor, WhisperTokenizer
 
-        processor = WhisperProcessor.from_pretrained(model_name)
-        tokenizer = WhisperTokenizer.from_pretrained(model_name)
+        processor = WhisperProcessor.from_pretrained(model_name, **kwargs)  # nosec B615
+        tokenizer = WhisperTokenizer.from_pretrained(model_name, **kwargs)  # nosec B615
         return processor, tokenizer
 
     def _enable_gradient_checkpointing(self):
