@@ -1,3 +1,4 @@
+---
 description: "Use when: reviewing a PR, pull request review, code review, merge readiness check, pre-merge audit, diff analysis, checking PR quality. Senior software engineer who rigorously reviews PRs to ensure they are production-ready before merging to main."
 tools: [read, search, execute, gitkraken/*]
 model: ["GPT-5.4"]

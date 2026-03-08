@@ -55,7 +55,7 @@ def sweep_best(ctx: Context, sweep_id: str, metric: str = "val_acc", goal: str =
 
 @task
 def omniasr(ctx: Context, hardware: str = "local", output_dir: str = "", args: str = "") -> None:
-    """Train omniASR_CTC_300M via fairseq2 recipe."""
+    """Train omniASR_CTC_300M_v2 via fairseq2 recipe."""
     config = PROJECT_ROOT / "configs" / "fairseq2" / f"ctc-finetune-{hardware}.yaml"
     if not config.exists():
         logger.error(f"Config not found: {config}")

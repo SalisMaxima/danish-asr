@@ -6,7 +6,7 @@ Configuration and rationale for training three ASR models across two hardware ta
 
 | Model | Params | Strategy | Framework | Config group |
 |---|---|---|---|---|
-| `omniASR_CTC_300M` | 325M | Full fine-tuning | fairseq2 recipe | `configs/fairseq2/` |
+| `omniASR_CTC_300M_v2` | 325M | Full fine-tuning | fairseq2 recipe | `configs/fairseq2/` |
 | Whisper Large v3 | 1.55B | LoRA (PEFT) | PyTorch Lightning + HF | `model=whisper train=whisper` |
 | Wav2Vec2-XLSR-53 | 300M | LoRA (PEFT) | PyTorch Lightning + HF | `model=wav2vec2 train=wav2vec2` |
 

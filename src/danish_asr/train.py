@@ -47,6 +47,8 @@ class ASRLitModel(pl.LightningModule):
         # Validation accumulators
         self._val_predictions: list[str] = []
         self._val_references: list[str] = []
+        self._test_predictions: list[str] = []
+        self._test_references: list[str] = []
 
     def _build_processor(self):
         model_name = self.cfg.model.get("model_name", "")
@@ -76,6 +78,42 @@ class ASRLitModel(pl.LightningModule):
     def forward(self, **kwargs):
         return self.model(**kwargs)
 
+    def _predict_batch(self, batch: dict) -> tuple[torch.Tensor, list[str]]:
+        if self.mode == "ctc":
+            outputs = self.model(
+                input_values=batch["input_values"],
+                attention_mask=batch.get("attention_mask"),
+                labels=batch["labels"],
+            )
+            logits = outputs["logits"]
+            pred_ids = torch.argmax(logits, dim=-1)
+            predictions = self.processor.batch_decode(pred_ids)
+            return outputs["loss"], predictions
+
+        outputs = self.model(
+            input_features=batch["input_features"],
+            labels=batch["labels"],
+        )
+        inner = self.model.model if hasattr(self.model, "model") else self.model
+        generated_ids = inner.generate(
+            batch["input_features"],
+            language=self.cfg.model.get("language", "da"),
+            task="transcribe",
+            max_new_tokens=225,
+        )
+        predictions = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
+        return outputs["loss"], predictions
+
+    def _finalize_epoch_metrics(self, predictions: list[str], references: list[str], prefix: str) -> None:
+        if not predictions:
+            return
+
+        wer = compute_wer(predictions, references)
+        cer = compute_cer(predictions, references)
+        self.log(f"{prefix}_wer", wer, prog_bar=(prefix == "val"))
+        self.log(f"{prefix}_cer", cer, prog_bar=(prefix == "val"))
+        logger.info(f"{prefix.upper()} WER: {wer:.4f}, CER: {cer:.4f}")
+
     def training_step(self, batch, batch_idx: int):
         if self.mode == "ctc":
             outputs = self.model(
@@ -93,50 +131,30 @@ class ASRLitModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx: int):
-        if self.mode == "ctc":
-            outputs = self.model(
-                input_values=batch["input_values"],
-                attention_mask=batch.get("attention_mask"),
-                labels=batch["labels"],
-            )
-            # Decode CTC: argmax over logits
-            logits = outputs["logits"]
-            pred_ids = torch.argmax(logits, dim=-1)
-            predictions = self.processor.batch_decode(pred_ids)
-        else:
-            outputs = self.model(
-                input_features=batch["input_features"],
-                labels=batch["labels"],
-            )
-            # Decode seq2seq: generate
-            inner = self.model.model if hasattr(self.model, "model") else self.model
-            generated_ids = inner.generate(
-                batch["input_features"],
-                language="da",
-                task="transcribe",
-                max_new_tokens=225,
-            )
-            predictions = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
-
-        loss = outputs["loss"]
+        loss, predictions = self._predict_batch(batch)
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
         self._val_predictions.extend(predictions)
         self._val_references.extend(batch["text"])
         return loss
 
+    def test_step(self, batch, batch_idx: int):
+        loss, predictions = self._predict_batch(batch)
+        self.log("test_loss", loss, on_step=False, on_epoch=True)
+
+        self._test_predictions.extend(predictions)
+        self._test_references.extend(batch["text"])
+        return loss
+
     def on_validation_epoch_end(self):
-        if not self._val_predictions:
-            return
-
-        wer = compute_wer(self._val_predictions, self._val_references)
-        cer = compute_cer(self._val_predictions, self._val_references)
-        self.log("val_wer", wer, prog_bar=True)
-        self.log("val_cer", cer, prog_bar=True)
-        logger.info(f"Validation WER: {wer:.4f}, CER: {cer:.4f}")
-
+        self._finalize_epoch_metrics(self._val_predictions, self._val_references, "val")
         self._val_predictions.clear()
         self._val_references.clear()
+
+    def on_test_epoch_end(self):
+        self._finalize_epoch_metrics(self._test_predictions, self._test_references, "test")
+        self._test_predictions.clear()
+        self._test_references.clear()
 
     def configure_optimizers(self):
         opt_cfg = self.cfg.train.optimizer
