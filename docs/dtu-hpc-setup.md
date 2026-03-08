@@ -78,9 +78,11 @@ uv add "omnilingual-asr[data]"
 # Check available CUDA versions
 module avail cuda
 
-# Load CUDA (A100 requires >=11.0)
-module load cuda/12.1  # or latest available
+# Load a standard CUDA module (A100 requires >=11.0)
+module load cuda/11.7
 ```
+
+For the standard DTU module workflow, prefer `cuda/11.7` in examples because it is the documented, known-good module path. CUDA 12.1 is still usable on DTU HPC, but that should be treated as a **manual environment setup** path where you install a matching PyTorch/fairseq2 stack inside your own environment instead of relying on the module examples below.
 
 ## Job Scripts
 
@@ -100,7 +102,7 @@ module load cuda/12.1  # or latest available
 #BSUB -o logs/train_%J.out
 #BSUB -e logs/train_%J.err
 
-module load cuda/12.1
+module load cuda/11.7
 
 # Activate environment
 source ~/miniconda3/bin/activate danish_asr
@@ -133,7 +135,7 @@ Submit: `bsub < scripts/hpc/train_single_gpu.sh`
 #BSUB -o logs/train_%J.out
 #BSUB -e logs/train_%J.err
 
-module load cuda/12.1
+module load cuda/11.7
 
 source ~/miniconda3/bin/activate danish_asr
 
@@ -188,7 +190,7 @@ echo "Conversion complete."
 #BSUB -o logs/eval_%J.out
 #BSUB -e logs/eval_%J.err
 
-module load cuda/12.1
+module load cuda/11.7
 source ~/miniconda3/bin/activate danish_asr
 
 CHECKPOINT_DIR="$1"  # pass as argument
@@ -367,7 +369,7 @@ DTU HPC provides three dedicated shared interactive GPU nodes. They are always o
 |----------|---------------------------------|-----------|
 | `voltash`  | 1 node, 2× V100 PCIe           | 16 GB each |
 | `sxm2sh`   | 1 node, 4× V100-SXM2 NVLink   | 32 GB each |
-| `a100sh`   | 1 node, 2× A100 PCIe NVLink   | 40 GB each |
+| `a100sh`   | 1 node, 2× A100 PCIe          | 40 GB each |
 
 These nodes are for **development, profiling, and short test jobs only** — not for full training runs. Walltime is not enforced but courtesy applies.
 
@@ -465,7 +467,7 @@ hostname   # e.g. gpunode042
 
 ```bash
 # On the GPU compute node:
-module load cuda/12.1
+module load cuda/11.7
 source ~/danish_asr/.venv/bin/activate    # or conda activate danish_asr
 
 # Start Jupyter — bind to the node's hostname, pick a port (40000-49999)
@@ -848,12 +850,14 @@ wandb sync runs/<run-dir>
 ### Port forwarding shorthand for multiple services
 
 ```bash
-# Forward Jupyter (40000) + TensorBoard (6006) + W&B UI (8080) in one command:
+# Forward Jupyter (40000) + TensorBoard (6006) in one command:
 ssh -N \
     -L 40000:COMPUTE_NODE:40000 \
     -L 6006:COMPUTE_NODE:6006 \
     USERNAME@login.hpc.dtu.dk
 ```
+
+W&B itself does not need a local tunnel here because it syncs outbound over HTTPS. Only add an `8080` forward if you are explicitly running a local service on that port.
 
 ---
 

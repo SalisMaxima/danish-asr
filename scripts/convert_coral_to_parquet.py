@@ -28,7 +28,7 @@ SUBSETS = {
     "read_aloud": "coral_v3_read_aloud",
     "conversation": "coral_v3_conversation",
 }
-SPLIT_MAP = {"train": "train", "val": "dev", "test": "test"}
+SPLIT_MAP = {"train": "train", "validation": "dev", "test": "test"}
 ROW_GROUP_SIZE = 100
 TARGET_SR = 16000
 LANGUAGE = "dan_Latn"

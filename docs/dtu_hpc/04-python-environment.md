@@ -27,6 +27,8 @@ module load cuda/11.7
 python train.py
 ```
 
+If you need CUDA 12.1 specifically, use a manual environment setup rather than assuming a standard DTU module example. In practice that means building or installing a matching PyTorch and fairseq2 stack inside your own conda or venv environment and validating it interactively before submitting jobs.
+
 ### Known modules
 
 | Module | Notes |
@@ -40,6 +42,8 @@ python train.py
 | `gcc/12.2.0-binutils-2.39` | GNU compiler |
 
 > Check the live list on the cluster: `module avail 2>&1 | grep -iE "cuda|torch|python"`
+
+CUDA 12.1 may still be workable on DTU HPC through manual environment provisioning, but it is not part of the standard documented module guidance used in this project.
 
 No PyTorch, cuDNN, or NCCL system modules are publicly documented — install these inside your own conda/venv environment.
 
@@ -126,11 +130,14 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 # For cuda/11.7:
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
 
+# For manual cuda/12.1 environments:
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
 # Verify:
 python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 ```
 
-**Key constraint:** A100 GPUs require CUDA 11.0 or newer. Always use `module load cuda/11.6` or higher when targeting `gpua100`.
+**Key constraint:** A100 GPUs require CUDA 11.0 or newer. For module-based jobs in this repo, use `module load cuda/11.7`. If you build a manual CUDA 12.1 environment, make sure your PyTorch and fairseq2 wheels match that toolchain.
 
 ---
 
@@ -150,6 +157,8 @@ pip install "omnilingual-asr[data]"
 ```
 
 Adjust `cu117` to match your loaded CUDA version (e.g., `cu116` for `cuda/11.6`).
+
+For a manual CUDA 12.1 environment, use the corresponding fairseq2 and PyTorch wheels for `cu121` instead of mixing them with the `cuda/11.7` module examples.
 
 Do this **once** in an interactive session. Batch jobs just activate the environment.
 

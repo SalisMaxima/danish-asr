@@ -13,6 +13,7 @@ import pyarrow.parquet as pq
 
 from scripts.convert_coral_to_parquet import (
     SCHEMA,
+    SPLIT_MAP,
     process_audio,
     write_parquet,
     write_stats_tsv,
@@ -147,3 +148,7 @@ class TestNormalizeText:
         result = normalize_text("Hej Verden")
         assert isinstance(result, str)
         assert len(result) > 0
+
+
+def test_split_map_uses_validation_for_hf_dataset():
+    assert SPLIT_MAP == {"train": "train", "validation": "dev", "test": "test"}
