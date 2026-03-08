@@ -62,11 +62,15 @@ class ASRLitModel(pl.LightningModule):
             from transformers import Wav2Vec2CTCTokenizer, Wav2Vec2FeatureExtractor, Wav2Vec2Processor
 
             feature_extractor_name = self.cfg.model.get("feature_extractor_name", model_name)
-            vocab_path = Path(self.cfg.model.get("vocab_path", ""))
+            raw_vocab_path = self.cfg.model.get("vocab_path")
+            if not raw_vocab_path or not str(raw_vocab_path).strip():
+                msg = "cfg.model.vocab_path must be set to a valid vocab JSON file for Wav2Vec2 CTC."
+                raise ValueError(msg)
+            vocab_path = Path(str(raw_vocab_path))
             if not vocab_path.is_absolute():
                 vocab_path = _PROJECT_ROOT / vocab_path
-            if not vocab_path.exists():
-                msg = f"Wav2Vec2 vocab file not found: {vocab_path}"
+            if not vocab_path.is_file():
+                msg = f"Wav2Vec2 vocab file not found or is not a file: {vocab_path}"
                 raise FileNotFoundError(msg)
 
             feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(feature_extractor_name, **kwargs)  # nosec B615

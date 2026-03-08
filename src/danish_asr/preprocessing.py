@@ -20,12 +20,38 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import pyarrow as pa
-import pyarrow.parquet as pq
 import soundfile as sf
 import torch
 import torchaudio
 from loguru import logger
+
+# ---------------------------------------------------------------------------
+# Optional pyarrow import (only required for Parquet output)
+# ---------------------------------------------------------------------------
+
+try:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    _PYARROW_AVAILABLE = True
+except ImportError:
+    pa = None  # type: ignore[assignment]
+    pq = None  # type: ignore[assignment]
+    _PYARROW_AVAILABLE = False
+
+
+def _require_pyarrow():
+    """Return (pa, pq) or raise a clear ImportError if pyarrow is missing."""
+    if not _PYARROW_AVAILABLE:
+        msg = (
+            "pyarrow is required for Parquet output but is not installed.\n"
+            "Install it with one of the following commands:\n"
+            "  uv add pyarrow\n"
+            "  or install the 'omni' extra: uv sync --group omni"
+        )
+        raise ImportError(msg)
+    return pa, pq  # type: ignore[return-value]
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -44,34 +70,37 @@ MAX_SKIP_RATE = 0.05
 METADATA_FIELDS = ("speaker_id", "gender", "age", "dialect")
 
 # ---------------------------------------------------------------------------
-# Schemas
+# Schemas (only defined when pyarrow is available; None otherwise)
 # ---------------------------------------------------------------------------
 
-FAIRSEQ2_SCHEMA = pa.schema(
-    [
-        ("text", pa.string()),
-        ("audio_bytes", pa.list_(pa.int8())),
-        ("audio_size", pa.int64()),
-        ("corpus", pa.dictionary(pa.int32(), pa.string())),
-        ("split", pa.dictionary(pa.int32(), pa.string())),
-        ("language", pa.dictionary(pa.int32(), pa.string())),
-    ]
-)
-
-UNIVERSAL_SCHEMA = pa.schema(
-    [
-        ("text", pa.string()),
-        ("audio", pa.binary()),
-        ("audio_samples", pa.int64()),
-        ("duration_s", pa.float32()),
-        ("subset", pa.string()),
-        ("split", pa.string()),
-        ("speaker_id", pa.string()),
-        ("gender", pa.string()),
-        ("age", pa.string()),
-        ("dialect", pa.string()),
-    ]
-)
+if _PYARROW_AVAILABLE:
+    FAIRSEQ2_SCHEMA = pa.schema(  # type: ignore[union-attr]
+        [
+            ("text", pa.string()),  # type: ignore[union-attr]
+            ("audio_bytes", pa.list_(pa.int8())),  # type: ignore[union-attr]
+            ("audio_size", pa.int64()),  # type: ignore[union-attr]
+            ("corpus", pa.dictionary(pa.int32(), pa.string())),  # type: ignore[union-attr]
+            ("split", pa.dictionary(pa.int32(), pa.string())),  # type: ignore[union-attr]
+            ("language", pa.dictionary(pa.int32(), pa.string())),  # type: ignore[union-attr]
+        ]
+    )
+    UNIVERSAL_SCHEMA = pa.schema(  # type: ignore[union-attr]
+        [
+            ("text", pa.string()),  # type: ignore[union-attr]
+            ("audio", pa.binary()),  # type: ignore[union-attr]
+            ("audio_samples", pa.int64()),  # type: ignore[union-attr]
+            ("duration_s", pa.float32()),  # type: ignore[union-attr]
+            ("subset", pa.string()),  # type: ignore[union-attr]
+            ("split", pa.string()),  # type: ignore[union-attr]
+            ("speaker_id", pa.string()),  # type: ignore[union-attr]
+            ("gender", pa.string()),  # type: ignore[union-attr]
+            ("age", pa.string()),  # type: ignore[union-attr]
+            ("dialect", pa.string()),  # type: ignore[union-attr]
+        ]
+    )
+else:
+    FAIRSEQ2_SCHEMA = None  # type: ignore[assignment]
+    UNIVERSAL_SCHEMA = None  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
 # Audio processing
@@ -130,6 +159,7 @@ def normalize_text_fairseq2(text: str) -> str:
 
 def write_fairseq2_parquet(rows: list[dict], path: Path) -> None:
     """Write rows to a fairseq2-format Parquet file."""
+    pa, pq = _require_pyarrow()
     path.parent.mkdir(parents=True, exist_ok=True)
     arrays = {
         "text": pa.array([r["text"] for r in rows], type=pa.string()),
@@ -145,6 +175,7 @@ def write_fairseq2_parquet(rows: list[dict], path: Path) -> None:
 
 def write_universal_parquet(rows: list[dict], path: Path) -> None:
     """Write rows to a universal-format Parquet file."""
+    pa, pq = _require_pyarrow()
     path.parent.mkdir(parents=True, exist_ok=True)
     arrays = {
         "text": pa.array([r["text"] for r in rows], type=pa.string()),
@@ -330,7 +361,7 @@ def convert_split(
 def write_stats_tsv(stats: list[dict], path: Path) -> None:
     """Write language distribution stats TSV."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with Path.open(path, "w", newline="") as f:
+    with path.open("w", newline="") as f:
         writer = csv.DictWriter(
             f,
             fieldnames=["corpus", "language", "split", "num_samples", "total_audio_seconds"],

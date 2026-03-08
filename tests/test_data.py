@@ -6,6 +6,7 @@ import io
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
 import torch
 
 from danish_asr.data import CoRalDataModule, CoRalDataset, collate_fn
@@ -263,6 +264,9 @@ class TestWhisperProcessor:
         batch = collate_fn(items)
 
         assert batch["normalized_text"] == ["hej", "verden"]
+
+
+pyarrow = pytest.importorskip("pyarrow", reason="pyarrow not installed; skipping preprocessed-dataset tests")
 
 
 class TestPreprocessedCollateFn:

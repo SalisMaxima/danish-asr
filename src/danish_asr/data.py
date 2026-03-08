@@ -112,11 +112,18 @@ class PreprocessedCoRalDataset(Dataset):
         if not part_files:
             raise FileNotFoundError(f"No part-*.parquet files found in {parquet_dir}")
 
-        table = pq.read_table(part_files[0] if len(part_files) == 1 else parquet_dir)
-        # Filter by max_duration
-        mask = table.column("duration_s").to_pylist()
-        keep = [i for i, d in enumerate(mask) if d <= max_duration]
-        self.table = table.take(keep)
+        # Open files lazily and build a (file_idx, row_group_idx, row_idx) index
+        # by reading only the lightweight duration_s column — avoids loading all
+        # audio bytes into memory (~710 h of FLAC would OOM most machines).
+        self._files: list[pq.ParquetFile] = [pq.ParquetFile(p) for p in part_files]
+        self._indices: list[tuple[int, int, int]] = []
+        for file_idx, pf in enumerate(self._files):
+            for rg_idx in range(pf.num_row_groups):
+                rg = pf.read_row_group(rg_idx, columns=["duration_s"])
+                durations = rg.column("duration_s").to_pylist()
+                for row_idx, d in enumerate(durations):
+                    if d is not None and d <= max_duration:
+                        self._indices.append((file_idx, rg_idx, row_idx))
 
         self.processor = processor
         self.tokenizer = tokenizer
@@ -124,10 +131,13 @@ class PreprocessedCoRalDataset(Dataset):
         self.sample_rate = sample_rate
 
     def __len__(self) -> int:
-        return len(self.table)
+        return len(self._indices)
 
     def __getitem__(self, idx: int) -> dict:
-        row = {col: self.table.column(col)[idx].as_py() for col in self.table.column_names}
+        file_idx, rg_idx, row_idx = self._indices[idx]
+        pf = self._files[file_idx]
+        table = pf.read_row_group(rg_idx)
+        row = {col: table.column(col)[row_idx].as_py() for col in table.column_names}
 
         # Decode FLAC bytes to float32 waveform
         audio_bytes = row["audio"]
