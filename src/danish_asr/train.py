@@ -18,7 +18,8 @@ from pytorch_lightning.loggers import WandbLogger
 
 from danish_asr.metrics import compute_cer, compute_wer
 from danish_asr.model import build_model
-from danish_asr.utils import get_device
+from danish_asr.text import normalize_ctc_text
+from danish_asr.utils import configure_project_cache_environment, get_device
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _CONFIG_PATH = str(_PROJECT_ROOT / "configs")
@@ -33,6 +34,7 @@ class ASRLitModel(pl.LightningModule):
     def __init__(self, cfg: DictConfig):
         super().__init__()
         self.cfg = cfg
+        configure_project_cache_environment()
         self.model = build_model(cfg.model)
         self.mode = "ctc" if cfg.model.name == "wav2vec2_asr" else "seq2seq"
         self.save_hyperparameters(ignore=["model"])
@@ -59,8 +61,22 @@ class ASRLitModel(pl.LightningModule):
         if self.mode == "ctc":
             from transformers import Wav2Vec2CTCTokenizer, Wav2Vec2FeatureExtractor, Wav2Vec2Processor
 
-            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_name, **kwargs)  # nosec B615
-            tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(model_name, **kwargs)  # nosec B615
+            feature_extractor_name = self.cfg.model.get("feature_extractor_name", model_name)
+            vocab_path = Path(self.cfg.model.get("vocab_path", ""))
+            if not vocab_path.is_absolute():
+                vocab_path = _PROJECT_ROOT / vocab_path
+            if not vocab_path.exists():
+                msg = f"Wav2Vec2 vocab file not found: {vocab_path}"
+                raise FileNotFoundError(msg)
+
+            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(feature_extractor_name, **kwargs)  # nosec B615
+            tokenizer = Wav2Vec2CTCTokenizer(
+                str(vocab_path),
+                unk_token=self.cfg.model.get("unk_token", "[UNK]"),
+                pad_token=self.cfg.model.get("pad_token", "[PAD]"),
+                word_delimiter_token=self.cfg.model.get("word_delimiter_token", "|"),
+                do_lower_case=self.cfg.model.get("do_lower_case", True),
+            )
             processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
             return processor, tokenizer
         from transformers import WhisperProcessor, WhisperTokenizer
@@ -135,7 +151,7 @@ class ASRLitModel(pl.LightningModule):
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
         self._val_predictions.extend(predictions)
-        self._val_references.extend(batch["text"])
+        self._val_references.extend(batch.get("normalized_text", batch["text"]))
         return loss
 
     def test_step(self, batch, batch_idx: int):
@@ -143,7 +159,7 @@ class ASRLitModel(pl.LightningModule):
         self.log("test_loss", loss, on_step=False, on_epoch=True)
 
         self._test_predictions.extend(predictions)
-        self._test_references.extend(batch["text"])
+        self._test_references.extend(batch.get("normalized_text", batch["text"]))
         return loss
 
     def on_validation_epoch_end(self):
@@ -230,7 +246,12 @@ def train_model(cfg: DictConfig, output_dir: str, wandb_logger: WandbLogger | No
     from danish_asr.data import CoRalDataModule
 
     datamodule = CoRalDataModule(cfg.data)
-    datamodule.set_processor_and_tokenizer(lit_model.processor, lit_model.tokenizer)
+    text_normalizer = normalize_ctc_text if lit_model.mode == "ctc" else None
+    datamodule.set_processor_and_tokenizer(
+        lit_model.processor,
+        lit_model.tokenizer,
+        text_normalizer=text_normalizer,
+    )
 
     # Apply hardware overrides to datamodule
     if hw_cfg.get("batch_size") is not None:
@@ -317,6 +338,7 @@ def train_model(cfg: DictConfig, output_dir: str, wandb_logger: WandbLogger | No
 @hydra.main(config_path=_CONFIG_PATH, config_name="config", version_base="1.3")
 def train(cfg: DictConfig) -> None:
     """Train an ASR model (Hydra entry point)."""
+    configure_project_cache_environment()
     output_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
     configure_logging(output_dir)
     device = get_device()

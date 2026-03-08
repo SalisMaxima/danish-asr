@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import io
+from collections.abc import Callable
+from pathlib import Path
+
 import pytorch_lightning as pl
+import soundfile as sf
 import torch
 import torchaudio
 from loguru import logger
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader, Dataset
+
+from danish_asr.utils import configure_project_cache_environment, get_project_hf_cache_dir, resolve_project_path
 
 
 class CoRalDataset(Dataset):
@@ -22,12 +29,14 @@ class CoRalDataset(Dataset):
         hf_dataset,
         processor=None,
         tokenizer=None,
+        text_normalizer: Callable[[str], str] | None = None,
         target_sample_rate: int = 16000,
         max_duration: float = 30.0,
     ):
         self.dataset = hf_dataset
         self.processor = processor
         self.tokenizer = tokenizer
+        self.text_normalizer = text_normalizer
         self.target_sample_rate = target_sample_rate
         self.max_samples = int(max_duration * target_sample_rate)
 
@@ -51,8 +60,11 @@ class CoRalDataset(Dataset):
             waveform = waveform[..., : self.max_samples]
 
         text = item.get("text", item.get("sentence", ""))
+        normalized_text = self.text_normalizer(text) if self.text_normalizer is not None else text
 
         result = {"audio": waveform, "text": text}
+        if self.text_normalizer is not None:
+            result["normalized_text"] = normalized_text
 
         # If processor is available, create model inputs
         if self.processor is not None:
@@ -71,7 +83,83 @@ class CoRalDataset(Dataset):
 
         # If tokenizer is available, tokenize labels
         if self.tokenizer is not None:
-            labels = self.tokenizer(text, return_tensors="pt", padding=False)
+            labels = self.tokenizer(normalized_text, return_tensors="pt", padding=False)
+            result["labels"] = labels.input_ids.squeeze(0)
+
+        return result
+
+
+class PreprocessedCoRalDataset(Dataset):
+    """CoRal dataset from preprocessed Parquet (no on-the-fly resampling).
+
+    Reads universal-format Parquet files produced by ``danish_asr.preprocessing``.
+    Audio is stored as FLAC bytes and decoded to float32 on access.
+    """
+
+    def __init__(
+        self,
+        parquet_dir: str | Path,
+        processor=None,
+        tokenizer=None,
+        text_normalizer: Callable[[str], str] | None = None,
+        max_duration: float = 30.0,
+        sample_rate: int = 16000,
+    ):
+        import pyarrow.parquet as pq
+
+        parquet_dir = Path(parquet_dir)
+        part_files = sorted(parquet_dir.glob("part-*.parquet"))
+        if not part_files:
+            raise FileNotFoundError(f"No part-*.parquet files found in {parquet_dir}")
+
+        table = pq.read_table(part_files[0] if len(part_files) == 1 else parquet_dir)
+        # Filter by max_duration
+        mask = table.column("duration_s").to_pylist()
+        keep = [i for i, d in enumerate(mask) if d <= max_duration]
+        self.table = table.take(keep)
+
+        self.processor = processor
+        self.tokenizer = tokenizer
+        self.text_normalizer = text_normalizer
+        self.sample_rate = sample_rate
+
+    def __len__(self) -> int:
+        return len(self.table)
+
+    def __getitem__(self, idx: int) -> dict:
+        row = {col: self.table.column(col)[idx].as_py() for col in self.table.column_names}
+
+        # Decode FLAC bytes to float32 waveform
+        audio_bytes = row["audio"]
+        decoded, decoded_sr = sf.read(io.BytesIO(audio_bytes), dtype="float32")
+        waveform = torch.from_numpy(decoded)
+
+        if decoded_sr != self.sample_rate:
+            waveform = torchaudio.functional.resample(waveform, decoded_sr, self.sample_rate)
+
+        text = row["text"]
+        normalized_text = self.text_normalizer(text) if self.text_normalizer is not None else text
+
+        result = {"audio": waveform, "text": text}
+        if self.text_normalizer is not None:
+            result["normalized_text"] = normalized_text
+
+        if self.processor is not None:
+            inputs = self.processor(
+                waveform.numpy(),
+                sampling_rate=self.sample_rate,
+                return_tensors="pt",
+                padding=False,
+            )
+            if hasattr(inputs, "input_features") and inputs.input_features is not None:
+                result["input_features"] = inputs.input_features.squeeze(0)
+            elif hasattr(inputs, "input_values") and inputs.input_values is not None:
+                result["input_values"] = inputs.input_values.squeeze(0)
+            if hasattr(inputs, "attention_mask") and inputs.attention_mask is not None:
+                result["attention_mask"] = inputs.attention_mask.squeeze(0)
+
+        if self.tokenizer is not None:
+            labels = self.tokenizer(normalized_text, return_tensors="pt", padding=False)
             result["labels"] = labels.input_ids.squeeze(0)
 
         return result
@@ -107,6 +195,8 @@ def collate_fn(batch: list[dict]) -> dict:
         "audio_lengths": torch.tensor(audio_lengths),
         "text": [item["text"] for item in batch],
     }
+    if "normalized_text" in batch[0]:
+        result["normalized_text"] = [item["normalized_text"] for item in batch]
 
     if "input_values" in batch[0]:
         input_values = [item["input_values"] for item in batch]
@@ -129,6 +219,7 @@ class CoRalDataModule(pl.LightningDataModule):
 
     def __init__(self, cfg: DictConfig):
         super().__init__()
+        configure_project_cache_environment()
         self.cfg = cfg
         self.batch_size = cfg.get("batch_size", 8)
         self.num_workers = cfg.get("num_workers", 4)
@@ -137,33 +228,74 @@ class CoRalDataModule(pl.LightningDataModule):
         self.subset = cfg.get("subset", "read_aloud")
         self.dataset_revision = cfg.get("dataset_revision", None)
         self.dataset_name = cfg.get("dataset_name", "CoRal-project/coral-v3")
-        self.hf_cache_dir = cfg.get("hf_cache_dir", None)
+        hf_cache_dir = cfg.get("hf_cache_dir")
+        self.hf_cache_dir = str(resolve_project_path(hf_cache_dir)) if hf_cache_dir else str(get_project_hf_cache_dir())
         self.processor = None
         self.tokenizer = None
+        self.text_normalizer: Callable[[str], str] | None = None
         self.train_dataset: CoRalDataset | None = None
         self.val_dataset: CoRalDataset | None = None
         self.test_dataset: CoRalDataset | None = None
 
-    def set_processor_and_tokenizer(self, processor, tokenizer=None) -> None:
+    def set_processor_and_tokenizer(self, processor, tokenizer=None, text_normalizer=None) -> None:
         """Set the feature processor and optional tokenizer.
 
         Must be called before setup() for the processor to be used.
         """
         self.processor = processor
         self.tokenizer = tokenizer
+        self.text_normalizer = text_normalizer
 
     def setup(self, stage: str | None = None) -> None:
         """Load and prepare CoRal dataset splits."""
+        use_preprocessed = self.cfg.get("use_preprocessed", False)
+
+        if use_preprocessed:
+            self._setup_preprocessed(stage)
+        else:
+            self._setup_hf(stage)
+
+        logger.info(
+            f"Dataset loaded: train={len(self.train_dataset) if self.train_dataset else 0}, "
+            f"val={len(self.val_dataset) if self.val_dataset else 0}, "
+            f"test={len(self.test_dataset) if self.test_dataset else 0}"
+        )
+
+    def _setup_preprocessed(self, stage: str | None) -> None:
+        """Load from preprocessed Parquet files."""
+        preprocessed_dir = resolve_project_path(self.cfg.get("preprocessed_dir", "data/preprocessed"))
+        subset_dir = preprocessed_dir / self.subset
+        logger.info(f"Loading preprocessed CoRal dataset from {subset_dir}...")
+
+        def _make_ds(split: str) -> PreprocessedCoRalDataset:
+            return PreprocessedCoRalDataset(
+                parquet_dir=subset_dir / split,
+                processor=self.processor,
+                tokenizer=self.tokenizer,
+                text_normalizer=self.text_normalizer,
+                max_duration=self.max_duration,
+                sample_rate=self.target_sample_rate,
+            )
+
+        if stage == "fit" or stage is None:
+            self.train_dataset = _make_ds("train")
+            self.val_dataset = _make_ds("validation")
+
+        if stage == "test" or stage is None:
+            self.test_dataset = _make_ds("test")
+
+    def _setup_hf(self, stage: str | None) -> None:
+        """Load from HuggingFace (original on-the-fly resampling)."""
         from datasets import load_dataset
 
         logger.info(f"Loading CoRal dataset (subset={self.subset})...")
+        logger.info(f"Using Hugging Face cache dir: {self.hf_cache_dir}")
 
         # Build kwargs for load_dataset
         kwargs: dict[str, object] = {}
         if self.dataset_revision is not None:
             kwargs["revision"] = self.dataset_revision
-        if self.hf_cache_dir is not None:
-            kwargs["cache_dir"] = self.hf_cache_dir
+        kwargs["cache_dir"] = self.hf_cache_dir
 
         dataset = load_dataset(  # nosec B615
             self.dataset_name,
@@ -176,6 +308,7 @@ class CoRalDataModule(pl.LightningDataModule):
                 dataset["train"],
                 processor=self.processor,
                 tokenizer=self.tokenizer,
+                text_normalizer=self.text_normalizer,
                 target_sample_rate=self.target_sample_rate,
                 max_duration=self.max_duration,
             )
@@ -183,6 +316,7 @@ class CoRalDataModule(pl.LightningDataModule):
                 dataset["validation"],
                 processor=self.processor,
                 tokenizer=self.tokenizer,
+                text_normalizer=self.text_normalizer,
                 target_sample_rate=self.target_sample_rate,
                 max_duration=self.max_duration,
             )
@@ -192,15 +326,10 @@ class CoRalDataModule(pl.LightningDataModule):
                 dataset["test"],
                 processor=self.processor,
                 tokenizer=self.tokenizer,
+                text_normalizer=self.text_normalizer,
                 target_sample_rate=self.target_sample_rate,
                 max_duration=self.max_duration,
             )
-
-        logger.info(
-            f"Dataset loaded: train={len(self.train_dataset) if self.train_dataset else 0}, "
-            f"val={len(self.val_dataset) if self.val_dataset else 0}, "
-            f"test={len(self.test_dataset) if self.test_dataset else 0}"
-        )
 
     def train_dataloader(self) -> DataLoader:
         return DataLoader(

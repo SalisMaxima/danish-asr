@@ -1,8 +1,15 @@
 # Wav2Vec2 XLSR-53 with LoRA fine-tuning
 name: wav2vec2_asr
 model_name: facebook/wav2vec2-large-xlsr-53
+feature_extractor_name: facebook/wav2vec2-large-xlsr-53
+vocab_path: configs/vocab/coral_wav2vec2_ctc.json
 revision: null  # Use null for latest, or specify a commit SHA/tag for pinned revision
-num_labels: 32
+num_labels: 72
+pad_token_id: 0
+pad_token: "[PAD]"
+unk_token: "[UNK]"
+word_delimiter_token: "|"
+do_lower_case: true
 use_lora: true
 lora_r: 8
 lora_alpha: 16

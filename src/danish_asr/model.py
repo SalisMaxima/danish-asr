@@ -54,6 +54,7 @@ class Wav2Vec2ASR(nn.Module):
         model_name: str = "facebook/wav2vec2-large-xlsr-53",
         revision: str | None = None,
         num_labels: int = 32,
+        pad_token_id: int = 0,
         use_lora: bool = True,
         lora_r: int = 8,
         lora_alpha: int = 16,
@@ -67,7 +68,8 @@ class Wav2Vec2ASR(nn.Module):
         # Build kwargs for from_pretrained
         kwargs = {
             "ctc_loss_reduction": "mean",
-            "pad_token_id": 0,
+            "pad_token_id": pad_token_id,
+            "vocab_size": num_labels,
         }
         if revision is not None:
             kwargs["revision"] = revision
@@ -112,6 +114,7 @@ class Wav2Vec2ASR(nn.Module):
             model_name=cfg.get("model_name", "facebook/wav2vec2-large-xlsr-53"),
             revision=cfg.get("revision", "main"),
             num_labels=cfg.get("num_labels", 32),
+            pad_token_id=cfg.get("pad_token_id", 0),
             use_lora=cfg.get("use_lora", True),
             lora_r=cfg.get("lora_r", 8),
             lora_alpha=cfg.get("lora_alpha", 16),
