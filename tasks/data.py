@@ -32,10 +32,10 @@ def download(ctx: Context, subset: str = "read_aloud") -> None:
     ctx.run(
         _hf_env_prefix() + f'uv run python -c "'
         f"from datasets import load_dataset; "
-        f"ds = load_dataset('CoRal-project/coral-v3', '{subset}', trust_remote_code=True, "
+        f"ds = load_dataset('CoRal-project/coral-v3', '{subset}', "
         f"cache_dir='{HF_CACHE_DIR}'); "
-        f"print(f'Downloaded: {{{{len(ds)}}}} splits'); "
-        f"[print(f'  {{{{k}}}}: {{{{len(v)}}}} samples') for k, v in ds.items()]"
+        f"print('Downloaded:', len(ds), 'splits'); "
+        f"[print(' ', k + ':', len(v), 'samples') for k, v in ds.items()]"
         f'"',
         echo=True,
         pty=not WINDOWS,
@@ -54,18 +54,16 @@ def stats(ctx: Context, subset: str = "read_aloud") -> None:
     ctx.run(
         _hf_env_prefix() + f'uv run python -c "'
         f"from datasets import load_dataset; "
-        f"ds = load_dataset('CoRal-project/coral-v3', '{subset}', trust_remote_code=True, "
+        f"ds = load_dataset('CoRal-project/coral-v3', '{subset}', "
         f"cache_dir='{HF_CACHE_DIR}'); "
         f"print('CoRal Dataset Statistics'); "
         f"print('=' * 60); "
         f"for split, data in ds.items(): "
-        f"    print(f'  {{{{split}}}}: {{{{len(data)}}}} samples'); "
-        f"    if len(data) > 0: "
-        f"        example = data[0]; "
-        f'        sr = example["audio"]["sampling_rate"]; '
-        f'        dur = len(example["audio"]["array"]) / sr; '
-        f"        print(f'    Sample rate: {{{{sr}}}} Hz'); "
-        f"        print(f'    Example duration: {{{{dur:.1f}}}}s'); "
+        f"    print(' ', split + ':', len(data), 'samples'); "
+        f"    ex = data[0] if len(data) > 0 else None; "
+        f'    sr = ex["audio"]["sampling_rate"] if ex else 0; '
+        f'    dur = len(ex["audio"]["array"]) / sr if ex else 0; '
+        f"    print(f'    Sample rate: {{sr}} Hz, example duration: {{dur:.1f}}s') if ex else None; "
         f'"',
         echo=True,
         pty=not WINDOWS,
@@ -80,14 +78,14 @@ def validate(ctx: Context) -> None:
         _hf_env_prefix() + 'uv run python -c "'
         "import sys; "
         "from datasets import load_dataset; "
-        f"ds = load_dataset('CoRal-project/coral-v3', 'read_aloud', trust_remote_code=True, "
+        f"ds = load_dataset('CoRal-project/coral-v3', 'read_aloud', "
         f"split='train[:10]', cache_dir='{HF_CACHE_DIR}'); "
         "errors = 0; "
         "for i, item in enumerate(ds): "
         "    audio = item['audio']; "
         "    if audio['sampling_rate'] <= 0: errors += 1; "
         "    if len(audio['array']) == 0: errors += 1; "
-        "print(f'Validated 10 samples, {errors} errors found'); "
+        "print('Validated 10 samples,', errors, 'errors found'); "
         "sys.exit(1 if errors > 0 else 0); "
         '"',
         echo=True,

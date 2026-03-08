@@ -1,0 +1,26 @@
+loss:
+  name: seq2seq
+optimizer:
+  name: adamw
+  lr: 1.0e-4
+  weight_decay: 0.01
+  betas: [0.9, 0.999]
+scheduler:
+  name: linear_warmup
+  warmup_steps: 500
+callbacks:
+  early_stopping:
+    monitor: val_wer
+    patience: 5
+    mode: min
+  checkpoint:
+    monitor: val_wer
+    mode: min
+    save_top_k: 3
+    filename: "epoch={epoch}-wer={val_wer:.4f}"
+trainer:
+  max_epochs: 20
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 8
+  log_every_n_steps: 10
+  val_check_interval: 0.5

@@ -1,0 +1,8 @@
+name: local
+batch_size: null
+gradient_checkpointing: true
+precision: "bf16-mixed"
+num_workers: 4
+accelerator: auto
+devices: 1
+max_duration: 30.0
