@@ -1,0 +1,8 @@
+name: hpc
+batch_size: null
+gradient_checkpointing: false
+precision: "bf16-mixed"
+num_workers: 8
+accelerator: auto
+devices: 1
+max_duration: 30.0

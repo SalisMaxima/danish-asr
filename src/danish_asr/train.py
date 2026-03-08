@@ -1,4 +1,4 @@
-"""Training pipeline with PyTorch Lightning."""
+"""ASR training pipeline with PyTorch Lightning."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
-from danish_asr.losses import build_loss
+from danish_asr.metrics import compute_cer, compute_wer
 from danish_asr.model import build_model
 from danish_asr.utils import get_device
 
@@ -27,65 +27,135 @@ profiling_dir = _PROJECT_ROOT / "outputs" / "profiling"
 profiling_dir.mkdir(parents=True, exist_ok=True)
 
 
-class LitModel(pl.LightningModule):
-    """Lightning module wrapping the model."""
+class ASRLitModel(pl.LightningModule):
+    """Lightning module for ASR training (CTC and seq2seq)."""
 
     def __init__(self, cfg: DictConfig):
         super().__init__()
         self.cfg = cfg
-        self.model = build_model(cfg)
-        self.criterion = build_loss(cfg)
+        self.model = build_model(cfg.model)
+        self.mode = "ctc" if cfg.model.name == "wav2vec2_asr" else "seq2seq"
         self.save_hyperparameters(ignore=["model"])
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.model(x)
+        # Load processor/tokenizer
+        self.processor, self.tokenizer = self._build_processor()
 
-    def _compute_accuracy(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        preds = torch.argmax(logits, dim=1)
-        return (preds == targets).float().mean()
+        # Gradient checkpointing
+        if cfg.get("hardware", {}).get("gradient_checkpointing", False):
+            self._enable_gradient_checkpointing()
+
+        # Validation accumulators
+        self._val_predictions: list[str] = []
+        self._val_references: list[str] = []
+
+    def _build_processor(self):
+        model_name = self.cfg.model.get("model_name", "")
+        if self.mode == "ctc":
+            from transformers import Wav2Vec2CTCTokenizer, Wav2Vec2FeatureExtractor, Wav2Vec2Processor
+
+            feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(model_name)
+            tokenizer = Wav2Vec2CTCTokenizer.from_pretrained(model_name)
+            processor = Wav2Vec2Processor(feature_extractor=feature_extractor, tokenizer=tokenizer)
+            return processor, tokenizer
+        from transformers import WhisperProcessor, WhisperTokenizer
+
+        processor = WhisperProcessor.from_pretrained(model_name)
+        tokenizer = WhisperTokenizer.from_pretrained(model_name)
+        return processor, tokenizer
+
+    def _enable_gradient_checkpointing(self):
+        inner = self.model.model if hasattr(self.model, "model") else self.model
+        if hasattr(inner, "gradient_checkpointing_enable"):
+            inner.gradient_checkpointing_enable()
+            logger.info("Gradient checkpointing enabled")
+
+    def forward(self, **kwargs):
+        return self.model(**kwargs)
 
     def training_step(self, batch, batch_idx: int):
-        x, y = batch
-        y_hat = self(x)
-        loss = self.criterion(y_hat, y)
-        acc = self._compute_accuracy(y_hat, y)
+        if self.mode == "ctc":
+            outputs = self.model(
+                input_values=batch["input_values"],
+                attention_mask=batch.get("attention_mask"),
+                labels=batch["labels"],
+            )
+        else:
+            outputs = self.model(
+                input_features=batch["input_features"],
+                labels=batch["labels"],
+            )
+        loss = outputs["loss"]
         self.log("train_loss", loss, on_epoch=True, prog_bar=True)
-        self.log("train_acc", acc, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx: int):
-        x, y = batch
-        y_hat = self(x)
-        loss = self.criterion(y_hat, y)
-        acc = self._compute_accuracy(y_hat, y)
+        if self.mode == "ctc":
+            outputs = self.model(
+                input_values=batch["input_values"],
+                attention_mask=batch.get("attention_mask"),
+                labels=batch["labels"],
+            )
+            # Decode CTC: argmax over logits
+            logits = outputs["logits"]
+            pred_ids = torch.argmax(logits, dim=-1)
+            predictions = self.processor.batch_decode(pred_ids)
+        else:
+            outputs = self.model(
+                input_features=batch["input_features"],
+                labels=batch["labels"],
+            )
+            # Decode seq2seq: generate
+            inner = self.model.model if hasattr(self.model, "model") else self.model
+            generated_ids = inner.generate(
+                batch["input_features"],
+                language="da",
+                task="transcribe",
+                max_new_tokens=225,
+            )
+            predictions = self.processor.batch_decode(generated_ids, skip_special_tokens=True)
+
+        loss = outputs["loss"]
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+
+        self._val_predictions.extend(predictions)
+        self._val_references.extend(batch["text"])
         return loss
 
-    def test_step(self, batch, batch_idx: int):
-        x, y = batch
-        y_hat = self(x)
-        loss = self.criterion(y_hat, y)
-        acc = self._compute_accuracy(y_hat, y)
-        self.log("test_loss", loss, on_step=False, on_epoch=True)
-        self.log("test_acc", acc, on_step=False, on_epoch=True)
-        return loss
+    def on_validation_epoch_end(self):
+        if not self._val_predictions:
+            return
+
+        wer = compute_wer(self._val_predictions, self._val_references)
+        cer = compute_cer(self._val_predictions, self._val_references)
+        self.log("val_wer", wer, prog_bar=True)
+        self.log("val_cer", cer, prog_bar=True)
+        logger.info(f"Validation WER: {wer:.4f}, CER: {cer:.4f}")
+
+        self._val_predictions.clear()
+        self._val_references.clear()
 
     def configure_optimizers(self):
         opt_cfg = self.cfg.train.optimizer
-        sched_cfg = self.cfg.train.scheduler
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             self.parameters(),
             lr=opt_cfg.lr,
             weight_decay=opt_cfg.weight_decay,
             betas=tuple(opt_cfg.betas),
         )
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+
+        sched_cfg = self.cfg.train.scheduler
+        warmup_steps = sched_cfg.get("warmup_steps", 500)
+
+        scheduler = torch.optim.lr_scheduler.LinearLR(
             optimizer,
-            T_max=self.cfg.train.max_epochs,
-            eta_min=sched_cfg.eta_min,
+            start_factor=1e-7 / opt_cfg.lr,
+            end_factor=1.0,
+            total_iters=warmup_steps,
         )
-        return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler, "interval": "epoch", "frequency": 1}}
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {"scheduler": scheduler, "interval": "step", "frequency": 1},
+        }
 
 
 def configure_logging(output_dir: str) -> None:
@@ -120,64 +190,76 @@ def set_seed(seed: int, device: torch.device) -> None:
 
 
 def train_model(cfg: DictConfig, output_dir: str, wandb_logger: WandbLogger | None = None) -> str:
-    """Train using PyTorch Lightning with full MLOps features."""
+    """Train ASR model using PyTorch Lightning."""
     output_path = Path(output_dir)
     train_cfg = cfg.train
+    hw_cfg = cfg.get("hardware", {})
     logger.info(f"Configuration:\n{OmegaConf.to_yaml(cfg)}")
     set_seed(cfg.seed, get_device())
     pl.seed_everything(cfg.seed, workers=True)
+
+    # Model
+    lit_model = ASRLitModel(cfg)
+    total_params = sum(p.numel() for p in lit_model.model.parameters())
+    trainable_params = sum(p.numel() for p in lit_model.model.parameters() if p.requires_grad)
+    logger.info(f"Model: {cfg.model.name} | Total params: {total_params:,} | Trainable: {trainable_params:,}")
 
     # Data
     from danish_asr.data import CoRalDataModule
 
     datamodule = CoRalDataModule(cfg.data)
-    datamodule.setup(stage="fit")
+    datamodule.set_processor_and_tokenizer(lit_model.processor, lit_model.tokenizer)
 
-    # Model
-    lit_model = LitModel(cfg)
-    total_params = sum(p.numel() for p in lit_model.model.parameters())
-    trainable_params = sum(p.numel() for p in lit_model.model.parameters() if p.requires_grad)
-    logger.info(f"Model: {cfg.model.name} | Total params: {total_params:,} | Trainable: {trainable_params:,}")
+    # Apply hardware overrides to datamodule
+    if hw_cfg.get("batch_size") is not None:
+        datamodule.batch_size = hw_cfg.batch_size
+    if hw_cfg.get("num_workers") is not None:
+        datamodule.num_workers = hw_cfg.num_workers
+    if hw_cfg.get("max_duration") is not None:
+        datamodule.max_duration = hw_cfg.max_duration
+
+    datamodule.setup(stage="fit")
 
     # Callbacks
     callbacks = []
-    ckpt_cfg = train_cfg.checkpoint
+    cb_cfg = train_cfg.callbacks
+    ckpt_cfg = cb_cfg.checkpoint
     checkpoint_callback = ModelCheckpoint(
         dirpath=str(output_path),
-        filename="best_model",
+        filename=ckpt_cfg.get("filename", "best_model"),
         monitor=ckpt_cfg.monitor,
         mode=ckpt_cfg.mode,
         save_top_k=ckpt_cfg.save_top_k,
-        save_last=ckpt_cfg.save_last,
+        save_last=True,
         verbose=True,
     )
     callbacks.append(checkpoint_callback)
 
-    es_cfg = train_cfg.early_stopping
-    if es_cfg.enabled:
-        callbacks.append(
-            EarlyStopping(
-                monitor=es_cfg.monitor,
-                patience=es_cfg.patience,
-                mode=es_cfg.mode,
-                min_delta=0.001,
-                verbose=True,
-            )
+    es_cfg = cb_cfg.early_stopping
+    callbacks.append(
+        EarlyStopping(
+            monitor=es_cfg.monitor,
+            patience=es_cfg.patience,
+            mode=es_cfg.mode,
+            min_delta=0.001,
+            verbose=True,
         )
+    )
 
-    callbacks.append(LearningRateMonitor(logging_interval="epoch"))
+    callbacks.append(LearningRateMonitor(logging_interval="step"))
 
     # Trainer
+    trainer_cfg = train_cfg.trainer
     trainer = pl.Trainer(
         default_root_dir=str(output_path),
-        max_epochs=train_cfg.max_epochs,
-        min_epochs=train_cfg.get("min_epochs", 1),
-        accelerator=train_cfg.get("accelerator", "auto"),
-        devices=train_cfg.get("devices", "auto"),
-        precision=train_cfg.get("precision", 32),
-        gradient_clip_val=train_cfg.gradient_clip_val,
-        accumulate_grad_batches=train_cfg.get("accumulate_grad_batches", 1),
-        log_every_n_steps=10,
+        max_epochs=trainer_cfg.max_epochs,
+        accelerator=hw_cfg.get("accelerator", "auto"),
+        devices=hw_cfg.get("devices", "auto"),
+        precision=hw_cfg.get("precision", "bf16-mixed"),
+        gradient_clip_val=trainer_cfg.gradient_clip_val,
+        accumulate_grad_batches=trainer_cfg.get("accumulate_grad_batches", 1),
+        log_every_n_steps=trainer_cfg.get("log_every_n_steps", 10),
+        val_check_interval=trainer_cfg.get("val_check_interval", 0.5),
         callbacks=callbacks,
         logger=wandb_logger,
         enable_checkpointing=True,
@@ -186,9 +268,9 @@ def train_model(cfg: DictConfig, output_dir: str, wandb_logger: WandbLogger | No
     trainer.fit(lit_model, datamodule=datamodule)
 
     # Test
-    best_ckpt_path = output_path / "best_model.ckpt"
-    if best_ckpt_path.exists():
-        trainer.test(ckpt_path=str(best_ckpt_path), datamodule=datamodule, weights_only=False)
+    best_ckpt_path = checkpoint_callback.best_model_path
+    if best_ckpt_path:
+        trainer.test(ckpt_path=best_ckpt_path, datamodule=datamodule)
 
     # Save final model
     final_model_path = output_path / "model.pt"
@@ -196,22 +278,23 @@ def train_model(cfg: DictConfig, output_dir: str, wandb_logger: WandbLogger | No
     logger.info(f"Final model saved to {final_model_path}")
 
     # Log artifact
-    artifact = wandb.Artifact(
-        name=f"{cfg.experiment_name}_model",
-        type="model",
-        metadata={"model_name": cfg.model.name, "num_params": total_params},
-    )
-    if best_ckpt_path.exists():
-        artifact.add_file(str(best_ckpt_path))
-    artifact.add_file(str(final_model_path))
-    wandb.log_artifact(artifact)
+    if wandb_logger is not None:
+        artifact = wandb.Artifact(
+            name=f"{cfg.experiment_name}_model",
+            type="model",
+            metadata={"model_name": cfg.model.name, "num_params": total_params},
+        )
+        if best_ckpt_path:
+            artifact.add_file(best_ckpt_path)
+        artifact.add_file(str(final_model_path))
+        wandb.log_artifact(artifact)
 
     return str(final_model_path)
 
 
 @hydra.main(config_path=_CONFIG_PATH, config_name="config", version_base="1.3")
 def train(cfg: DictConfig) -> None:
-    """Train a model (Hydra entry point)."""
+    """Train an ASR model (Hydra entry point)."""
     output_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
     configure_logging(output_dir)
     device = get_device()

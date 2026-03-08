@@ -2,6 +2,7 @@ defaults:
   - model: wav2vec2
   - data: coral
   - train: default
+  - hardware: local
   - _self_
 
 seed: 42

@@ -11,6 +11,7 @@ Fine-tuning Meta's Omnilingual ASR (`omniASR_CTC_300M`) for Danish using CoRal-v
 | [CoRal Dataset](coral-dataset.md) | Dataset splits, fields, demographics, and loading |
 | [Data Preparation](data-preparation.md) | Converting CoRal-v3 to the required Parquet format |
 | [Finetuning Recipe](finetuning-recipe.md) | CTC finetuning config, hyperparameters, and training commands |
+| [Training Infrastructure](training-infrastructure.md) | Hydra configs, hardware profiles, VRAM budgets, and usage commands for all 3 models |
 | [DTU HPC Setup](dtu-hpc-setup.md) | GPU queues, LSF job scripts, environment setup, storage layout |
 
 ## Quick Reference

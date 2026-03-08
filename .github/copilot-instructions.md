@@ -1,6 +1,6 @@
 # Danish ASR - Copilot Instructions
 
-Fine-tuning Meta's omnilingual ASR (`omniASR_CTC_300M`) for Danish using CoRal-v3 (~710h Danish speech).
+Fine-tuning Meta's omnilingual ASR (`omniASR_CTC_300M_v2`) for Danish using CoRal-v3 (~710h Danish speech).
 
 **Course:** 5 ECTS Special Course (Feb-May 2026) at DTU
 
@@ -18,7 +18,7 @@ Fine-tuning Meta's omnilingual ASR (`omniASR_CTC_300M`) for Danish using CoRal-v
 - W&B for tracking, DVC for data versioning
 
 ## Model
-- **`omniASR_CTC_300M`** (325M params) — CTC finetuning via fairseq2 recipe
+- **`omniASR_CTC_300M_v2`** (325M params) — CTC finetuning via fairseq2 recipe
 - No LoRA — fairseq2 does full fine-tuning
 - Language code: `dan_Latn`
 - Existing Wav2Vec2/Whisper code in `model.py` is baseline comparison only
