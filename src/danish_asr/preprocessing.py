@@ -208,6 +208,7 @@ def convert_split(
     rows_per_file: int = 5000,
     max_samples: int | None = None,
     cache_dir: str | None = None,
+    revision: str | None = None,
 ) -> dict:
     """Convert one HF split, writing enabled target formats.
 
@@ -222,7 +223,9 @@ def convert_split(
         load_kwargs: dict[str, object] = {}
         if cache_dir is not None:
             load_kwargs["cache_dir"] = cache_dir
-        ds = load_dataset("CoRal-project/coral-v3", hf_subset, split=hf_split, **load_kwargs)
+        if revision is not None:
+            load_kwargs["revision"] = revision
+        ds = load_dataset("CoRal-project/coral-v3", hf_subset, split=hf_split, **load_kwargs)  # nosec B615
     except Exception as e:
         logger.error(
             f"Failed to load dataset {hf_subset}/{hf_split}: {e}. "
@@ -422,6 +425,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="HuggingFace cache directory",
     )
     parser.add_argument(
+        "--revision",
+        type=str,
+        default=None,
+        help="Pin HuggingFace dataset revision (commit hash or tag) for reproducibility",
+    )
+    parser.add_argument(
         "--skip-stats",
         action="store_true",
         help="Skip generating language_distribution_0.tsv",
@@ -461,6 +470,7 @@ def main(argv: list[str] | None = None) -> None:
                 rows_per_file=args.rows_per_file,
                 max_samples=args.max_samples,
                 cache_dir=args.cache_dir,
+                revision=args.revision,
             )
             all_stats.append(stats)
 
