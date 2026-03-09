@@ -28,7 +28,7 @@ repos:
         exclude: \.lock$|\.csv$
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.8.3
+    rev: 1.9.4
     hooks:
       - id: bandit
         args: ["-r", "src/", "-ll", "-ii"]
