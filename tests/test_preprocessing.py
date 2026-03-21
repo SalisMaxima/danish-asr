@@ -46,20 +46,14 @@ def _make_audio_dict(sr: int = 48000, duration: float = 1.0) -> dict:
 class TestProcessAudio:
     def test_resamples_to_16khz(self):
         audio = _make_audio_dict(sr=48000, duration=1.0)
-        _, _, audio_samples = process_audio(audio)
+        _, audio_samples = process_audio(audio)
         assert audio_samples == 16000
 
     def test_returns_flac_bytes(self):
         audio = _make_audio_dict(sr=16000, duration=0.5)
-        flac_bytes, _, _ = process_audio(audio)
+        flac_bytes, _ = process_audio(audio)
         assert isinstance(flac_bytes, bytes)
         assert len(flac_bytes) > 0
-
-    def test_returns_int8_array(self):
-        audio = _make_audio_dict(sr=16000, duration=0.5)
-        _, flac_int8, _ = process_audio(audio)
-        assert isinstance(flac_int8, np.ndarray)
-        assert flac_int8.dtype == np.int8
 
     def test_flac_roundtrip(self):
         rng = np.random.default_rng(42)
@@ -67,22 +61,19 @@ class TestProcessAudio:
             "array": np.clip(rng.standard_normal(8000) * 0.3, -0.99, 0.99).astype(np.float32),
             "sampling_rate": 16000,
         }
-        flac_bytes, flac_int8, audio_samples = process_audio(audio)
+        flac_bytes, audio_samples = process_audio(audio)
 
-        # Both representations should decode identically
-        decoded_from_bytes, sr1 = sf.read(io.BytesIO(flac_bytes))
-        decoded_from_int8, sr2 = sf.read(io.BytesIO(flac_int8.tobytes()))
-        assert sr1 == sr2 == 16000
-        assert len(decoded_from_bytes) == audio_samples
-        np.testing.assert_array_equal(decoded_from_bytes, decoded_from_int8)
+        decoded, sr = sf.read(io.BytesIO(flac_bytes))
+        assert sr == 16000
+        assert len(decoded) == audio_samples
 
         # FLAC quantization tolerance
-        max_diff = np.max(np.abs(decoded_from_bytes - audio["array"]))
+        max_diff = np.max(np.abs(decoded - audio["array"]))
         assert max_diff < 1e-3
 
     def test_no_resample_when_already_16khz(self):
         audio = _make_audio_dict(sr=16000, duration=0.5)
-        _, _, audio_samples = process_audio(audio)
+        _, audio_samples = process_audio(audio)
         assert audio_samples == 8000
 
 
@@ -169,7 +160,7 @@ class TestFairseq2Parquet:
         return [
             {
                 "text": f"sample {i}",
-                "audio_bytes": np.array([0, 1, 2], dtype=np.int8),
+                "audio_bytes": bytes([0, 1, 2]),
                 "audio_size": 16000,
                 "corpus": "coral_v3_read_aloud",
                 "split": "train",
@@ -250,9 +241,8 @@ class TestConvertSplit:
         part_files = list((tmp_path / "universal" / "read_aloud" / "train").glob("*.parquet"))
         assert len(part_files) == 1
 
-    @patch("danish_asr.preprocessing.normalize_text_fairseq2", side_effect=lambda t: t.lower())
     @patch("datasets.load_dataset")
-    def test_both_targets(self, mock_load, mock_norm, tmp_path: Path):
+    def test_both_targets(self, mock_load, tmp_path: Path):
         mock_load.return_value = _make_fake_hf_dataset(3)
         stats = convert_split(
             hf_subset="read_aloud",
