@@ -229,7 +229,7 @@ def main() -> None:
         except OSError as e:
             logger.error(f"Failed to launch training subprocess: {e}")
             logger.error(f"Command was: {' '.join(cmd)}")
-            sys.exit(1)
+            raise RuntimeError("Failed to launch training subprocess") from e
 
         logger.info(f"Training subprocess started (PID={process.pid})")
 
