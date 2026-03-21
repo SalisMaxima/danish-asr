@@ -21,7 +21,8 @@ mkdir -p /work3/$USER/logs/lsf
 mkdir -p /work3/$USER/logs/python
 
 # PyTorch cu128 bundles its own CUDA runtime — no module load needed
-cd "$HOME/danish_asr"
+PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
+cd "$PROJECT_DIR"
 source .venv/bin/activate
 
 echo "=== Job $LSB_JOBID: Evaluate omniASR ==="

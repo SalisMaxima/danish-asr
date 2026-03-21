@@ -1,4 +1,4 @@
-"""Step 3: Training wrapper for omniASR on HPC.
+"""Training wrapper for omniASR on HPC.
 
 Sets up environment, creates data symlink, and runs the fairseq2 training recipe
 with full logging of stdout/stderr and W&B metric tracking.
@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import re
 import shlex
+import signal
 import subprocess
 import sys
 import time
@@ -96,6 +97,15 @@ def check_prerequisites(config: Path) -> None:
         logger.error("PyTorch not installed")
         sys.exit(1)
 
+    try:
+        import workflows.recipes.wav2vec2.asr  # noqa: F401
+
+        logger.info("fairseq2 recipe module: OK")
+    except ImportError as e:
+        logger.error(f"Cannot import training recipe: {e}")
+        logger.error("omnilingual-asr not available. Activate your venv and run: uv sync --group omni")
+        sys.exit(1)
+
 
 def _init_wandb(args: argparse.Namespace, config: Path) -> object | None:
     """Initialise W&B run. Returns the run object or None if W&B is unavailable."""
@@ -149,7 +159,7 @@ def _log_line_to_wandb(line: str, wandb_run: object | None) -> None:
             if loss_match:
                 metrics["val/loss"] = float(loss_match.group(1))
 
-        if metrics:
+        if metrics and step is not None:
             wandb.log(metrics, step=step)
     except Exception as e:
         logger.debug(f"W&B metric parse failed for line ({type(e).__name__}: {e}): {line[:80]}")
@@ -182,7 +192,6 @@ def main() -> None:
     check_prerequisites(args.config)
     ensure_data_symlink()
 
-    # Create output directory
     if args.output_dir:
         output_dir = args.output_dir
     else:
@@ -194,7 +203,6 @@ def main() -> None:
 
     wandb_run = _init_wandb(args, args.config)
 
-    # Build command
     cmd = [
         sys.executable,
         "-m",
@@ -209,15 +217,20 @@ def main() -> None:
     logger.info(f"Command: {' '.join(cmd)}")
 
     try:
-        # Run training
         start_time = time.time()
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            cwd=str(PROJECT_DIR),
-        )
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                cwd=str(PROJECT_DIR),
+            )
+        except OSError as e:
+            logger.error(f"Failed to launch training subprocess: {e}")
+            logger.error(f"Command was: {' '.join(cmd)}")
+            raise RuntimeError("Failed to launch training subprocess") from e
+
         logger.info(f"Training subprocess started (PID={process.pid})")
 
         last_heartbeat = time.time()
@@ -236,20 +249,17 @@ def main() -> None:
         return_code = process.wait()
         elapsed = time.time() - start_time
 
-        # Post-training summary
-        logger.info(f"Training finished in {elapsed / 3600:.1f}h (exit code: {return_code})")
-
-        # Log GPU memory stats (note: reports parent process stats, not subprocess)
-        try:
-            import torch
-
-            if torch.cuda.is_available():
-                peak_mem = torch.cuda.max_memory_allocated() / (1024**3)
-                logger.info(f"Peak GPU memory: {peak_mem:.1f} GB")
-        except ImportError:
-            logger.debug("PyTorch not available — skipping GPU memory report")
-        except Exception as e:
-            logger.warning(f"Failed to log GPU memory stats: {type(e).__name__}: {e}")
+        if return_code < 0:
+            sig_num = -return_code
+            sig_map = {s.value: s.name for s in signal.Signals}
+            sig_name = sig_map.get(sig_num, str(sig_num))
+            return_code = 128 + sig_num
+            logger.error(f"Training KILLED by signal {sig_name} after {elapsed / 3600:.1f}h (exit code: {return_code})")
+            logger.error("If SIGKILL: likely OOM. Check GPU stats CSV and increase rusage[mem] or reduce batch size.")
+        elif return_code != 0:
+            logger.error(f"Training FAILED after {elapsed / 3600:.1f}h (exit code: {return_code})")
+        else:
+            logger.info(f"Training completed successfully in {elapsed / 3600:.1f}h")
 
         # List checkpoints
         checkpoints = sorted(output_dir.glob("**/*.pt"))
@@ -278,8 +288,8 @@ def main() -> None:
                 import wandb
 
                 wandb.finish(exit_code=1)
-            except Exception:
-                pass
+            except Exception as wandb_err:
+                logger.debug(f"W&B cleanup also failed: {type(wandb_err).__name__}: {wandb_err}")
         sys.exit(1)
 
     sys.exit(return_code)
