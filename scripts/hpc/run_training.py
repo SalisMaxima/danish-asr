@@ -1,16 +1,18 @@
 """Step 3: Training wrapper for omniASR on HPC.
 
 Sets up environment, creates data symlink, and runs the fairseq2 training recipe
-with full logging of stdout/stderr.
+with full logging of stdout/stderr and W&B metric tracking.
 
 Usage:
     python scripts/hpc/run_training.py
     python scripts/hpc/run_training.py --config configs/fairseq2/ctc-finetune-hpc.yaml
+    python scripts/hpc/run_training.py --config configs/fairseq2/ctc-finetune-smoke.yaml --wandb-tags smoke,hpc
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 import shlex
 import subprocess
 import sys
@@ -30,6 +32,19 @@ from scripts.hpc.common import (
     setup_hpc_environment,
     setup_logging,
 )
+
+# Fairseq2 metric extraction patterns — validated against smoke test output.
+# Fairseq2 CTC typically logs lines like:
+#   | train | step 100 | loss 1.234 | ...
+#   | valid | step 500 | wer 0.42 | cer 0.12 | ...
+# All fairseq2 stdout lines are forwarded to INFO; these patterns are used
+# best-effort to extract scalar metrics for W&B logging.
+_LOSS_PATTERN = re.compile(r"\bloss[:\s]+([\d.]+)", re.IGNORECASE)
+_WER_PATTERN = re.compile(r"\bwer[:\s]+([\d.]+)", re.IGNORECASE)
+_CER_PATTERN = re.compile(r"\bcer[:\s]+([\d.]+)", re.IGNORECASE)
+_STEP_PATTERN = re.compile(r"\bstep[:\s]+(\d+)", re.IGNORECASE)
+
+_HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines
 
 
 def ensure_data_symlink() -> None:
@@ -82,6 +97,64 @@ def check_prerequisites(config: Path) -> None:
         sys.exit(1)
 
 
+def _init_wandb(args: argparse.Namespace, config: Path) -> object | None:
+    """Initialise W&B run. Returns the run object or None if W&B is unavailable."""
+    try:
+        import wandb
+
+        tags = [t.strip() for t in args.wandb_tags.split(",") if t.strip()]
+        run = wandb.init(
+            project=args.wandb_project,
+            name=args.wandb_name or None,
+            tags=tags or None,
+            config={"config_file": str(config), "output_dir": str(args.output_dir)},
+            resume=args.wandb_resume,
+        )
+        logger.info(f"W&B run initialised: {run.url}")
+        return run
+    except ImportError:
+        logger.warning("wandb not installed — skipping W&B logging")
+        return None
+    except Exception as e:
+        logger.warning(f"W&B init failed ({type(e).__name__}: {e}) — continuing without it")
+        return None
+
+
+def _log_line_to_wandb(line: str, wandb_run: object | None) -> None:
+    """Parse a fairseq2 output line and log matching metrics to W&B."""
+    if wandb_run is None:
+        return
+    try:
+        import wandb
+
+        metrics: dict[str, float] = {}
+        step: int | None = None
+
+        step_match = _STEP_PATTERN.search(line)
+        if step_match:
+            step = int(step_match.group(1))
+
+        if "train" in line.lower():
+            loss_match = _LOSS_PATTERN.search(line)
+            if loss_match:
+                metrics["train/loss"] = float(loss_match.group(1))
+        elif "valid" in line.lower():
+            wer_match = _WER_PATTERN.search(line)
+            cer_match = _CER_PATTERN.search(line)
+            loss_match = _LOSS_PATTERN.search(line)
+            if wer_match:
+                metrics["val/wer"] = float(wer_match.group(1))
+            if cer_match:
+                metrics["val/cer"] = float(cer_match.group(1))
+            if loss_match:
+                metrics["val/loss"] = float(loss_match.group(1))
+
+        if metrics:
+            wandb.log(metrics, step=step)
+    except Exception as e:
+        logger.debug(f"W&B metric parse failed for line ({type(e).__name__}: {e}): {line[:80]}")
+
+
 def main() -> None:
     default_config = PROJECT_DIR / "configs" / "fairseq2" / "ctc-finetune-hpc.yaml"
 
@@ -89,6 +162,16 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=default_config, help="fairseq2 config file")
     parser.add_argument("--output-dir", type=Path, default=None, help="Output directory (auto-generated if omitted)")
     parser.add_argument("--extra-args", type=str, default="", help="Additional args passed to fairseq2 recipe")
+    parser.add_argument("--wandb-project", type=str, default="danish-asr", help="W&B project name")
+    parser.add_argument("--wandb-name", type=str, default="", help="W&B run name (auto-generated if omitted)")
+    parser.add_argument("--wandb-tags", type=str, default="hpc", help="Comma-separated W&B tags")
+    parser.add_argument(
+        "--wandb-resume",
+        type=str,
+        default="allow",
+        choices=["allow", "never", "must"],
+        help="W&B resume mode: 'never' for smoke tests, 'allow' for full training",
+    )
     args = parser.parse_args()
 
     setup_logging("run_training")
@@ -105,8 +188,11 @@ def main() -> None:
     else:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir = OUTPUT_DIR / f"omniasr_hpc_{timestamp}"
+    args.output_dir = output_dir  # make available to W&B init
     output_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Output directory: {output_dir}")
+
+    wandb_run = _init_wandb(args, args.config)
 
     # Build command
     cmd = [
@@ -122,46 +208,79 @@ def main() -> None:
 
     logger.info(f"Command: {' '.join(cmd)}")
 
-    # Run training
-    start_time = time.time()
-    process = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        cwd=str(PROJECT_DIR),
-    )
-
-    for line in process.stdout:
-        line = line.rstrip()
-        logger.info(f"[fairseq2] {line}")
-
-    return_code = process.wait()
-    elapsed = time.time() - start_time
-
-    # Post-training summary
-    logger.info(f"Training finished in {elapsed / 3600:.1f}h (exit code: {return_code})")
-
-    # Log GPU memory stats (note: reports parent process stats, not subprocess)
     try:
-        import torch
+        # Run training
+        start_time = time.time()
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            cwd=str(PROJECT_DIR),
+        )
+        logger.info(f"Training subprocess started (PID={process.pid})")
 
-        if torch.cuda.is_available():
-            peak_mem = torch.cuda.max_memory_allocated() / (1024**3)
-            logger.info(f"Peak GPU memory: {peak_mem:.1f} GB")
-    except ImportError:
-        logger.debug("PyTorch not available — skipping GPU memory report")
+        last_heartbeat = time.time()
+        for line_count, line in enumerate(process.stdout, 1):
+            line = line.rstrip()
+            logger.info(f"[fairseq2] {line}")
+
+            _log_line_to_wandb(line, wandb_run)
+
+            now = time.time()
+            if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
+                elapsed = now - start_time
+                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_logged={line_count}")
+                last_heartbeat = now
+
+        return_code = process.wait()
+        elapsed = time.time() - start_time
+
+        # Post-training summary
+        logger.info(f"Training finished in {elapsed / 3600:.1f}h (exit code: {return_code})")
+
+        # Log GPU memory stats (note: reports parent process stats, not subprocess)
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                peak_mem = torch.cuda.max_memory_allocated() / (1024**3)
+                logger.info(f"Peak GPU memory: {peak_mem:.1f} GB")
+        except ImportError:
+            logger.debug("PyTorch not available — skipping GPU memory report")
+        except Exception as e:
+            logger.warning(f"Failed to log GPU memory stats: {type(e).__name__}: {e}")
+
+        # List checkpoints
+        checkpoints = sorted(output_dir.glob("**/*.pt"))
+        if checkpoints:
+            logger.info(f"Checkpoints found ({len(checkpoints)}):")
+            for ckpt in checkpoints:
+                logger.info(f"  {ckpt}")
+        else:
+            logger.warning("No checkpoint files found in output directory")
+
+        if wandb_run is not None:
+            try:
+                import wandb
+
+                wandb.summary["exit_code"] = return_code
+                wandb.summary["elapsed_hours"] = round(elapsed / 3600, 2)
+                wandb.summary["num_checkpoints"] = len(checkpoints)
+                wandb.finish(exit_code=return_code)
+            except Exception as e:
+                logger.warning(f"W&B finish failed: {type(e).__name__}: {e}")
+
     except Exception as e:
-        logger.warning(f"Failed to log GPU memory stats: {type(e).__name__}: {e}")
+        logger.exception(f"Unhandled exception in training wrapper: {e}")
+        if wandb_run is not None:
+            try:
+                import wandb
 
-    # List checkpoints
-    checkpoints = sorted(output_dir.glob("**/*.pt"))
-    if checkpoints:
-        logger.info(f"Checkpoints found ({len(checkpoints)}):")
-        for ckpt in checkpoints:
-            logger.info(f"  {ckpt}")
-    else:
-        logger.warning("No checkpoint files found in output directory")
+                wandb.finish(exit_code=1)
+            except Exception:
+                pass
+        sys.exit(1)
 
     sys.exit(return_code)
 

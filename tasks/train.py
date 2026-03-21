@@ -1,11 +1,17 @@
 """Training and hyperparameter tuning tasks."""
 
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 
 from invoke import Context, task
 from loguru import logger
+
+HPC_USER = os.environ.get("HPC_USER", "s204696")
+if not re.fullmatch(r"[a-zA-Z0-9_.-]+", HPC_USER):
+    raise ValueError(f"Invalid HPC_USER: {HPC_USER!r}")
+HPC_LOGIN = f"{HPC_USER}@login.hpc.dtu.dk"
 
 WINDOWS = os.name == "nt"
 PROJECT_NAME = "danish_asr"
@@ -72,6 +78,19 @@ def omniasr(ctx: Context, hardware: str = "local", output_dir: str = "", args: s
         cmd += f" {args}"
     logger.info(f"Starting omniASR training: hardware={hardware}, output={output_dir}")
     ctx.run(cmd, echo=True, pty=not WINDOWS)
+
+
+@task(name="hpc-smoke")
+def hpc_smoke(ctx: Context) -> None:
+    """Submit 50-step smoke test to DTU HPC gpua100 queue (requires VPN). Validates full pipeline.
+
+    Runs 'git pull' on the HPC node before submitting, so the job always uses
+    the latest pushed commit — local uncommitted changes are NOT included.
+    """
+    ctx.run(
+        f"ssh {HPC_LOGIN} 'cd ~/danish_asr && git pull && bsub < scripts/hpc/05_smoke_test.sh'",
+        pty=not WINDOWS,
+    )
 
 
 @task
