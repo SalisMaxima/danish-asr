@@ -126,7 +126,7 @@ def log_gpu_info() -> None:
         if torch.cuda.is_available():
             for i in range(torch.cuda.device_count()):
                 name = torch.cuda.get_device_name(i)
-                total = torch.cuda.get_device_properties(i).total_mem / (1024**3)
+                total = torch.cuda.get_device_properties(i).total_memory / (1024**3)
                 logger.info(f"GPU {i}: {name} ({total:.1f} GB)")
         else:
             logger.warning("CUDA not available")
