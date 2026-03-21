@@ -1,4 +1,6 @@
 #!/bin/bash
+# Usage: invoke train.hpc-smoke
+#   or:  bsub -o /work3/$USER/logs/lsf/smoke_%J.out -e /work3/$USER/logs/lsf/smoke_%J.err < scripts/hpc/05_smoke_test.sh
 #BSUB -J danish_asr_smoke
 #BSUB -q gpua100
 #BSUB -n 4
@@ -6,8 +8,7 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 0:30
-#BSUB -o /work3/%U/logs/lsf/smoke_%J.out
-#BSUB -e /work3/%U/logs/lsf/smoke_%J.err
+# -o/-e passed on bsub command line (shell variables are not expanded in #BSUB directives)
 
 set -euo pipefail
 
@@ -21,6 +22,15 @@ mkdir -p /work3/$USER/logs/lsf
 mkdir -p /work3/$USER/logs/python
 
 # PyTorch cu128 bundles its own CUDA runtime — no module load needed
+# The pip-installed omnilingual-asr package does not include the workflows/ recipe module
+OMNI_ASR_DIR="/work3/$USER/omnilingual-asr"
+if [ ! -d "$OMNI_ASR_DIR/workflows" ]; then
+    echo "ERROR: omnilingual-asr repo not found at $OMNI_ASR_DIR" >&2
+    echo "Clone it: git clone https://github.com/facebookresearch/omnilingual-asr.git $OMNI_ASR_DIR" >&2
+    exit 1
+fi
+export PYTHONPATH="$OMNI_ASR_DIR:${PYTHONPATH:-}"
+
 PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
 cd "$PROJECT_DIR"
 source .venv/bin/activate

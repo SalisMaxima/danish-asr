@@ -88,7 +88,11 @@ def hpc_smoke(ctx: Context) -> None:
     the latest pushed commit — local uncommitted changes are NOT included.
     """
     ctx.run(
-        f"ssh {HPC_LOGIN} 'cd ~/danish_asr && git pull && bsub < scripts/hpc/05_smoke_test.sh'",
+        f"ssh {HPC_LOGIN} '"
+        f"cd ~/danish_asr && git pull && "
+        f"mkdir -p /work3/$USER/logs/lsf && "
+        f"bsub -o /work3/$USER/logs/lsf/smoke_%J.out -e /work3/$USER/logs/lsf/smoke_%J.err "
+        f"< scripts/hpc/05_smoke_test.sh'",
         pty=not WINDOWS,
     )
 
