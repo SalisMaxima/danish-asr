@@ -1,11 +1,14 @@
 """Utility and maintenance tasks."""
 
 import os
+import re
 
 from invoke import Context, task
 
 WINDOWS = os.name == "nt"
 HPC_USER = os.environ.get("HPC_USER", "s204696")
+if not re.fullmatch(r"[a-zA-Z0-9_.-]+", HPC_USER):
+    raise ValueError(f"Invalid HPC_USER: {HPC_USER!r}")
 HPC_LOGIN = f"{HPC_USER}@login.hpc.dtu.dk"
 HPC_TRANSFER = f"{HPC_USER}@transfer.gbar.dtu.dk"
 

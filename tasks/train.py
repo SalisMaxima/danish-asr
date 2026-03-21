@@ -1,6 +1,7 @@
 """Training and hyperparameter tuning tasks."""
 
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -8,6 +9,8 @@ from invoke import Context, task
 from loguru import logger
 
 HPC_USER = os.environ.get("HPC_USER", "s204696")
+if not re.fullmatch(r"[a-zA-Z0-9_.-]+", HPC_USER):
+    raise ValueError(f"Invalid HPC_USER: {HPC_USER!r}")
 HPC_LOGIN = f"{HPC_USER}@login.hpc.dtu.dk"
 
 WINDOWS = os.name == "nt"
