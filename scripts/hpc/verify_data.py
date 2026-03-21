@@ -123,8 +123,8 @@ def verify(data_dir: Path) -> bool:
 
         usage = shutil.disk_usage(data_dir)
         logger.info(f"Data dir disk usage: {usage.used / (1024**3):.1f} GB")
-    except OSError:
-        pass
+    except OSError as e:
+        logger.warning(f"Could not get disk usage for {data_dir}: {e}")
 
     if errors:
         logger.error(f"{len(errors)} check(s) FAILED:")

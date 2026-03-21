@@ -42,7 +42,7 @@ except ImportError:
 
 
 def _require_pyarrow():
-    """Return (pa, pq) or raise a clear ImportError if pyarrow is missing."""
+    """Return (pa, pc, pq) or raise a clear ImportError if pyarrow is missing."""
     if not _PYARROW_AVAILABLE:
         msg = (
             "pyarrow is required for Parquet output but is not installed.\n"
@@ -51,7 +51,7 @@ def _require_pyarrow():
             "  or sync the 'omni' dependency group: uv sync --group omni"
         )
         raise ImportError(msg)
-    return pa, pq  # type: ignore[return-value]
+    return pa, pc, pq  # type: ignore[return-value]
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +137,7 @@ def process_audio(audio_dict: dict) -> tuple[bytes, int]:
 
 def write_fairseq2_parquet(rows: list[dict], path: Path) -> None:
     """Write rows to a fairseq2-format Parquet file."""
-    pa, pq = _require_pyarrow()
+    pa, pc, pq = _require_pyarrow()
     path.parent.mkdir(parents=True, exist_ok=True)
     arrays = {
         "text": pa.array([r["text"] for r in rows], type=pa.string()),
@@ -148,12 +148,14 @@ def write_fairseq2_parquet(rows: list[dict], path: Path) -> None:
         "language": pa.array([r["language"] for r in rows]).dictionary_encode(),
     }
     table = pa.table(arrays, schema=FAIRSEQ2_SCHEMA)
-    pq.write_table(table, path, row_group_size=ROW_GROUP_SIZE)
+    tmp_path = path.with_suffix(".tmp")
+    pq.write_table(table, tmp_path, row_group_size=ROW_GROUP_SIZE)
+    tmp_path.rename(path)
 
 
 def write_universal_parquet(rows: list[dict], path: Path) -> None:
     """Write rows to a universal-format Parquet file."""
-    pa, pq = _require_pyarrow()
+    pa, pc, pq = _require_pyarrow()
     path.parent.mkdir(parents=True, exist_ok=True)
     arrays = {
         "text": pa.array([r["text"] for r in rows], type=pa.string()),
@@ -168,7 +170,9 @@ def write_universal_parquet(rows: list[dict], path: Path) -> None:
         "dialect": pa.array([r["dialect"] for r in rows], type=pa.string()),
     }
     table = pa.table(arrays, schema=UNIVERSAL_SCHEMA)
-    pq.write_table(table, path, row_group_size=ROW_GROUP_SIZE)
+    tmp_path = path.with_suffix(".tmp")
+    pq.write_table(table, tmp_path, row_group_size=ROW_GROUP_SIZE)
+    tmp_path.rename(path)
 
 
 # ---------------------------------------------------------------------------
@@ -374,6 +378,7 @@ def verify_preprocessed_data(preprocessed_dir: str = "data/preprocessed") -> Non
     Checks all 6 split directories in `preprocessed_dir` ({read_aloud,conversation}/{train,validation,test}).
     Exits with code 1 if any check fails.
     """
+    pa, pc, pq = _require_pyarrow()
     base = Path(preprocessed_dir)
     splits = ("train", "validation", "test")
     subsets = ("read_aloud", "conversation")

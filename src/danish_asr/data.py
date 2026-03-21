@@ -345,7 +345,7 @@ class CoRalDataModule(pl.LightningDataModule):
                 max_duration=self.max_duration,
             )
             self.val_dataset = CoRalDataset(
-                dataset["val"],
+                dataset["validation"],
                 processor=self.processor,
                 tokenizer=self.tokenizer,
                 text_normalizer=self.text_normalizer,

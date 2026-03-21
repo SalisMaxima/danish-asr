@@ -20,8 +20,7 @@ mkdir -p "$TMPDIR"
 mkdir -p /work3/$USER/logs/lsf
 mkdir -p /work3/$USER/logs/python
 
-module load cuda/11.7
-
+# PyTorch cu128 bundles its own CUDA runtime — no module load needed
 cd "$HOME/danish_asr"
 source .venv/bin/activate
 

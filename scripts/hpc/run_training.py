@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import shlex
 import subprocess
 import sys
 import time
@@ -117,7 +118,7 @@ def main() -> None:
         str(args.config),
     ]
     if args.extra_args:
-        cmd.extend(args.extra_args.split())
+        cmd.extend(shlex.split(args.extra_args))
 
     logger.info(f"Command: {' '.join(cmd)}")
 
@@ -141,15 +142,17 @@ def main() -> None:
     # Post-training summary
     logger.info(f"Training finished in {elapsed / 3600:.1f}h (exit code: {return_code})")
 
-    # Log GPU memory stats
+    # Log GPU memory stats (note: reports parent process stats, not subprocess)
     try:
         import torch
 
         if torch.cuda.is_available():
             peak_mem = torch.cuda.max_memory_allocated() / (1024**3)
             logger.info(f"Peak GPU memory: {peak_mem:.1f} GB")
-    except Exception:
-        pass
+    except ImportError:
+        logger.debug("PyTorch not available — skipping GPU memory report")
+    except Exception as e:
+        logger.warning(f"Failed to log GPU memory stats: {type(e).__name__}: {e}")
 
     # List checkpoints
     checkpoints = sorted(output_dir.glob("**/*.pt"))
