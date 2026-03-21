@@ -158,29 +158,33 @@ def main() -> None:
     setup_hpc_environment()
     log_system_info()
 
-    subsets = SUBSETS if args.subset == "all" else {args.subset: SUBSETS[args.subset]}
-    all_stats: list[dict] = []
+    try:
+        subsets = SUBSETS if args.subset == "all" else {args.subset: SUBSETS[args.subset]}
+        all_stats: list[dict] = []
 
-    start_time = time.time()
-    for subset, corpus_name in subsets.items():
-        for hf_split in HF_SPLITS:
-            stats = convert_split(
-                subset=subset,
-                corpus_name=corpus_name,
-                hf_split=hf_split,
-                universal_dir=args.universal_dir,
-                fairseq2_dir=args.fairseq2_dir,
-                rows_per_file=args.rows_per_file,
-                max_samples=args.max_samples,
-            )
-            all_stats.append(stats)
+        start_time = time.time()
+        for subset, corpus_name in subsets.items():
+            for hf_split in HF_SPLITS:
+                stats = convert_split(
+                    subset=subset,
+                    corpus_name=corpus_name,
+                    hf_split=hf_split,
+                    universal_dir=args.universal_dir,
+                    fairseq2_dir=args.fairseq2_dir,
+                    rows_per_file=args.rows_per_file,
+                    max_samples=args.max_samples,
+                )
+                all_stats.append(stats)
 
-    # Write stats TSV
-    stats_path = args.fairseq2_dir / "language_distribution_0.tsv"
-    write_stats_tsv(all_stats, stats_path)
+        # Write stats TSV
+        stats_path = args.fairseq2_dir / "language_distribution_0.tsv"
+        write_stats_tsv(all_stats, stats_path)
 
-    elapsed = time.time() - start_time
-    logger.info(f"Conversion complete in {elapsed / 60:.1f} minutes")
+        elapsed = time.time() - start_time
+        logger.info(f"Conversion complete in {elapsed / 60:.1f} minutes")
+    except Exception as e:
+        logger.exception(f"Unhandled exception in convert_to_fairseq2: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

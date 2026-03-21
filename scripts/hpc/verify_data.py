@@ -145,9 +145,13 @@ def main() -> None:
     setup_hpc_environment()
     log_system_info()
 
-    logger.info(f"Verifying data in: {args.data_dir}")
-    ok = verify(args.data_dir)
-    sys.exit(0 if ok else 1)
+    try:
+        logger.info(f"Verifying data in: {args.data_dir}")
+        ok = verify(args.data_dir)
+        sys.exit(0 if ok else 1)
+    except Exception as e:
+        logger.exception(f"Unhandled exception in verify_data: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,12 @@
 #!/bin/bash
 #BSUB -J danish_asr_convert
 #BSUB -q hpc
-#BSUB -n 8
-#BSUB -R "rusage[mem=8GB]"
+#BSUB -n 4
+#BSUB -R "rusage[mem=4GB]"
 #BSUB -R "span[hosts=1]"
-#BSUB -W 8:00
-#BSUB -o /work3/$USER/logs/lsf/convert_%J.out
-#BSUB -e /work3/$USER/logs/lsf/convert_%J.err
+#BSUB -W 2:00
+#BSUB -o /work3/%U/logs/lsf/convert_%J.out
+#BSUB -e /work3/%U/logs/lsf/convert_%J.err
 
 set -euo pipefail
 

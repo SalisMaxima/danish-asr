@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -25,6 +26,8 @@ from scripts.hpc.common import (
     setup_hpc_environment,
     setup_logging,
 )
+
+_HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines
 
 
 def check_prerequisites(checkpoint_dir: Path, config: Path) -> None:
@@ -61,6 +64,10 @@ def main() -> None:
     parser.add_argument("--checkpoint-dir", type=Path, required=True, help="Directory with trained checkpoint")
     parser.add_argument("--config", type=Path, default=default_config, help="fairseq2 config file")
     parser.add_argument("--extra-args", type=str, default="", help="Additional args passed to fairseq2 eval recipe")
+    parser.add_argument("--wandb-project", type=str, default="danish-asr", help="W&B project name")
+    parser.add_argument(
+        "--wandb-run-id", type=str, default="", help="W&B run ID to resume (links eval to training run)"
+    )
     args = parser.parse_args()
 
     setup_logging("run_eval")
@@ -70,6 +77,24 @@ def main() -> None:
 
     check_prerequisites(args.checkpoint_dir, args.config)
     logger.info(f"Evaluating checkpoint: {args.checkpoint_dir}")
+
+    # Initialise W&B
+    wandb_run = None
+    try:
+        import wandb
+
+        wandb_run = wandb.init(
+            project=args.wandb_project,
+            id=args.wandb_run_id or None,
+            resume="allow" if args.wandb_run_id else None,
+            tags=["eval", "hpc"],
+            config={"checkpoint_dir": str(args.checkpoint_dir), "config_file": str(args.config)},
+        )
+        logger.info(f"W&B run initialised: {wandb_run.url}")
+    except ImportError:
+        logger.warning("wandb not installed — skipping W&B logging")
+    except Exception as e:
+        logger.warning(f"W&B init failed ({type(e).__name__}: {e}) — continuing without it")
 
     # Build command
     cmd = [
@@ -81,52 +106,88 @@ def main() -> None:
         str(args.config),
     ]
     if args.extra_args:
-        cmd.extend(args.extra_args.split())
+        cmd.extend(shlex.split(args.extra_args))
 
     logger.info(f"Command: {' '.join(cmd)}")
 
-    # Run evaluation
-    start_time = time.time()
-    wer_pattern = re.compile(r"WER[:\s]+(\d+\.?\d*)", re.IGNORECASE)
-    cer_pattern = re.compile(r"CER[:\s]+(\d+\.?\d*)", re.IGNORECASE)
-    wer_value = None
-    cer_value = None
+    try:
+        # Run evaluation
+        start_time = time.time()
+        wer_pattern = re.compile(r"WER[:\s]+([\d.]+)", re.IGNORECASE)
+        cer_pattern = re.compile(r"CER[:\s]+([\d.]+)", re.IGNORECASE)
+        wer_value = None
+        cer_value = None
 
-    process = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        cwd=str(PROJECT_DIR),
-    )
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            cwd=str(PROJECT_DIR),
+        )
+        logger.info(f"Eval subprocess started (PID={process.pid})")
 
-    for line in process.stdout:
-        line = line.rstrip()
-        logger.info(f"[fairseq2] {line}")
+        last_heartbeat = time.time()
+        for line_count, line in enumerate(process.stdout, 1):
+            line = line.rstrip()
+            logger.info(f"[fairseq2] {line}")
 
-        # Try to parse WER/CER from output
-        wer_match = wer_pattern.search(line)
-        if wer_match:
-            wer_value = float(wer_match.group(1))
-        cer_match = cer_pattern.search(line)
-        if cer_match:
-            cer_value = float(cer_match.group(1))
+            # Try to parse WER/CER from output
+            wer_match = wer_pattern.search(line)
+            if wer_match:
+                wer_value = float(wer_match.group(1))
+            cer_match = cer_pattern.search(line)
+            if cer_match:
+                cer_value = float(cer_match.group(1))
 
-    return_code = process.wait()
-    elapsed = time.time() - start_time
+            now = time.time()
+            if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
+                elapsed = now - start_time
+                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_logged={line_count}")
+                last_heartbeat = now
 
-    # Summary
-    logger.info(f"Evaluation finished in {elapsed / 60:.1f} min (exit code: {return_code})")
-    logger.info("=" * 50)
-    if wer_value is not None:
-        logger.info(f"  WER: {wer_value:.2f}%")
-    else:
-        logger.warning("  WER: not found in output")
-    if cer_value is not None:
-        logger.info(f"  CER: {cer_value:.2f}%")
-    else:
-        logger.warning("  CER: not found in output")
-    logger.info("=" * 50)
+        return_code = process.wait()
+        elapsed = time.time() - start_time
+
+        # Summary
+        logger.info(f"Evaluation finished in {elapsed / 60:.1f} min (exit code: {return_code})")
+        logger.info("=" * 50)
+        if wer_value is not None:
+            logger.info(f"  WER: {wer_value:.2f}%")
+        else:
+            logger.warning("  WER: not found in output")
+        if cer_value is not None:
+            logger.info(f"  CER: {cer_value:.2f}%")
+        else:
+            logger.warning("  CER: not found in output")
+        logger.info("=" * 50)
+
+        if wandb_run is not None:
+            try:
+                import wandb
+
+                metrics: dict[str, float] = {}
+                if wer_value is not None:
+                    metrics["test/wer"] = wer_value
+                if cer_value is not None:
+                    metrics["test/cer"] = cer_value
+                if metrics:
+                    wandb.log(metrics)
+                wandb.summary["exit_code"] = return_code
+                wandb.finish(exit_code=return_code)
+            except Exception as e:
+                logger.warning(f"W&B finish failed: {type(e).__name__}: {e}")
+
+    except Exception as e:
+        logger.exception(f"Unhandled exception in eval wrapper: {e}")
+        if wandb_run is not None:
+            try:
+                import wandb
+
+                wandb.finish(exit_code=1)
+            except Exception:
+                pass
+        sys.exit(1)
 
     sys.exit(return_code)
 
