@@ -103,7 +103,9 @@ def check_prerequisites(config: Path) -> None:
         logger.info("fairseq2 recipe module: OK")
     except ImportError as e:
         logger.error(f"Cannot import training recipe: {e}")
-        logger.error("Ensure omnilingual-asr is installed: uv add omnilingual-asr")
+        logger.error(
+            "omnilingual-asr not available. Activate your venv and run: uv sync --group omni"
+        )
         sys.exit(1)
 
 
