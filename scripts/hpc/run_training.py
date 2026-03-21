@@ -249,15 +249,15 @@ def main() -> None:
         return_code = process.wait()
         elapsed = time.time() - start_time
 
-        if return_code != 0:
+        if return_code < 0:
+            sig_num = -return_code
+            sig_map = {s.value: s.name for s in signal.Signals}
+            sig_name = sig_map.get(sig_num, str(sig_num))
+            return_code = 128 + sig_num
+            logger.error(f"Training KILLED by signal {sig_name} after {elapsed / 3600:.1f}h (exit code: {return_code})")
+            logger.error("If SIGKILL: likely OOM. Check GPU stats CSV and increase rusage[mem] or reduce batch size.")
+        elif return_code != 0:
             logger.error(f"Training FAILED after {elapsed / 3600:.1f}h (exit code: {return_code})")
-            if return_code < 0:
-                sig_map = {s.value: s.name for s in signal.Signals}
-                sig_name = sig_map.get(-return_code, str(-return_code))
-                logger.error(f"Killed by signal {sig_name} — last log lines above may be incomplete")
-                logger.error(
-                    "If SIGKILL: likely OOM. Check GPU stats CSV and increase rusage[mem] or reduce batch size."
-                )
         else:
             logger.info(f"Training completed successfully in {elapsed / 3600:.1f}h")
 

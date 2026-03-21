@@ -33,10 +33,11 @@ nvidia-smi
 # Background GPU monitoring (every 30s)
 OUTPUT_DIR="/work3/$USER/outputs"
 mkdir -p "$OUTPUT_DIR"
+NVIDIA_SMI_PID=""
+trap '[[ -n "$NVIDIA_SMI_PID" ]] && kill "$NVIDIA_SMI_PID" 2>/dev/null || true' EXIT
 nvidia-smi --query-gpu=index,timestamp,utilization.gpu,memory.total,memory.used,memory.free \
     --format=csv -l 30 > "$OUTPUT_DIR/gpu_stats_${LSB_JOBID}.csv" &
 NVIDIA_SMI_PID=$!
-trap 'kill "$NVIDIA_SMI_PID" 2>/dev/null || true' EXIT
 
 python scripts/hpc/run_training.py \
     --config configs/fairseq2/ctc-finetune-hpc.yaml
