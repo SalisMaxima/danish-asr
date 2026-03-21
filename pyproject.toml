@@ -154,6 +154,9 @@ omit = [
     ".venv/*",
 ]
 
+[project.entry-points."fairseq2.extension"]
+danish_asr = "danish_asr:setup_fairseq2_extension"
+
 [project.scripts]
 train = "danish_asr.train:train"
 sweep-train = "danish_asr.sweep_train:main"
