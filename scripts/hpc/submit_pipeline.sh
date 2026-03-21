@@ -26,7 +26,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Ensure log dirs exist
-mkdir -p /work3/$USER/logs/lsf
+LOG_DIR="/work3/$USER/logs/lsf"
+mkdir -p "$LOG_DIR"
 mkdir -p /work3/$USER/logs/python
 
 PREV_JOB_ID=""
@@ -46,7 +47,7 @@ extract_job_id() {
 # --- Step 1: Verify data ---
 if [ "$SKIP_VERIFY" = false ]; then
     echo "Submitting: 01_verify_data.sh"
-    VERIFY_OUTPUT=$(bsub < "$SCRIPT_DIR/01_verify_data.sh")
+    VERIFY_OUTPUT=$(bsub -o "$LOG_DIR/verify_%J.out" -e "$LOG_DIR/verify_%J.err" < "$SCRIPT_DIR/01_verify_data.sh")
     VERIFY_JOB_ID=$(extract_job_id "$VERIFY_OUTPUT" "01_verify_data")
     echo "  Job ID: $VERIFY_JOB_ID"
     PREV_JOB_ID="$VERIFY_JOB_ID"
@@ -56,9 +57,9 @@ fi
 if [ "$SKIP_CONVERT" = false ]; then
     echo "Submitting: 02_convert_fairseq2.sh"
     if [ -n "$PREV_JOB_ID" ]; then
-        CONVERT_OUTPUT=$(bsub -w "done($PREV_JOB_ID)" < "$SCRIPT_DIR/02_convert_fairseq2.sh")
+        CONVERT_OUTPUT=$(bsub -o "$LOG_DIR/convert_%J.out" -e "$LOG_DIR/convert_%J.err" -w "done($PREV_JOB_ID)" < "$SCRIPT_DIR/02_convert_fairseq2.sh")
     else
-        CONVERT_OUTPUT=$(bsub < "$SCRIPT_DIR/02_convert_fairseq2.sh")
+        CONVERT_OUTPUT=$(bsub -o "$LOG_DIR/convert_%J.out" -e "$LOG_DIR/convert_%J.err" < "$SCRIPT_DIR/02_convert_fairseq2.sh")
     fi
     CONVERT_JOB_ID=$(extract_job_id "$CONVERT_OUTPUT" "02_convert_fairseq2")
     echo "  Job ID: $CONVERT_JOB_ID"
@@ -68,9 +69,9 @@ fi
 # --- Step 3: Train ---
 echo "Submitting: 03_train.sh"
 if [ -n "$PREV_JOB_ID" ]; then
-    TRAIN_OUTPUT=$(bsub -w "done($PREV_JOB_ID)" < "$SCRIPT_DIR/03_train.sh")
+    TRAIN_OUTPUT=$(bsub -o "$LOG_DIR/train_%J.out" -e "$LOG_DIR/train_%J.err" -w "done($PREV_JOB_ID)" < "$SCRIPT_DIR/03_train.sh")
 else
-    TRAIN_OUTPUT=$(bsub < "$SCRIPT_DIR/03_train.sh")
+    TRAIN_OUTPUT=$(bsub -o "$LOG_DIR/train_%J.out" -e "$LOG_DIR/train_%J.err" < "$SCRIPT_DIR/03_train.sh")
 fi
 TRAIN_JOB_ID=$(extract_job_id "$TRAIN_OUTPUT" "03_train")
 echo "  Job ID: $TRAIN_JOB_ID"
@@ -78,7 +79,7 @@ echo "  Job ID: $TRAIN_JOB_ID"
 # --- Step 4: Eval (optional) ---
 if [ -n "$CHECKPOINT_DIR" ]; then
     echo "Submitting: 04_eval.sh (checkpoint: $CHECKPOINT_DIR)"
-    EVAL_OUTPUT=$(bsub -w "done($TRAIN_JOB_ID)" -env "CHECKPOINT_DIR=$CHECKPOINT_DIR" < "$SCRIPT_DIR/04_eval.sh")
+    EVAL_OUTPUT=$(bsub -o "$LOG_DIR/eval_%J.out" -e "$LOG_DIR/eval_%J.err" -w "done($TRAIN_JOB_ID)" -env "CHECKPOINT_DIR=$CHECKPOINT_DIR" < "$SCRIPT_DIR/04_eval.sh")
     EVAL_JOB_ID=$(extract_job_id "$EVAL_OUTPUT" "04_eval")
     echo "  Job ID: $EVAL_JOB_ID"
 fi

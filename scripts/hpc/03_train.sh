@@ -6,8 +6,7 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 8:00
-#BSUB -o /work3/%U/logs/lsf/train_%J.out
-#BSUB -e /work3/%U/logs/lsf/train_%J.err
+# -o/-e passed on bsub command line (LSF doesn't expand %U or $USER in directives)
 
 set -euo pipefail
 
@@ -21,6 +20,9 @@ mkdir -p /work3/$USER/logs/lsf
 mkdir -p /work3/$USER/logs/python
 
 # PyTorch cu128 bundles its own CUDA runtime — no module load needed
+# workflows/ module lives in the cloned omnilingual-asr repo, not the pip package
+export PYTHONPATH="/work3/$USER/omnilingual-asr:${PYTHONPATH:-}"
+
 PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
 cd "$PROJECT_DIR"
 source .venv/bin/activate

@@ -5,8 +5,7 @@
 #BSUB -R "rusage[mem=4GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -W 2:00
-#BSUB -o /work3/%U/logs/lsf/convert_%J.out
-#BSUB -e /work3/%U/logs/lsf/convert_%J.err
+# -o/-e passed on bsub command line (LSF doesn't expand %U or $USER in directives)
 
 set -euo pipefail
 
