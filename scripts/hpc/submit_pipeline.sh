@@ -25,7 +25,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Ensure log dirs exist
+# Ensure log dirs exist before bsub (LSF needs -o/-e paths at submission time)
 LOG_DIR="/work3/$USER/logs/lsf"
 mkdir -p "$LOG_DIR"
 mkdir -p /work3/$USER/logs/python

@@ -1,11 +1,13 @@
 #!/bin/bash
+# Usage: submit via submit_pipeline.sh
+#   or:  bsub -o /work3/$USER/logs/lsf/convert_%J.out -e /work3/$USER/logs/lsf/convert_%J.err < scripts/hpc/02_convert_fairseq2.sh
 #BSUB -J danish_asr_convert
 #BSUB -q hpc
 #BSUB -n 4
 #BSUB -R "rusage[mem=4GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -W 2:00
-# -o/-e passed on bsub command line (LSF doesn't expand %U or $USER in directives)
+# -o/-e passed on bsub command line (shell variables are not expanded in #BSUB directives)
 
 set -euo pipefail
 

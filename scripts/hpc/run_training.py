@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shlex
 import signal
@@ -103,9 +104,11 @@ def check_prerequisites(config: Path) -> None:
         logger.info("fairseq2 recipe module: OK")
     except ImportError as e:
         logger.error(f"Cannot import training recipe: {e}")
+        user = os.environ.get("USER", "<your-username>")
         logger.error(
-            "workflows module not found. Ensure PYTHONPATH includes the cloned omnilingual-asr repo: "
-            "export PYTHONPATH=/work3/$USER/omnilingual-asr:$PYTHONPATH"
+            f"workflows module not found. Expected at /work3/{user}/omnilingual-asr. "
+            "Clone it: git clone https://github.com/facebookresearch/omnilingual-asr.git "
+            f"/work3/{user}/omnilingual-asr"
         )
         sys.exit(1)
 
