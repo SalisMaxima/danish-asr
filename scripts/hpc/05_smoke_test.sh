@@ -1,13 +1,13 @@
 #!/bin/bash
-#BSUB -J danish_asr_train
+#BSUB -J danish_asr_smoke
 #BSUB -q gpua100
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -W 8:00
-#BSUB -o /work3/s204696/logs/lsf/train_%J.out
-#BSUB -e /work3/s204696/logs/lsf/train_%J.err
+#BSUB -W 0:30
+#BSUB -o /work3/s204696/logs/lsf/smoke_%J.out
+#BSUB -e /work3/s204696/logs/lsf/smoke_%J.err
 
 set -euo pipefail
 
@@ -24,7 +24,7 @@ mkdir -p /work3/$USER/logs/python
 cd "$HOME/danish_asr"
 source .venv/bin/activate
 
-echo "=== Job $LSB_JOBID: Train omniASR ==="
+echo "=== Job $LSB_JOBID: Smoke Test (50 steps) ==="
 echo "Started: $(date)"
 echo "Node: $(hostname)"
 nvidia-smi
@@ -33,11 +33,12 @@ nvidia-smi
 OUTPUT_DIR="/work3/$USER/outputs"
 mkdir -p "$OUTPUT_DIR"
 nvidia-smi --query-gpu=index,timestamp,utilization.gpu,memory.total,memory.used,memory.free \
-    --format=csv -l 30 > "$OUTPUT_DIR/gpu_stats_${LSB_JOBID}.csv" &
+    --format=csv -l 30 > "$OUTPUT_DIR/gpu_stats_smoke_${LSB_JOBID}.csv" &
 NVIDIA_SMI_PID=$!
 
 python scripts/hpc/run_training.py \
-    --config configs/fairseq2/ctc-finetune-hpc.yaml
+    --config configs/fairseq2/ctc-finetune-smoke.yaml \
+    --wandb-tags "smoke,hpc,a100"
 
 # Cleanup GPU monitor
 kill $NVIDIA_SMI_PID 2>/dev/null || true

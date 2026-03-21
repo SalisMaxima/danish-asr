@@ -74,6 +74,14 @@ def omniasr(ctx: Context, hardware: str = "local", output_dir: str = "", args: s
     ctx.run(cmd, echo=True, pty=not WINDOWS)
 
 
+@task(name="hpc-smoke")
+def hpc_smoke(ctx: Context) -> None:
+    """Submit 50-step smoke test to DTU HPC gpua100 queue (requires VPN). Validates full pipeline."""
+    ctx.run(
+        "ssh s204696@login.hpc.dtu.dk 'cd ~/danish_asr && git pull && bsub < scripts/hpc/05_smoke_test.sh'", pty=True
+    )
+
+
 @task
 def omniasr_eval(ctx: Context, checkpoint_dir: str, hardware: str = "local") -> None:
     """Evaluate omniASR checkpoint."""
