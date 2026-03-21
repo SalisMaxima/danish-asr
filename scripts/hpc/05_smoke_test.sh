@@ -3,7 +3,6 @@
 #BSUB -q gpua100
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
-#BSUB -M 18GB
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 0:30
