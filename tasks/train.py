@@ -7,6 +7,9 @@ from pathlib import Path
 from invoke import Context, task
 from loguru import logger
 
+HPC_USER = os.environ.get("HPC_USER", "s204696")
+HPC_LOGIN = f"{HPC_USER}@login.hpc.dtu.dk"
+
 WINDOWS = os.name == "nt"
 PROJECT_NAME = "danish_asr"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -82,7 +85,7 @@ def hpc_smoke(ctx: Context) -> None:
     the latest pushed commit — local uncommitted changes are NOT included.
     """
     ctx.run(
-        "ssh s204696@login.hpc.dtu.dk 'cd ~/danish_asr && git pull && bsub < scripts/hpc/05_smoke_test.sh'",
+        f"ssh {HPC_LOGIN} 'cd ~/danish_asr && git pull && bsub < scripts/hpc/05_smoke_test.sh'",
         pty=not WINDOWS,
     )
 

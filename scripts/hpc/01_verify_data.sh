@@ -5,8 +5,8 @@
 #BSUB -R "rusage[mem=8GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -W 2:00
-#BSUB -o /work3/s204696/logs/lsf/verify_%J.out
-#BSUB -e /work3/s204696/logs/lsf/verify_%J.err
+#BSUB -o /work3/%U/logs/lsf/verify_%J.out
+#BSUB -e /work3/%U/logs/lsf/verify_%J.err
 
 set -euo pipefail
 

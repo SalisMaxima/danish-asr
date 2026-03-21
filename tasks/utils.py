@@ -5,6 +5,9 @@ import os
 from invoke import Context, task
 
 WINDOWS = os.name == "nt"
+HPC_USER = os.environ.get("HPC_USER", "s204696")
+HPC_LOGIN = f"{HPC_USER}@login.hpc.dtu.dk"
+HPC_TRANSFER = f"{HPC_USER}@transfer.gbar.dtu.dk"
 
 
 @task
@@ -106,20 +109,20 @@ def kill_port(ctx: Context, port: int = 8000) -> None:
 @task
 def hpc_sftp(ctx: Context) -> None:
     """Open SFTP session to DTU HPC transfer node (requires VPN or DTU network)."""
-    ctx.run("sftp s204696@transfer.gbar.dtu.dk", pty=True)
+    ctx.run(f"sftp {HPC_TRANSFER}", pty=True)
 
 
 @task
 def hpc_ssh(ctx: Context) -> None:
     """SSH into DTU HPC login node (requires VPN or DTU network)."""
-    ctx.run("ssh s204696@login.hpc.dtu.dk", pty=True)
+    ctx.run(f"ssh {HPC_LOGIN}", pty=True)
 
 
 @task
 def dtu_vpn(ctx: Context) -> None:
     """Connect to DTU VPN via openconnect (requires sudo + MFA)."""
     print("Connecting to DTU VPN...")
-    print("  Username: s204696@dtu.dk  |  MFA: Microsoft Authenticator\n")
+    print(f"  Username: {HPC_USER}@dtu.dk  |  MFA: Microsoft Authenticator\n")
     ctx.run(
         'sudo openconnect vpn.dtu.dk --useragent "AnyConnect Linux_64 5.1.10.238" --version-string "5.1.10.238"',
         pty=True,

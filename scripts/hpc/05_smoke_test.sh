@@ -7,8 +7,8 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 0:30
-#BSUB -o /work3/s204696/logs/lsf/smoke_%J.out
-#BSUB -e /work3/s204696/logs/lsf/smoke_%J.err
+#BSUB -o /work3/%U/logs/lsf/smoke_%J.out
+#BSUB -e /work3/%U/logs/lsf/smoke_%J.err
 
 set -euo pipefail
 
