@@ -184,7 +184,7 @@ dialect = sample["dialect"]
 - **Both subsets used:** `read_aloud` + `conversation`
 - Audio sample rate is **48kHz** — must be resampled to **16kHz** for omnilingual ASR
 - Language code for omnilingual ASR: **`dan_Latn`**
-- Text field: `text` — needs normalization (lowercasing, punctuation removal) via omnilingual ASR's `text_normalize()`
+- Text field: `text` — stored as-is; `omniASR_tokenizer_written_v2` handles mixed case, digits, and punctuation natively (see `docs/data-preparation.md`)
 - Split naming: HF uses `validation`, omnilingual ASR expects `dev` — map during Parquet conversion
 - Rich metadata (dialect, age, gender) enables per-group evaluation and fairness analysis
 - Conversational subset adds spontaneous speech diversity (different acoustic conditions, disfluencies)

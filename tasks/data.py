@@ -157,6 +157,16 @@ def download_all(ctx: Context) -> None:
         raise RuntimeError(f"Failed to download: {', '.join(failed)}")
 
 
+@task(name="verify-preprocessed")
+def verify_preprocessed(ctx: Context, preprocessed_dir: str = "data/preprocessed") -> None:
+    """Verify schema, row counts, audio duration, and audio integrity of preprocessed Parquet files."""
+    ctx.run(
+        f"uv run python -c 'from danish_asr.preprocessing import verify_preprocessed_data; verify_preprocessed_data({preprocessed_dir!r})'",
+        echo=True,
+        pty=not WINDOWS,
+    )
+
+
 @task(name="convert-parquet")
 def convert_parquet(
     ctx: Context,

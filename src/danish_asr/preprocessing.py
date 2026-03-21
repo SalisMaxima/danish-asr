@@ -19,7 +19,6 @@ import io
 import sys
 from pathlib import Path
 
-import numpy as np
 import soundfile as sf
 import torch
 import torchaudio
@@ -31,17 +30,19 @@ from loguru import logger
 
 try:
     import pyarrow as pa
+    import pyarrow.compute as pc
     import pyarrow.parquet as pq
 
     _PYARROW_AVAILABLE = True
 except ImportError:
     pa = None  # type: ignore[assignment]
+    pc = None  # type: ignore[assignment]
     pq = None  # type: ignore[assignment]
     _PYARROW_AVAILABLE = False
 
 
 def _require_pyarrow():
-    """Return (pa, pq) or raise a clear ImportError if pyarrow is missing."""
+    """Return (pa, pc, pq) or raise a clear ImportError if pyarrow is missing."""
     if not _PYARROW_AVAILABLE:
         msg = (
             "pyarrow is required for Parquet output but is not installed.\n"
@@ -50,7 +51,7 @@ def _require_pyarrow():
             "  or sync the 'omni' dependency group: uv sync --group omni"
         )
         raise ImportError(msg)
-    return pa, pq  # type: ignore[return-value]
+    return pa, pc, pq  # type: ignore[return-value]
 
 
 # ---------------------------------------------------------------------------
@@ -77,7 +78,7 @@ if _PYARROW_AVAILABLE:
     FAIRSEQ2_SCHEMA = pa.schema(  # type: ignore[union-attr]
         [
             ("text", pa.string()),  # type: ignore[union-attr]
-            ("audio_bytes", pa.list_(pa.int8())),  # type: ignore[union-attr]
+            ("audio_bytes", pa.binary()),  # type: ignore[union-attr]
             ("audio_size", pa.int64()),  # type: ignore[union-attr]
             ("corpus", pa.dictionary(pa.int32(), pa.string())),  # type: ignore[union-attr]
             ("split", pa.dictionary(pa.int32(), pa.string())),  # type: ignore[union-attr]
@@ -107,11 +108,11 @@ else:
 # ---------------------------------------------------------------------------
 
 
-def process_audio(audio_dict: dict) -> tuple[bytes, np.ndarray, int]:
+def process_audio(audio_dict: dict) -> tuple[bytes, int]:
     """Resample to 16kHz and FLAC-encode once.
 
     Returns:
-        (flac_bytes_raw, flac_int8_array, audio_samples)
+        (flac_bytes, audio_samples)
     """
     array = audio_dict["array"]
     sr = audio_dict["sampling_rate"]
@@ -126,30 +127,7 @@ def process_audio(audio_dict: dict) -> tuple[bytes, np.ndarray, int]:
     sf.write(buffer, waveform.squeeze(0).numpy(), TARGET_SR, format="FLAC")
     flac_bytes = buffer.getvalue()
 
-    flac_int8 = np.frombuffer(flac_bytes, dtype=np.int8)
-    return flac_bytes, flac_int8, audio_samples
-
-
-# ---------------------------------------------------------------------------
-# Text normalization (fairseq2 only)
-# ---------------------------------------------------------------------------
-
-_text_normalize_fn = None
-
-
-def _get_text_normalize():
-    """Lazy-load and cache the text_normalize function."""
-    global _text_normalize_fn  # noqa: PLW0603
-    if _text_normalize_fn is None:
-        from omnilingual_asr.data.text_tools import text_normalize
-
-        _text_normalize_fn = text_normalize
-    return _text_normalize_fn
-
-
-def normalize_text_fairseq2(text: str) -> str:
-    """Normalize text using omnilingual ASR text normalizer."""
-    return _get_text_normalize()(text, "dan", lower_case=True, remove_numbers=True)
+    return flac_bytes, audio_samples
 
 
 # ---------------------------------------------------------------------------
@@ -159,23 +137,25 @@ def normalize_text_fairseq2(text: str) -> str:
 
 def write_fairseq2_parquet(rows: list[dict], path: Path) -> None:
     """Write rows to a fairseq2-format Parquet file."""
-    pa, pq = _require_pyarrow()
+    pa, pc, pq = _require_pyarrow()
     path.parent.mkdir(parents=True, exist_ok=True)
     arrays = {
         "text": pa.array([r["text"] for r in rows], type=pa.string()),
-        "audio_bytes": pa.array([r["audio_bytes"] for r in rows], type=pa.list_(pa.int8())),
+        "audio_bytes": pa.array([r["audio_bytes"] for r in rows], type=pa.binary()),
         "audio_size": pa.array([r["audio_size"] for r in rows], type=pa.int64()),
         "corpus": pa.array([r["corpus"] for r in rows]).dictionary_encode(),
         "split": pa.array([r["split"] for r in rows]).dictionary_encode(),
         "language": pa.array([r["language"] for r in rows]).dictionary_encode(),
     }
     table = pa.table(arrays, schema=FAIRSEQ2_SCHEMA)
-    pq.write_table(table, path, row_group_size=ROW_GROUP_SIZE)
+    tmp_path = path.with_suffix(".tmp")
+    pq.write_table(table, tmp_path, row_group_size=ROW_GROUP_SIZE)
+    tmp_path.rename(path)
 
 
 def write_universal_parquet(rows: list[dict], path: Path) -> None:
     """Write rows to a universal-format Parquet file."""
-    pa, pq = _require_pyarrow()
+    pa, pc, pq = _require_pyarrow()
     path.parent.mkdir(parents=True, exist_ok=True)
     arrays = {
         "text": pa.array([r["text"] for r in rows], type=pa.string()),
@@ -190,7 +170,9 @@ def write_universal_parquet(rows: list[dict], path: Path) -> None:
         "dialect": pa.array([r["dialect"] for r in rows], type=pa.string()),
     }
     table = pa.table(arrays, schema=UNIVERSAL_SCHEMA)
-    pq.write_table(table, path, row_group_size=ROW_GROUP_SIZE)
+    tmp_path = path.with_suffix(".tmp")
+    pq.write_table(table, tmp_path, row_group_size=ROW_GROUP_SIZE)
+    tmp_path.rename(path)
 
 
 # ---------------------------------------------------------------------------
@@ -258,7 +240,7 @@ def convert_split(
 
     for i, sample in enumerate(ds):
         try:
-            flac_bytes, flac_int8, audio_samples = process_audio(sample["audio"])
+            flac_bytes, audio_samples = process_audio(sample["audio"])
         except (ValueError, RuntimeError, OSError, KeyError, TypeError, AttributeError) as e:
             logger.warning(f"Skipping sample {i} in {hf_subset}/{hf_split}: {type(e).__name__}: {e}")
             skipped += 1
@@ -266,19 +248,14 @@ def convert_split(
 
         text = sample.get("text", sample.get("sentence", ""))
 
-        # Build fairseq2 row
+        # Build fairseq2 row — raw text, no normalization needed.
+        # omniASR_CTC_300M_v2 uses omniASR_tokenizer_written_v2, which natively
+        # handles mixed case, digits, punctuation, and Danish characters.
         if fairseq2_split_dir is not None:
-            try:
-                normalized_text = normalize_text_fairseq2(text)
-            except (ValueError, RuntimeError, OSError, KeyError, TypeError, AttributeError) as e:
-                logger.warning(f"Skipping sample {i} (text normalization): {type(e).__name__}: {e}")
-                skipped += 1
-                continue
-
             fairseq2_rows.append(
                 {
-                    "text": normalized_text,
-                    "audio_bytes": flac_int8,
+                    "text": text,
+                    "audio_bytes": flac_bytes,
                     "audio_size": audio_samples,
                     "corpus": corpus_name,
                     "split": parquet_split,
@@ -376,6 +353,115 @@ def write_stats_tsv(stats: list[dict], path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Verification
+# ---------------------------------------------------------------------------
+
+EXPECTED_COLUMNS = {
+    "text",
+    "audio",
+    "audio_samples",
+    "duration_s",
+    "subset",
+    "split",
+    "speaker_id",
+    "gender",
+    "age",
+    "dialect",
+}
+# Approximate total hours per subset (train+val+test combined); tolerance ±20h
+EXPECTED_SUBSET_HOURS = {"read_aloud": 542, "conversation": 155}
+
+
+def verify_preprocessed_data(preprocessed_dir: str = "data/preprocessed") -> None:
+    """Verify schema, row counts, audio duration, and audio integrity of preprocessed Parquet files.
+
+    Checks all 6 split directories in `preprocessed_dir` ({read_aloud,conversation}/{train,validation,test}).
+    Exits with code 1 if any check fails.
+    """
+    pa, pc, pq = _require_pyarrow()
+    base = Path(preprocessed_dir)
+    splits = ("train", "validation", "test")
+    subsets = ("read_aloud", "conversation")
+
+    errors: list[str] = []
+    summary: list[tuple[str, str, int, float]] = []
+
+    for subset in subsets:
+        subset_hours = 0.0
+        for split in splits:
+            split_dir = base / subset / split
+            if not split_dir.exists():
+                errors.append(f"MISSING dir: {split_dir}")
+                continue
+            files = sorted(split_dir.glob("*.parquet"))
+            if not files:
+                errors.append(f"NO FILES in {split_dir}")
+                continue
+
+            # Schema check (read from first file only)
+            schema = pq.read_schema(files[0])
+            missing_cols = EXPECTED_COLUMNS - set(schema.names)
+            if missing_cols:
+                errors.append(f"SCHEMA {subset}/{split}: missing columns {missing_cols}")
+
+            # Row count + duration + null checks — process in chunks to limit memory
+            total_rows = sum(pq.read_metadata(f).num_rows for f in files)
+            split_duration_s = 0.0
+            null_counts: dict[str, int] = {"text": 0, "audio": 0, "duration_s": 0}
+            audio_spot_checked = False
+            chunk_size = max(1, len(files) // 20)
+
+            for chunk_start in range(0, len(files), chunk_size):
+                chunk_files = files[chunk_start : chunk_start + chunk_size]
+                chunk_tables = [pq.read_table(f, columns=["duration_s", "text", "audio"]) for f in chunk_files]
+                chunk = pa.concat_tables(chunk_tables)
+
+                split_duration_s += pc.sum(chunk["duration_s"].cast(pa.float64())).as_py()
+
+                for col in null_counts:
+                    null_counts[col] += chunk[col].null_count
+
+                # Audio spot-check on first chunk only
+                if not audio_spot_checked and len(chunk) > 0:
+                    spot_bytes = chunk["audio"][0].as_py()
+                    try:
+                        sf.read(io.BytesIO(spot_bytes))
+                    except Exception as e:
+                        errors.append(f"AUDIO DECODE {subset}/{split}: {e}")
+                    audio_spot_checked = True
+
+                del chunk, chunk_tables
+
+            split_hours_total = split_duration_s / 3600
+            subset_hours += split_hours_total
+
+            for col, nc in null_counts.items():
+                if nc > 0:
+                    errors.append(f"NULLS {subset}/{split} col={col}: {nc} nulls")
+
+            summary.append((subset, split, total_rows, split_hours_total))
+
+        expected_h = EXPECTED_SUBSET_HOURS[subset]
+        if abs(subset_hours - expected_h) > 20:
+            errors.append(f"DURATION {subset}: {subset_hours:.1f}h (expected ~{expected_h}h)")
+
+    # Print summary table
+    print(f"{'Subset':<15} {'Split':<8} {'Rows':>10} {'Hours':>8}")
+    print("-" * 45)
+    for subset, split, n, h in summary:
+        print(f"{subset:<15} {split:<8} {n:>10,} {h:>7.1f}h")
+    print()
+
+    if errors:
+        print("FAILURES:")
+        for err in errors:
+            print(f"  [FAIL] {err}")
+        sys.exit(1)
+    else:
+        print("All checks passed.")
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -446,14 +532,6 @@ def main(argv: list[str] | None = None) -> None:
         targets.add("fairseq2")
     if args.target in ("universal", "all"):
         targets.add("universal")
-
-    # Early check for omnilingual_asr if fairseq2 target is requested
-    if "fairseq2" in targets:
-        try:
-            from omnilingual_asr.data.text_tools import text_normalize  # noqa: F401
-        except ImportError:
-            logger.error("omnilingual-asr not installed. Run: uv sync --group omni")
-            sys.exit(1)
 
     subsets_to_process = SUBSETS if args.subset == "all" else {args.subset: SUBSETS[args.subset]}
     all_stats: list[dict] = []

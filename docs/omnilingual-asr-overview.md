@@ -55,14 +55,19 @@ Audio (16kHz) → wav2vec2 encoder → CTC projection → character/token sequen
 - Tokenizer: character-level with language-specific tokens
 - Language code format: `{iso639-3}_{script}` (e.g., `dan_Latn` for Danish)
 
+## Tokenizers
+
+| Tokenizer | Used by | Handles uppercase/digits/punctuation? |
+|---|---|---|
+| `omniASR_tokenizer_v1` | v1 CTC models (`omniASR_CTC_300M`) | No — maps them to UNK |
+| `omniASR_tokenizer_written_v2` | v2 CTC models (`omniASR_CTC_300M_v2`, etc.) | Yes — designed for written text |
+
+**`omniASR_CTC_300M_v2` uses `omniASR_tokenizer_written_v2`.** This tokenizer natively handles mixed case, digits (e.g. `42`, `CO2`), punctuation, and Danish characters (æøå, ÆØÅ). No text normalization is needed before training or inference — and `text_normalize()` was removed from omnilingual-asr 0.2.0 for this reason. See `docs/data-preparation.md` for full details.
+
 ## Installation
 
 ```bash
-# Core package
-uv add omnilingual-asr
-
-# With data preparation tools
-uv add "omnilingual-asr[data]"
+uv sync --group omni   # installs omnilingual-asr + pyarrow
 ```
 
 System dependency: `libsndfile` (usually pre-installed on Linux).
