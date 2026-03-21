@@ -311,7 +311,7 @@ class CoRalDataModule(pl.LightningDataModule):
 
         if stage == "fit" or stage is None:
             self.train_dataset = _make_ds("train")
-            self.val_dataset = _make_ds("validation")
+            self.val_dataset = _make_ds("val")
 
         if stage == "test" or stage is None:
             self.test_dataset = _make_ds("test")
@@ -345,7 +345,7 @@ class CoRalDataModule(pl.LightningDataModule):
                 max_duration=self.max_duration,
             )
             self.val_dataset = CoRalDataset(
-                dataset["validation"],
+                dataset["val"],
                 processor=self.processor,
                 tokenizer=self.tokenizer,
                 text_normalizer=self.text_normalizer,

@@ -26,7 +26,7 @@ Fine-tuning Meta's omnilingual ASR (`omniASR_CTC_300M_v2`) for Danish using CoRa
 ## Dataset
 - **Source:** `CoRal-project/coral-v3` on HuggingFace (NOT `alexandrainst/coral`)
 - **Subsets:** `read_aloud` + `conversation` — both used
-- **Splits:** `train` / `validation` / `test` (HF naming; map `validation` → `dev` for fairseq2)
+- **Splits:** `train` / `val` / `test` (HF naming; map `val` → `dev` for fairseq2)
 - **Audio:** 48kHz native, resample to 16kHz
 - See [docs/coral-dataset.md](docs/coral-dataset.md) for fields and demographics
 

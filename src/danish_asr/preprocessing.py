@@ -31,11 +31,13 @@ from loguru import logger
 
 try:
     import pyarrow as pa
+    import pyarrow.compute as pc
     import pyarrow.parquet as pq
 
     _PYARROW_AVAILABLE = True
 except ImportError:
     pa = None  # type: ignore[assignment]
+    pc = None  # type: ignore[assignment]
     pq = None  # type: ignore[assignment]
     _PYARROW_AVAILABLE = False
 
@@ -61,8 +63,8 @@ SUBSETS = {
     "read_aloud": "coral_v3_read_aloud",
     "conversation": "coral_v3_conversation",
 }
-SPLIT_MAP = {"train": "train", "validation": "dev", "test": "test"}
-HF_SPLITS = ("train", "validation", "test")
+SPLIT_MAP = {"train": "train", "val": "dev", "test": "test"}
+HF_SPLITS = ("train", "val", "test")
 TARGET_SR = 16000
 LANGUAGE = "dan_Latn"
 ROW_GROUP_SIZE = 100
@@ -373,6 +375,114 @@ def write_stats_tsv(stats: list[dict], path: Path) -> None:
         writer.writeheader()
         writer.writerows(stats)
     logger.info(f"Wrote stats to {path}")
+
+
+# ---------------------------------------------------------------------------
+# Verification
+# ---------------------------------------------------------------------------
+
+EXPECTED_COLUMNS = {
+    "text",
+    "audio",
+    "audio_samples",
+    "duration_s",
+    "subset",
+    "split",
+    "speaker_id",
+    "gender",
+    "age",
+    "dialect",
+}
+# Approximate total hours per subset (train+val+test combined); tolerance ±20h
+EXPECTED_SUBSET_HOURS = {"read_aloud": 542, "conversation": 155}
+
+
+def verify_preprocessed_data(preprocessed_dir: str = "data/preprocessed") -> None:
+    """Verify schema, row counts, audio duration, and audio integrity of preprocessed Parquet files.
+
+    Checks all 6 split directories in `preprocessed_dir` ({read_aloud,conversation}/{train,val,test}).
+    Exits with code 1 if any check fails.
+    """
+    base = Path(preprocessed_dir)
+    splits = ("train", "val", "test")
+    subsets = ("read_aloud", "conversation")
+
+    errors: list[str] = []
+    summary: list[tuple[str, str, int, float]] = []
+
+    for subset in subsets:
+        subset_hours = 0.0
+        for split in splits:
+            split_dir = base / subset / split
+            if not split_dir.exists():
+                errors.append(f"MISSING dir: {split_dir}")
+                continue
+            files = sorted(split_dir.glob("*.parquet"))
+            if not files:
+                errors.append(f"NO FILES in {split_dir}")
+                continue
+
+            # Schema check (read from first file only)
+            schema = pq.read_schema(files[0])
+            missing_cols = EXPECTED_COLUMNS - set(schema.names)
+            if missing_cols:
+                errors.append(f"SCHEMA {subset}/{split}: missing columns {missing_cols}")
+
+            # Row count + duration + null checks — process in chunks to limit memory
+            total_rows = sum(pq.read_metadata(f).num_rows for f in files)
+            split_duration_s = 0.0
+            null_counts: dict[str, int] = {"text": 0, "audio": 0, "duration_s": 0}
+            audio_spot_checked = False
+            chunk_size = max(1, len(files) // 20)
+
+            for chunk_start in range(0, len(files), chunk_size):
+                chunk_files = files[chunk_start : chunk_start + chunk_size]
+                chunk_tables = [pq.read_table(f, columns=["duration_s", "text", "audio"]) for f in chunk_files]
+                chunk = pa.concat_tables(chunk_tables)
+
+                split_duration_s += pc.sum(chunk["duration_s"].cast(pa.float64())).as_py()
+
+                for col in null_counts:
+                    null_counts[col] += chunk[col].null_count
+
+                # Audio spot-check on first chunk only
+                if not audio_spot_checked and len(chunk) > 0:
+                    spot_bytes = chunk["audio"][0].as_py()
+                    try:
+                        sf.read(io.BytesIO(spot_bytes))
+                    except Exception as e:
+                        errors.append(f"AUDIO DECODE {subset}/{split}: {e}")
+                    audio_spot_checked = True
+
+                del chunk, chunk_tables
+
+            split_hours_total = split_duration_s / 3600
+            subset_hours += split_hours_total
+
+            for col, nc in null_counts.items():
+                if nc > 0:
+                    errors.append(f"NULLS {subset}/{split} col={col}: {nc} nulls")
+
+            summary.append((subset, split, total_rows, split_hours_total))
+
+        expected_h = EXPECTED_SUBSET_HOURS[subset]
+        if abs(subset_hours - expected_h) > 20:
+            errors.append(f"DURATION {subset}: {subset_hours:.1f}h (expected ~{expected_h}h)")
+
+    # Print summary table
+    print(f"{'Subset':<15} {'Split':<8} {'Rows':>10} {'Hours':>8}")
+    print("-" * 45)
+    for subset, split, n, h in summary:
+        print(f"{subset:<15} {split:<8} {n:>10,} {h:>7.1f}h")
+    print()
+
+    if errors:
+        print("FAILURES:")
+        for err in errors:
+            print(f"  [FAIL] {err}")
+        sys.exit(1)
+    else:
+        print("All checks passed.")
 
 
 # ---------------------------------------------------------------------------
