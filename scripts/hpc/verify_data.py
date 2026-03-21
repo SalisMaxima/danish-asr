@@ -5,7 +5,7 @@ FLAC spot-checks, null checks, and disk usage reporting.
 
 Usage:
     python scripts/hpc/verify_data.py
-    python scripts/hpc/verify_data.py --data-dir /work3/s204696/data/preprocessed
+    python scripts/hpc/verify_data.py --data-dir /work3/$USER/data/preprocessed
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ EXPECTED_COLUMNS = {
     "dialect",
 }
 EXPECTED_SUBSET_HOURS = {"read_aloud": 542, "conversation": 155}
-HF_SPLITS = ("train", "val", "test")
+HF_SPLITS = ("train", "validation", "test")
 CRITICAL_COLUMNS = ("text", "audio", "duration_s")
 
 

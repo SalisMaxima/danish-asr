@@ -5,7 +5,7 @@
 #   ./scripts/hpc/submit_pipeline.sh
 #   ./scripts/hpc/submit_pipeline.sh --skip-verify
 #   ./scripts/hpc/submit_pipeline.sh --skip-verify --skip-convert
-#   ./scripts/hpc/submit_pipeline.sh --checkpoint-dir /work3/s204696/outputs/omniasr_hpc_20260308
+#   ./scripts/hpc/submit_pipeline.sh --checkpoint-dir /work3/$USER/outputs/omniasr_hpc_20260308
 
 set -euo pipefail
 
@@ -26,8 +26,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Ensure log dirs exist
-mkdir -p /work3/s204696/logs/lsf
-mkdir -p /work3/s204696/logs/python
+mkdir -p /work3/$USER/logs/lsf
+mkdir -p /work3/$USER/logs/python
 
 PREV_JOB_ID=""
 

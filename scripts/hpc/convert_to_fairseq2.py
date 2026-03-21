@@ -4,10 +4,10 @@ Reads preprocessed universal Parquet files and converts them to the fairseq2
 schema required by omniASR training, without re-downloading or resampling audio.
 
 For each row:
-- Normalizes text via omnilingual ASR text normalizer
-- Converts pa.binary() FLAC → list<int8> for fairseq2
+- Passes raw text through (omniASR_tokenizer_written_v2 handles normalization natively)
+- Keeps audio_bytes as raw FLAC bytes (pa.binary())
 - Maps audio_samples → audio_size
-- Maps subset → corpus name, split: val → dev
+- Maps subset → corpus name, split: validation → dev
 
 Usage:
     python scripts/hpc/convert_to_fairseq2.py
@@ -21,13 +21,11 @@ import sys
 import time
 from pathlib import Path
 
-import numpy as np
 import pyarrow.parquet as pq
 from loguru import logger
 
 from danish_asr.preprocessing import (
     MAX_SKIP_RATE,
-    normalize_text_fairseq2,
     write_fairseq2_parquet,
     write_stats_tsv,
 )
@@ -88,26 +86,16 @@ def convert_split(
             audio_samples = table["audio_samples"][i].as_py()
             duration_s = table["duration_s"][i].as_py()
 
-            # Normalize text
-            try:
-                normalized_text = normalize_text_fairseq2(text)
-            except Exception as e:
-                logger.warning(f"Skipping row (text normalization): {type(e).__name__}: {e}")
+            # Skip empty text
+            if not text or not text.strip():
+                logger.debug("Skipping row with empty text")
                 skipped += 1
                 continue
-
-            if not normalized_text.strip():
-                logger.debug(f"Skipping row with empty normalized text (original: {text!r})")
-                skipped += 1
-                continue
-
-            # Convert binary FLAC → int8 array
-            flac_int8 = np.frombuffer(audio_bytes, dtype=np.int8)
 
             fairseq2_rows.append(
                 {
-                    "text": normalized_text,
-                    "audio_bytes": flac_int8,
+                    "text": text,
+                    "audio_bytes": audio_bytes,
                     "audio_size": audio_samples,
                     "corpus": corpus_name,
                     "split": parquet_split,
@@ -169,13 +157,6 @@ def main() -> None:
     setup_logging("convert_to_fairseq2")
     setup_hpc_environment()
     log_system_info()
-
-    # Early check for omnilingual_asr
-    try:
-        from omnilingual_asr.data.text_tools import text_normalize  # noqa: F401
-    except ImportError:
-        logger.error("omnilingual-asr not installed. Run: uv sync --group omni")
-        sys.exit(1)
 
     subsets = SUBSETS if args.subset == "all" else {args.subset: SUBSETS[args.subset]}
     all_stats: list[dict] = []

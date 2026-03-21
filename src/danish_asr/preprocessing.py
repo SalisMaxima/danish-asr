@@ -371,11 +371,11 @@ EXPECTED_SUBSET_HOURS = {"read_aloud": 542, "conversation": 155}
 def verify_preprocessed_data(preprocessed_dir: str = "data/preprocessed") -> None:
     """Verify schema, row counts, audio duration, and audio integrity of preprocessed Parquet files.
 
-    Checks all 6 split directories in `preprocessed_dir` ({read_aloud,conversation}/{train,val,test}).
+    Checks all 6 split directories in `preprocessed_dir` ({read_aloud,conversation}/{train,validation,test}).
     Exits with code 1 if any check fails.
     """
     base = Path(preprocessed_dir)
-    splits = ("train", "val", "test")
+    splits = ("train", "validation", "test")
     subsets = ("read_aloud", "conversation")
 
     errors: list[str] = []

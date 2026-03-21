@@ -36,40 +36,42 @@ The CoRal team trained both Whisper and Wav2Vec2 (CTC) models. Their largest Whi
 
 **Goal:** Install omnilingual ASR, establish zero-shot baseline WER.
 
-| Step | Task | Estimated Time |
-|---|---|---|
-| 2.1 | `uv add omnilingual-asr` + verify import | 30 min |
-| 2.2 | Download `omniASR_CTC_300M` checkpoint (~1.3 GiB) | 10 min |
-| 2.3 | Run zero-shot inference on CoRal-v3 test set | 1-2 hours |
-| 2.4 | Compute baseline WER/CER (overall + per-dialect) | 30 min |
+| Step | Task | Estimated Time | Status |
+|---|---|---|---|
+| 2.1 | `uv add omnilingual-asr` + verify import | 30 min | DONE |
+| 2.2 | Download `omniASR_CTC_300M_v2` checkpoint | 10 min | DONE (via fairseq2 dry-run) |
+| 2.3 | Run zero-shot inference on CoRal-v3 test set | 1-2 hours | Planned (Module E) |
+| 2.4 | Compute baseline WER/CER (overall + per-dialect) | 30 min | Planned |
 
 **Output:** Baseline WER numbers for the pre-trained model on Danish.
 
-## Phase 3: Data Conversion (CoRal-v3 to Parquet)
+## Phase 3: Data Conversion (CoRal-v3 to Parquet) — DONE
 
 **Goal:** Convert HuggingFace dataset to omnilingual ASR's required Parquet format.
 
 See [data-preparation.md](data-preparation.md) for full details.
 
-| Step | Task | Estimated Time |
+| Step | Task | Status |
 |---|---|---|
-| 3.1 | Write `scripts/convert_coral_to_parquet.py` | 2-4 hours |
-| 3.2 | Run conversion (~710h audio, both subsets to Parquet) | 5-10 hours (CPU job on HPC) |
-| 3.3 | Generate `language_distribution_0.tsv` stats | 15 min |
-| 3.4 | Create fairseq2 asset card `coral_v3_danish.yaml` | 15 min |
-| 3.5 | Verify with dataloader example script | 30 min |
+| 3.1 | Write unified preprocessing module | DONE — `src/danish_asr/preprocessing.py` |
+| 3.2 | Run local dry-run (small slice) | DONE — `data/parquet_dryrun/` |
+| 3.3 | Verify preprocessed data locally | DONE — `invoke data.verify-preprocessed` passed |
+| 3.4 | Upload universal Parquet to HPC | DONE — `/work3/s204696/data/preprocessed/` (~200GB) |
+| 3.5 | HPC pipeline scripts | DONE — `scripts/hpc/` |
 
-**Output:** Parquet dataset at `data/parquet/version=0/corpus=coral_v3_*/` + asset card.
+**Notes (omnilingual-asr 0.2.0):**
+- No text normalization — `omniASR_tokenizer_written_v2` handles it natively
+- `audio_bytes` schema: `pa.binary()` (raw bytes), NOT `pa.list_(pa.int8())`
 
 ### Conversion field mapping
 
 | Parquet Field | CoRal Source | Transform |
 |---|---|---|
-| `text` | `sample["text"]` | `text_normalize()` (lowercase, remove punctuation/numbers) |
-| `audio_bytes` | `sample["audio"]` | Resample 48 to 16kHz, FLAC encode, `list<int8>` |
+| `text` | `sample["text"]` | Raw — no normalization (v2 tokenizer handles it) |
+| `audio_bytes` | `sample["audio"]` | Resample 48→16kHz, FLAC encode, `pa.binary()` |
 | `audio_size` | computed | `len(resampled_waveform)` |
 | `corpus` | subset name | `"coral_v3_read_aloud"` or `"coral_v3_conversation"` |
-| `split` | split name | `validation` to `dev` |
+| `split` | split name | `validation` → `dev` |
 | `language` | constant | `"dan_Latn"` |
 
 ## Phase 4: Training Setup & Smoke Test
@@ -167,8 +169,8 @@ CoRal's rich metadata enables systematic fairness evaluation. Anders Sogaard's r
 | Weeks | Phase | Status |
 |---|---|---|
 | 1-3 | Phase 1: Data Pipeline | DONE |
-| 4-5 | Phase 2-3: Baseline + Data Conversion | Next |
-| 6-7 | Phase 4: Training Setup | Planned |
+| 4-5 | Phase 2-3: Environment + Data Conversion | DONE |
+| 6-7 | Phase 4: Training Setup | Next — submit HPC Parquet job (Module D) |
 | 8-9 | Phase 5: Full Training | Planned |
 | 10-11 | Phase 6: Evaluation & Fairness | Planned |
 | 12-13 | Phase 7: Report | Planned |

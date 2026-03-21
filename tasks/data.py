@@ -1,6 +1,7 @@
 """Data management tasks for Danish ASR."""
 
 import os
+import shlex
 from pathlib import Path
 
 from invoke import Context, task
@@ -161,7 +162,7 @@ def download_all(ctx: Context) -> None:
 def verify_preprocessed(ctx: Context, preprocessed_dir: str = "data/preprocessed") -> None:
     """Verify schema, row counts, audio duration, and audio integrity of preprocessed Parquet files."""
     ctx.run(
-        f"uv run python -c 'from danish_asr.preprocessing import verify_preprocessed_data; verify_preprocessed_data(\"{preprocessed_dir}\")'",
+        f"uv run python -c 'from danish_asr.preprocessing import verify_preprocessed_data; verify_preprocessed_data({shlex.quote(preprocessed_dir)})'",
         echo=True,
         pty=not WINDOWS,
     )

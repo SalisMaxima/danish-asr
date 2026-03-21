@@ -3,7 +3,7 @@
 Runs the fairseq2 eval recipe on a trained checkpoint with full logging.
 
 Usage:
-    python scripts/hpc/run_eval.py --checkpoint-dir /work3/s204696/outputs/omniasr_hpc_20260308
+    python scripts/hpc/run_eval.py --checkpoint-dir /work3/$USER/outputs/omniasr_hpc_20260308
     python scripts/hpc/run_eval.py --checkpoint-dir $CHECKPOINT_DIR --config configs/fairseq2/ctc-finetune-hpc.yaml
 """
 

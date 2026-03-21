@@ -311,7 +311,7 @@ class CoRalDataModule(pl.LightningDataModule):
 
         if stage == "fit" or stage is None:
             self.train_dataset = _make_ds("train")
-            self.val_dataset = _make_ds("val")
+            self.val_dataset = _make_ds("validation")
 
         if stage == "test" or stage is None:
             self.test_dataset = _make_ds("test")

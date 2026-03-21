@@ -6,19 +6,19 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 8:00
-#BSUB -o /work3/s204696/logs/lsf/train_%J.out
-#BSUB -e /work3/s204696/logs/lsf/train_%J.err
+#BSUB -o /work3/$USER/logs/lsf/train_%J.out
+#BSUB -e /work3/$USER/logs/lsf/train_%J.err
 
 set -euo pipefail
 
 # --- Environment ---
-export HF_HOME=/work3/s204696/hf_cache
-export HF_DATASETS_CACHE=/work3/s204696/hf_cache/datasets
-export FAIRSEQ2_CACHE_DIR=/work3/s204696/fairseq2_cache
-export TMPDIR=/work3/s204696/tmp
+export HF_HOME=/work3/$USER/hf_cache
+export HF_DATASETS_CACHE=/work3/$USER/hf_cache/datasets
+export FAIRSEQ2_CACHE_DIR=/work3/$USER/fairseq2_cache
+export TMPDIR=/work3/$USER/tmp
 mkdir -p "$TMPDIR"
-mkdir -p /work3/s204696/logs/lsf
-mkdir -p /work3/s204696/logs/python
+mkdir -p /work3/$USER/logs/lsf
+mkdir -p /work3/$USER/logs/python
 
 module load cuda/11.7
 
@@ -31,7 +31,7 @@ echo "Node: $(hostname)"
 nvidia-smi
 
 # Background GPU monitoring (every 30s)
-OUTPUT_DIR="/work3/s204696/outputs"
+OUTPUT_DIR="/work3/$USER/outputs"
 mkdir -p "$OUTPUT_DIR"
 nvidia-smi --query-gpu=index,timestamp,utilization.gpu,memory.total,memory.used,memory.free \
     --format=csv -l 30 > "$OUTPUT_DIR/gpu_stats_${LSB_JOBID}.csv" &

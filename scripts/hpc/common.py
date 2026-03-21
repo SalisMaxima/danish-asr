@@ -36,7 +36,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 PROJECT_DIR = Path(os.environ.get("DANISH_ASR_PROJECT_DIR", Path.home() / "danish_asr"))
-SCRATCH_DIR = Path(os.environ.get("DANISH_ASR_SCRATCH_DIR", "/work3/s204696"))
+SCRATCH_DIR = Path(os.environ.get("DANISH_ASR_SCRATCH_DIR", f"/work3/{os.environ.get('USER', 's204696')}"))
 UNIVERSAL_DIR = SCRATCH_DIR / "data" / "preprocessed"
 FAIRSEQ2_DIR = SCRATCH_DIR / "data" / "parquet" / "version=0"
 OUTPUT_DIR = SCRATCH_DIR / "outputs"

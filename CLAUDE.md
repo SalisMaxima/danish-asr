@@ -44,7 +44,7 @@ Fine-tuning `omniASR_CTC_300M_v2` (325M params, CTC) for Danish using CoRal-v3 (
 
 - **Source:** `CoRal-project/coral-v3` on HuggingFace
 - **Subsets:** `read_aloud` + `conversation` (both used)
-- **Splits:** `train` / `val` / `test` — map `val` → `dev` for fairseq2
+- **Splits:** `train` / `validation` / `test` — map `validation` → `dev` for fairseq2
 - **Audio:** 48kHz native → resample to 16kHz
 - **Metrics:** WER (primary), CER (secondary)
 
