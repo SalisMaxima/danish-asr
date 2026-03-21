@@ -114,15 +114,19 @@ def log_system_info() -> None:
             used_gb = usage.used / (1024**3)
             total_gb = usage.total / (1024**3)
             logger.info(f"Disk {path_name} ({path}): {used_gb:.1f} / {total_gb:.1f} GB used")
-        except OSError:
-            logger.debug(f"Disk {path_name} ({path}): not accessible")
+        except OSError as e:
+            logger.warning(f"Disk {path_name} ({path}): not accessible — {type(e).__name__}: {e}")
 
 
 def log_gpu_info() -> None:
     """Log torch CUDA availability, device names, and VRAM."""
     try:
         import torch
+    except ImportError:
+        logger.warning("PyTorch not installed — cannot check GPU")
+        return
 
+    try:
         if torch.cuda.is_available():
             for i in range(torch.cuda.device_count()):
                 name = torch.cuda.get_device_name(i)
@@ -130,5 +134,5 @@ def log_gpu_info() -> None:
                 logger.info(f"GPU {i}: {name} ({total:.1f} GB)")
         else:
             logger.warning("CUDA not available")
-    except ImportError:
-        logger.warning("PyTorch not installed — cannot check GPU")
+    except RuntimeError as e:
+        logger.warning(f"Failed to query GPU info: {type(e).__name__}: {e}")
