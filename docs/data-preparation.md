@@ -27,8 +27,8 @@ uv run python -m danish_asr.preprocessing --subset all --target all --max-sample
 
 | | fairseq2 format | Universal format |
 |---|---|---|
-| Text | Normalized via `text_normalize()` | Original (unnormalized) |
-| Audio | `list<int8>` (FLAC bytes) | `binary` (FLAC bytes) |
+| Text | Raw (no normalization — see below) | Raw |
+| Audio | `binary` (FLAC bytes) | `binary` (FLAC bytes) |
 | Splits | `validation` → `dev` | Keep HF naming (`validation`) |
 | Metadata | None (strict schema) | speaker_id, gender, age, dialect |
 | Use | omniASR training | Wav2Vec2/Whisper baselines |
@@ -69,8 +69,8 @@ This makes `CoRalDataModule` load from Parquet via `PreprocessedCoRalDataset` in
 
 | Column | PyArrow Type | Description |
 |---|---|---|
-| `text` | `pa.string()` | Normalized transcription |
-| `audio_bytes` | `pa.list_(pa.int8())` | Compressed audio (FLAC), stored as int8 list |
+| `text` | `pa.string()` | Raw transcription (no normalization needed — see Text Normalization section) |
+| `audio_bytes` | `pa.binary()` | Compressed audio (FLAC bytes) |
 | `audio_size` | `pa.int64()` | Decoded waveform length (samples). Duration = `audio_size / 16_000` |
 | `corpus` | `pa.dictionary(pa.int32(), pa.string())` | Dataset name: `"coral_v3"` |
 | `split` | `pa.dictionary(pa.int32(), pa.string())` | Partition: `"train"`, `"dev"`, `"test"` |
@@ -78,12 +78,14 @@ This makes `CoRalDataModule` load from Parquet via `PreprocessedCoRalDataset` in
 
 **Parquet settings:** `row_group_size=100` (required for efficient shuffling + memory control).
 
+> **Note:** `audio_bytes` changed from `pa.list_(pa.int8())` to `pa.binary()` in omnilingual-asr 0.2.0.
+
 ## Field Mapping: CoRal-v3 to Parquet
 
 | Target Field | Source | Transformation |
 |---|---|---|
-| `text` | `sample["text"]` | `text_normalize(text, "dan", lower_case=True, remove_numbers=True)` |
-| `audio_bytes` | `sample["audio"]["array"]` | Resample 48kHz to 16kHz, encode to FLAC, convert to `list<int8>` via `binary_to_list_int8()` |
+| `text` | `sample["text"]` | None — stored as-is (see Text Normalization section) |
+| `audio_bytes` | `sample["audio"]["array"]` | Resample 48kHz to 16kHz, encode to FLAC, store as `binary` |
 | `audio_size` | computed | Length of decoded 16kHz waveform (= `len(resampled_array)`) |
 | `corpus` | subset name | `"coral_v3_read_aloud"` or `"coral_v3_conversation"` |
 | `split` | split name | Map: `"train"` to `"train"`, `"validation"` to `"dev"`, `"test"` to `"test"` |
@@ -91,35 +93,30 @@ This makes `CoRalDataModule` load from Parquet via `PreprocessedCoRalDataset` in
 
 ## Text Normalization
 
-The omnilingual ASR package provides `text_normalize()`:
+**No text normalization is applied.** Raw CoRal-v3 `text` is stored as-is in both the fairseq2 and universal Parquet formats.
 
-```python
-from omnilingual_asr.data.text_tools import text_normalize
+### Why not normalize?
 
-normalized = text_normalize(
-    text="Hej, verden! Der er 42 mennesker.",
-    iso_code="dan",
-    lower_case=True,
-    remove_numbers=True,
-    remove_brackets=False,
-)
-# → "hej verden der er mennesker"
-```
+This project targets `omniASR_CTC_300M_v2`, which uses `omniASR_tokenizer_written_v2` — a tokenizer specifically designed for **written text**. Unlike the older `omniASR_tokenizer_v1` (used by `omniASR_CTC_300M`), the written tokenizer natively handles:
+- Mixed case (uppercase and lowercase, including ÆØÅ)
+- Digits (`42`, `CO2`, `9 meter`)
+- Punctuation (`,`, `.`, `!`, `bl.a.`)
 
-This handles:
-- Punctuation removal (language-specific rules)
-- Lowercasing
-- Digit-only word removal
-- Language remapping
+We verified this empirically: every character in CoRal-v3's `text` field tokenizes to a distinct, non-UNK token ID.
+
+### Historical context (do not reintroduce)
+
+`omnilingual-asr 0.1.0` exposed `omnilingual_asr.data.text_tools.text_normalize()`, which lowercased text and removed digits and punctuation. This was required for `omniASR_tokenizer_v1` because that tokenizer mapped all uppercase letters to UNK. **This function was removed in 0.2.0** because the v2 tokenizer made it unnecessary.
+
+Do not add text normalization back unless you deliberately switch to a v1 model and its tokenizer.
 
 ## Audio Processing
 
 ```python
-import torchaudio
 import io
 import soundfile as sf
-import numpy as np
-from omnilingual_asr.data.audio_tools import binary_to_list_int8
+import torch
+import torchaudio
 
 def process_audio(audio_dict):
     """Convert HF audio dict to omnilingual ASR format."""
@@ -133,17 +130,12 @@ def process_audio(audio_dict):
 
     audio_size = waveform.shape[1]  # decoded waveform length
 
-    # Encode to FLAC bytes
+    # Encode to FLAC bytes — stored as pa.binary() in Parquet
     buffer = io.BytesIO()
     sf.write(buffer, waveform.squeeze(0).numpy(), 16000, format="FLAC")
     flac_bytes = buffer.getvalue()
 
-    # Convert to list<int8> for Parquet
-    # Use binary_to_list_int8() for batch processing with PyArrow,
-    # or manually: list(np.frombuffer(flac_bytes, dtype=np.int8))
-    audio_int8 = list(np.frombuffer(flac_bytes, dtype=np.int8))
-
-    return audio_int8, audio_size
+    return flac_bytes, audio_size
 ```
 
 ## Conversion Script Outline

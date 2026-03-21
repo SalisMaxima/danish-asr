@@ -36,6 +36,7 @@ data/raw/
 data/processed/
 data/preprocessed/
 data/parquet/
+data/parquet_dryrun/
 *.pt
 *.pth
 *.ckpt

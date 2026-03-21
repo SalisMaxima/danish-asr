@@ -101,3 +101,26 @@ def kill_port(ctx: Context, port: int = 8000) -> None:
     print(f"Killing process on port {port}...")
     ctx.run(f"lsof -ti :{port} | xargs kill -9", warn=True, echo=True, pty=not WINDOWS)
     print(f"✓ Process on port {port} killed")
+
+
+@task
+def hpc_sftp(ctx: Context) -> None:
+    """Open SFTP session to DTU HPC transfer node (requires VPN or DTU network)."""
+    ctx.run("sftp s204696@transfer.gbar.dtu.dk", pty=True)
+
+
+@task
+def hpc_ssh(ctx: Context) -> None:
+    """SSH into DTU HPC login node (requires VPN or DTU network)."""
+    ctx.run("ssh s204696@login.hpc.dtu.dk", pty=True)
+
+
+@task
+def dtu_vpn(ctx: Context) -> None:
+    """Connect to DTU VPN via openconnect (requires sudo + MFA)."""
+    print("Connecting to DTU VPN...")
+    print("  Username: s204696@dtu.dk  |  MFA: Microsoft Authenticator\n")
+    ctx.run(
+        'sudo openconnect vpn.dtu.dk --useragent "AnyConnect Linux_64 5.1.10.238" --version-string "5.1.10.238"',
+        pty=True,
+    )

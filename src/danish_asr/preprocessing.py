@@ -19,7 +19,6 @@ import io
 import sys
 from pathlib import Path
 
-import numpy as np
 import soundfile as sf
 import torch
 import torchaudio
@@ -79,7 +78,7 @@ if _PYARROW_AVAILABLE:
     FAIRSEQ2_SCHEMA = pa.schema(  # type: ignore[union-attr]
         [
             ("text", pa.string()),  # type: ignore[union-attr]
-            ("audio_bytes", pa.list_(pa.int8())),  # type: ignore[union-attr]
+            ("audio_bytes", pa.binary()),  # type: ignore[union-attr]
             ("audio_size", pa.int64()),  # type: ignore[union-attr]
             ("corpus", pa.dictionary(pa.int32(), pa.string())),  # type: ignore[union-attr]
             ("split", pa.dictionary(pa.int32(), pa.string())),  # type: ignore[union-attr]
@@ -109,11 +108,11 @@ else:
 # ---------------------------------------------------------------------------
 
 
-def process_audio(audio_dict: dict) -> tuple[bytes, np.ndarray, int]:
+def process_audio(audio_dict: dict) -> tuple[bytes, int]:
     """Resample to 16kHz and FLAC-encode once.
 
     Returns:
-        (flac_bytes_raw, flac_int8_array, audio_samples)
+        (flac_bytes, audio_samples)
     """
     array = audio_dict["array"]
     sr = audio_dict["sampling_rate"]
@@ -128,30 +127,7 @@ def process_audio(audio_dict: dict) -> tuple[bytes, np.ndarray, int]:
     sf.write(buffer, waveform.squeeze(0).numpy(), TARGET_SR, format="FLAC")
     flac_bytes = buffer.getvalue()
 
-    flac_int8 = np.frombuffer(flac_bytes, dtype=np.int8)
-    return flac_bytes, flac_int8, audio_samples
-
-
-# ---------------------------------------------------------------------------
-# Text normalization (fairseq2 only)
-# ---------------------------------------------------------------------------
-
-_text_normalize_fn = None
-
-
-def _get_text_normalize():
-    """Lazy-load and cache the text_normalize function."""
-    global _text_normalize_fn  # noqa: PLW0603
-    if _text_normalize_fn is None:
-        from omnilingual_asr.data.text_tools import text_normalize
-
-        _text_normalize_fn = text_normalize
-    return _text_normalize_fn
-
-
-def normalize_text_fairseq2(text: str) -> str:
-    """Normalize text using omnilingual ASR text normalizer."""
-    return _get_text_normalize()(text, "dan", lower_case=True, remove_numbers=True)
+    return flac_bytes, audio_samples
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +141,7 @@ def write_fairseq2_parquet(rows: list[dict], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     arrays = {
         "text": pa.array([r["text"] for r in rows], type=pa.string()),
-        "audio_bytes": pa.array([r["audio_bytes"] for r in rows], type=pa.list_(pa.int8())),
+        "audio_bytes": pa.array([r["audio_bytes"] for r in rows], type=pa.binary()),
         "audio_size": pa.array([r["audio_size"] for r in rows], type=pa.int64()),
         "corpus": pa.array([r["corpus"] for r in rows]).dictionary_encode(),
         "split": pa.array([r["split"] for r in rows]).dictionary_encode(),
@@ -260,7 +236,7 @@ def convert_split(
 
     for i, sample in enumerate(ds):
         try:
-            flac_bytes, flac_int8, audio_samples = process_audio(sample["audio"])
+            flac_bytes, audio_samples = process_audio(sample["audio"])
         except (ValueError, RuntimeError, OSError, KeyError, TypeError, AttributeError) as e:
             logger.warning(f"Skipping sample {i} in {hf_subset}/{hf_split}: {type(e).__name__}: {e}")
             skipped += 1
@@ -268,19 +244,14 @@ def convert_split(
 
         text = sample.get("text", sample.get("sentence", ""))
 
-        # Build fairseq2 row
+        # Build fairseq2 row — raw text, no normalization needed.
+        # omniASR_CTC_300M_v2 uses omniASR_tokenizer_written_v2, which natively
+        # handles mixed case, digits, punctuation, and Danish characters.
         if fairseq2_split_dir is not None:
-            try:
-                normalized_text = normalize_text_fairseq2(text)
-            except (ValueError, RuntimeError, OSError, KeyError, TypeError, AttributeError) as e:
-                logger.warning(f"Skipping sample {i} (text normalization): {type(e).__name__}: {e}")
-                skipped += 1
-                continue
-
             fairseq2_rows.append(
                 {
-                    "text": normalized_text,
-                    "audio_bytes": flac_int8,
+                    "text": text,
+                    "audio_bytes": flac_bytes,
                     "audio_size": audio_samples,
                     "corpus": corpus_name,
                     "split": parquet_split,
@@ -556,14 +527,6 @@ def main(argv: list[str] | None = None) -> None:
         targets.add("fairseq2")
     if args.target in ("universal", "all"):
         targets.add("universal")
-
-    # Early check for omnilingual_asr if fairseq2 target is requested
-    if "fairseq2" in targets:
-        try:
-            from omnilingual_asr.data.text_tools import text_normalize  # noqa: F401
-        except ImportError:
-            logger.error("omnilingual-asr not installed. Run: uv sync --group omni")
-            sys.exit(1)
 
     subsets_to_process = SUBSETS if args.subset == "all" else {args.subset: SUBSETS[args.subset]}
     all_stats: list[dict] = []
