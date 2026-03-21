@@ -1,6 +1,4 @@
 #!/bin/bash
-# Usage: submit via submit_pipeline.sh
-#   or:  bsub -o /work3/$USER/logs/lsf/verify_%J.out -e /work3/$USER/logs/lsf/verify_%J.err < scripts/hpc/01_verify_data.sh
 #BSUB -J danish_asr_verify
 #BSUB -q hpc
 #BSUB -n 4
@@ -8,6 +6,8 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -W 2:00
 # -o/-e passed on bsub command line (shell variables are not expanded in #BSUB directives)
+# Usage: submit via submit_pipeline.sh
+#   or:  bsub -o /work3/$USER/logs/lsf/verify_%J.out -e /work3/$USER/logs/lsf/verify_%J.err < scripts/hpc/01_verify_data.sh
 
 set -euo pipefail
 
