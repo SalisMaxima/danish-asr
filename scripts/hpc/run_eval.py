@@ -129,7 +129,7 @@ def main() -> None:
         except OSError as e:
             logger.error(f"Failed to launch eval subprocess: {e}")
             logger.error(f"Command was: {' '.join(cmd)}")
-            sys.exit(1)
+            raise RuntimeError("Failed to launch eval subprocess") from e
         logger.info(f"Eval subprocess started (PID={process.pid})")
 
         last_heartbeat = time.time()
