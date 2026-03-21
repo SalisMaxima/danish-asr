@@ -118,13 +118,18 @@ def main() -> None:
         wer_value = None
         cer_value = None
 
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            cwd=str(PROJECT_DIR),
-        )
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                cwd=str(PROJECT_DIR),
+            )
+        except OSError as e:
+            logger.error(f"Failed to launch eval subprocess: {e}")
+            logger.error(f"Command was: {' '.join(cmd)}")
+            sys.exit(1)
         logger.info(f"Eval subprocess started (PID={process.pid})")
 
         last_heartbeat = time.time()
@@ -149,8 +154,10 @@ def main() -> None:
         return_code = process.wait()
         elapsed = time.time() - start_time
 
-        # Summary
-        logger.info(f"Evaluation finished in {elapsed / 60:.1f} min (exit code: {return_code})")
+        if return_code != 0:
+            logger.error(f"Evaluation FAILED after {elapsed / 60:.1f} min (exit code: {return_code})")
+        else:
+            logger.info(f"Evaluation completed successfully in {elapsed / 60:.1f} min")
         logger.info("=" * 50)
         if wer_value is not None:
             logger.info(f"  WER: {wer_value:.2f}%")
@@ -185,8 +192,8 @@ def main() -> None:
                 import wandb
 
                 wandb.finish(exit_code=1)
-            except Exception:
-                pass
+            except Exception as wandb_err:
+                logger.debug(f"W&B cleanup also failed: {type(wandb_err).__name__}: {wandb_err}")
         sys.exit(1)
 
     sys.exit(return_code)

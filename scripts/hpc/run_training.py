@@ -159,7 +159,7 @@ def _log_line_to_wandb(line: str, wandb_run: object | None) -> None:
             if loss_match:
                 metrics["val/loss"] = float(loss_match.group(1))
 
-        if metrics:
+        if metrics and step is not None:
             wandb.log(metrics, step=step)
     except Exception as e:
         logger.debug(f"W&B metric parse failed for line ({type(e).__name__}: {e}): {line[:80]}")
@@ -288,8 +288,8 @@ def main() -> None:
                 import wandb
 
                 wandb.finish(exit_code=1)
-            except Exception:
-                pass
+            except Exception as wandb_err:
+                logger.debug(f"W&B cleanup also failed: {type(wandb_err).__name__}: {wandb_err}")
         sys.exit(1)
 
     sys.exit(return_code)
