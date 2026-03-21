@@ -1,6 +1,4 @@
 #!/bin/bash
-# Usage: submit via submit_pipeline.sh
-#   or:  bsub -o /work3/$USER/logs/lsf/eval_%J.out -e /work3/$USER/logs/lsf/eval_%J.err < scripts/hpc/04_eval.sh
 #BSUB -J danish_asr_eval
 #BSUB -q gpua100
 #BSUB -n 4
@@ -9,6 +7,8 @@
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 4:00
 # -o/-e passed on bsub command line (shell variables are not expanded in #BSUB directives)
+# Usage: submit via submit_pipeline.sh
+#   or:  bsub -o /work3/$USER/logs/lsf/eval_%J.out -e /work3/$USER/logs/lsf/eval_%J.err < scripts/hpc/04_eval.sh
 
 set -euo pipefail
 
