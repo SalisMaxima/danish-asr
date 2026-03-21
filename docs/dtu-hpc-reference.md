@@ -293,6 +293,7 @@ bhist -l <id>     # completed jobs
 | `TERM_RUNLIMIT` | Walltime exceeded | Increase `-W` (default 15 min!) |
 | `TERM_CPULIMIT` | CPU time exceeded | Increase limit |
 | `TERM_CWD_NOTEXIST` | Log dir missing | `mkdir -p logs` before submit |
+| Log output mailed, not written to file | `$USER` not expanded in `#BSUB -o/-e` | Use hardcoded username (e.g. `s204696`) in `#BSUB` log path directives — LSF does not expand shell variables in `#BSUB` headers, only in the script body |
 | `TERM_OWNER` | Killed by user | `bkill` was called |
 | `TERM_UNKNOWN` | Unknown | Check `.err` file |
 

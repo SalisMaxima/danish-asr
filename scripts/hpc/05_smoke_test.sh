@@ -3,6 +3,7 @@
 #BSUB -q gpua100
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
+#BSUB -M 18GB
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 0:30
@@ -29,18 +30,18 @@ echo "Started: $(date)"
 echo "Node: $(hostname)"
 nvidia-smi
 
-# Background GPU monitoring (every 30s)
+# Background GPU monitoring (every 30s) — trap ensures cleanup on any exit
 OUTPUT_DIR="/work3/$USER/outputs"
 mkdir -p "$OUTPUT_DIR"
+NVIDIA_SMI_PID=""
+trap '[[ -n "$NVIDIA_SMI_PID" ]] && kill "$NVIDIA_SMI_PID" 2>/dev/null || true' EXIT
 nvidia-smi --query-gpu=index,timestamp,utilization.gpu,memory.total,memory.used,memory.free \
     --format=csv -l 30 > "$OUTPUT_DIR/gpu_stats_smoke_${LSB_JOBID}.csv" &
 NVIDIA_SMI_PID=$!
 
 python scripts/hpc/run_training.py \
     --config configs/fairseq2/ctc-finetune-smoke.yaml \
+    --wandb-resume never \
     --wandb-tags "smoke,hpc,a100"
-
-# Cleanup GPU monitor
-kill $NVIDIA_SMI_PID 2>/dev/null || true
 
 echo "Finished: $(date)"

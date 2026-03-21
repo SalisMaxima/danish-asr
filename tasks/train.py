@@ -76,9 +76,14 @@ def omniasr(ctx: Context, hardware: str = "local", output_dir: str = "", args: s
 
 @task(name="hpc-smoke")
 def hpc_smoke(ctx: Context) -> None:
-    """Submit 50-step smoke test to DTU HPC gpua100 queue (requires VPN). Validates full pipeline."""
+    """Submit 50-step smoke test to DTU HPC gpua100 queue (requires VPN). Validates full pipeline.
+
+    Runs 'git pull' on the HPC node before submitting, so the job always uses
+    the latest pushed commit — local uncommitted changes are NOT included.
+    """
     ctx.run(
-        "ssh s204696@login.hpc.dtu.dk 'cd ~/danish_asr && git pull && bsub < scripts/hpc/05_smoke_test.sh'", pty=True
+        "ssh s204696@login.hpc.dtu.dk 'cd ~/danish_asr && git pull && bsub < scripts/hpc/05_smoke_test.sh'",
+        pty=not WINDOWS,
     )
 
 

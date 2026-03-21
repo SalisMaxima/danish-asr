@@ -4,7 +4,7 @@
 #BSUB -n 4
 #BSUB -R "rusage[mem=4GB]"
 #BSUB -R "span[hosts=1]"
-#BSUB -W 1:00
+#BSUB -W 0:30
 #BSUB -o /work3/s204696/logs/lsf/convert_%J.out
 #BSUB -e /work3/s204696/logs/lsf/convert_%J.err
 

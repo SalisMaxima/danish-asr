@@ -33,16 +33,12 @@ from scripts.hpc.common import (
     setup_logging,
 )
 
-# Fairseq2 output patterns — validated against smoke test output.
-# Fairseq2 CTC logs lines like:
+# Fairseq2 metric extraction patterns — validated against smoke test output.
+# Fairseq2 CTC typically logs lines like:
 #   | train | step 100 | loss 1.234 | ...
 #   | valid | step 500 | wer 0.42 | cer 0.12 | ...
-# These are best-effort: unmatched lines are still logged at DEBUG.
-_TRAIN_PATTERN = re.compile(r"\|\s*train\s*\|.*?step\s+(\d+).*?loss\s+([\d.]+)", re.IGNORECASE)
-_VALID_PATTERN = re.compile(
-    r"\|\s*valid\s*\|.*?step\s+(\d+).*?(?:wer\s+([\d.]+))?.*?(?:cer\s+([\d.]+))?",
-    re.IGNORECASE,
-)
+# All fairseq2 stdout lines are forwarded to INFO; these patterns are used
+# best-effort to extract scalar metrics for W&B logging.
 _LOSS_PATTERN = re.compile(r"\bloss[:\s]+([\d.]+)", re.IGNORECASE)
 _WER_PATTERN = re.compile(r"\bwer[:\s]+([\d.]+)", re.IGNORECASE)
 _CER_PATTERN = re.compile(r"\bcer[:\s]+([\d.]+)", re.IGNORECASE)
@@ -112,7 +108,7 @@ def _init_wandb(args: argparse.Namespace, config: Path) -> object | None:
             name=args.wandb_name or None,
             tags=tags or None,
             config={"config_file": str(config), "output_dir": str(args.output_dir)},
-            resume="allow",
+            resume=args.wandb_resume,
         )
         logger.info(f"W&B run initialised: {run.url}")
         return run
@@ -169,6 +165,13 @@ def main() -> None:
     parser.add_argument("--wandb-project", type=str, default="danish-asr", help="W&B project name")
     parser.add_argument("--wandb-name", type=str, default="", help="W&B run name (auto-generated if omitted)")
     parser.add_argument("--wandb-tags", type=str, default="hpc", help="Comma-separated W&B tags")
+    parser.add_argument(
+        "--wandb-resume",
+        type=str,
+        default="allow",
+        choices=["allow", "never", "must"],
+        help="W&B resume mode: 'never' for smoke tests, 'allow' for full training",
+    )
     args = parser.parse_args()
 
     setup_logging("run_training")
