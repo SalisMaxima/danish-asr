@@ -135,8 +135,8 @@ class TestWriteStatsTsv:
         assert tsv_path.exists()
         lines = tsv_path.read_text().strip().split("\n")
         assert len(lines) == 2  # header + 1 data row
-        assert "corpus\tlanguage\tsplit\tnum_samples\ttotal_audio_seconds" in lines[0]
-        assert "coral_v3_read_aloud\tdan_Latn\ttrain\t100\t500.0" in lines[1]
+        assert "corpus\tlanguage\tsplit\tnum_samples\ttotal_audio_seconds\thours" in lines[0]
+        assert "coral_v3_read_aloud\tdan_Latn\ttrain\t100\t500.0\t0.138889" in lines[1]
 
 
 def test_split_map_uses_validation_for_hf_dataset():
