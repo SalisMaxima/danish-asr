@@ -37,7 +37,7 @@ trainer:
 
 regime:
   num_steps: 5_000
-  validate_after_n_steps: 0
+  validate_after_n_steps: 500  # CTC outputs all-blank early → zero-length hyps crash WER; matches official Meta default
   validate_every_n_steps: 500
   checkpoint_every_n_steps: 500
   publish_metrics_every_n_steps: 100

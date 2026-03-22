@@ -77,33 +77,49 @@ invoke utils.check-gpu      # GPU availability
 
 Target cluster: DTU HPC (LSF scheduler). Full reference: `docs/dtu-hpc-reference.md`.
 
-### Job script template (single A100)
+### HPC Job Script Standard
+
+All `scripts/hpc/*.sh` BSUB scripts MUST include these directives:
 
 ```bash
-#!/bin/sh
-#BSUB -J danish_asr_train
-#BSUB -q gpua100
+#BSUB -B                                   # Email at job start
+#BSUB -N                                   # Email at job end
+#BSUB -u s204696@dtu.dk                    # Notification email
+```
+
+Place these after `-W` (walltime) and before `-o`/`-e` (log paths). When creating new HPC scripts, follow this template:
+
+```bash
+#!/bin/bash
+#BSUB -J danish_asr_<name>
+#BSUB -q gpua100                           # or hpc for CPU-only
 #BSUB -n 4
-#BSUB -R "span[hosts=1]"
 #BSUB -R "rusage[mem=16GB]"
-#BSUB -M 18GB
-#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -R "span[hosts=1]"
+#BSUB -gpu "num=1:mode=exclusive_process"  # omit for CPU-only
 #BSUB -W 24:00
-#BSUB -o logs/train_%J.out
-#BSUB -e logs/train_%J.err
+#BSUB -B
+#BSUB -N
+#BSUB -u s204696@dtu.dk
+#BSUB -o /work3/s204696/logs/lsf/<name>_%J.out
+#BSUB -e /work3/s204696/logs/lsf/<name>_%J.err
 
-module purge
-module load cuda/11.7
+set -euo pipefail
 
-export HF_HOME=/work3/$USER/danish_asr/hf_cache
-export FAIRSEQ2_CACHE_DIR=/work3/$USER/danish_asr/fairseq2_cache
+# --- Environment ---
+export HF_HOME=/work3/$USER/hf_cache
+export HF_DATASETS_CACHE=/work3/$USER/hf_cache/datasets
+export FAIRSEQ2_CACHE_DIR=/work3/$USER/fairseq2_cache
 export TMPDIR=/work3/$USER/tmp
-mkdir -p $TMPDIR logs
+mkdir -p "$TMPDIR"
+mkdir -p /work3/$USER/logs/lsf
+mkdir -p /work3/$USER/logs/python
 
-source /work3/$USER/danish_asr/conda/etc/profile.d/conda.sh
-conda activate danish_asr
+PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
+cd "$PROJECT_DIR"
+source .venv/bin/activate
 
-python -u train.py
+# ... job logic ...
 ```
 
 ### Essential LSF commands
