@@ -204,14 +204,15 @@ def convert_split(
 def write_stats_tsv(stats: list[dict], path: Path) -> None:
     """Write language distribution stats TSV."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [{**s, "hours": round(s["total_audio_seconds"] / 3600, 6)} for s in stats]
     with Path.open(path, "w", newline="") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=["corpus", "language", "split", "num_samples", "total_audio_seconds"],
+            fieldnames=["corpus", "language", "split", "num_samples", "total_audio_seconds", "hours"],
             delimiter="\t",
         )
         writer.writeheader()
-        writer.writerows(stats)
+        writer.writerows(rows)
     logger.info(f"Wrote stats to {path}")
 
 
