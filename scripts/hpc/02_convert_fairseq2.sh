@@ -5,6 +5,9 @@
 #BSUB -R "rusage[mem=4GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -W 2:00
+#BSUB -B
+#BSUB -N
+#BSUB -u s204696@dtu.dk
 # -o/-e passed on bsub command line (shell variables are not expanded in #BSUB directives)
 # Usage: submit via submit_pipeline.sh
 #   or:  bsub -o /work3/$USER/logs/lsf/convert_%J.out -e /work3/$USER/logs/lsf/convert_%J.err < scripts/hpc/02_convert_fairseq2.sh

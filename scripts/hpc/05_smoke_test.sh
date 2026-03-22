@@ -8,6 +8,9 @@
 #BSUB -W 0:30
 #BSUB -o /work3/s204696/logs/lsf/smoke_%J.out
 #BSUB -e /work3/s204696/logs/lsf/smoke_%J.err
+#BSUB -B
+#BSUB -N
+#BSUB -u s204696@dtu.dk
 # Usage: invoke train.hpc-smoke
 #   or:  bsub < scripts/hpc/05_smoke_test.sh
 
