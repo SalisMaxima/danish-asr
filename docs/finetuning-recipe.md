@@ -83,7 +83,7 @@ dataset:
   storage_mode: "MIXTURE_PARQUET"
   task_mode: "ASR"
   mixture_parquet_storage_config:
-    dataset_summary_path: "data/parquet/language_distribution_0.tsv"
+    dataset_summary_path: "data/parquet/version=0/language_distribution_0.tsv"
     beta_corpus: 0.5
     beta_language: 0.5
     fragment_loading:
