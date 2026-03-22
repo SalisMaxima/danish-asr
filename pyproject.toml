@@ -52,6 +52,7 @@ dependencies = [
     # DVC
     "dvc>=3.0.0",
     "dvc-gs>=3.0.0",
+    "tensorboard>=2.20.0",
 ]
 
 [dependency-groups]
