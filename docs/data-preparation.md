@@ -183,7 +183,7 @@ After conversion, generate `language_distribution_0.tsv` required by the trainin
 ```bash
 python hf_dataset_ingestion_example.py compute_stats \
     data/parquet/version=0 \
-    data/parquet/language_distribution_0.tsv
+    data/parquet/version=0/language_distribution_0.tsv
 ```
 
 Or create it manually — it's a TSV with columns: `corpus`, `language`, `split`, `num_samples`, `total_audio_seconds`.
