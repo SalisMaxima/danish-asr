@@ -8,6 +8,24 @@ Visitors: a DTU host must create a guest account at https://guest.dtu.dk → sel
 
 ---
 
+## Invoke shortcuts
+
+The project provides invoke tasks for common HPC access operations:
+
+```bash
+invoke utils.dtu-vpn   # Connect to DTU VPN via openconnect (requires sudo + MFA)
+invoke utils.hpc-ssh   # SSH into the HPC login node
+invoke utils.hpc-sftp  # Open SFTP session to the transfer node
+```
+
+Typical workflow from off-campus:
+1. `invoke utils.dtu-vpn` — connect VPN (enter DTU password + Microsoft Authenticator MFA)
+2. Open a new terminal, then `invoke utils.hpc-ssh`
+
+The `HPC_USER` environment variable overrides the default user (`s204696`).
+
+---
+
 ## SSH access
 
 ### From on-campus or DTU VPN
