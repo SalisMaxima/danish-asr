@@ -6,9 +6,10 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 0:30
-# -o/-e passed on bsub command line (shell variables are not expanded in #BSUB directives)
+#BSUB -o /work3/s204696/logs/lsf/smoke_%J.out
+#BSUB -e /work3/s204696/logs/lsf/smoke_%J.err
 # Usage: invoke train.hpc-smoke
-#   or:  bsub -o /work3/$USER/logs/lsf/smoke_%J.out -e /work3/$USER/logs/lsf/smoke_%J.err < scripts/hpc/05_smoke_test.sh
+#   or:  bsub < scripts/hpc/05_smoke_test.sh
 
 set -euo pipefail
 
