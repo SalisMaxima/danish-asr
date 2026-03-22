@@ -44,7 +44,7 @@ echo "Node: $(hostname)"
 nvidia-smi
 
 if [ -z "${CHECKPOINT_DIR:-}" ]; then
-    echo "ERROR: CHECKPOINT_DIR not set. Pass via env or submit_pipeline.sh."
+    echo "ERROR: CHECKPOINT_DIR not set. Pass via env or submit_pipeline.sh." >&2
     exit 1
 fi
 

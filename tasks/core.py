@@ -85,8 +85,8 @@ def sync_ai_config(_ctx: Context) -> None:
     content = source.read_text()
 
     copilot_content = content.replace(
-        "# Danish ASR",
-        "# Danish ASR - Copilot Instructions",
+        "# Danish ASR — Claude Code Instructions",
+        "# Danish ASR - Copilot Instructions — Claude Code Instructions",
         1,
     )
     copilot_content = copilot_content.replace("## IMPORTANT", "## IMPORTANT RULES", 1)

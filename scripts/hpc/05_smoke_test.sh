@@ -6,11 +6,11 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 0:30
-#BSUB -o /work3/s204696/logs/lsf/smoke_%J.out
-#BSUB -e /work3/s204696/logs/lsf/smoke_%J.err
 #BSUB -B
 #BSUB -N
 #BSUB -u s204696@dtu.dk
+#BSUB -o /work3/s204696/logs/lsf/smoke_%J.out
+#BSUB -e /work3/s204696/logs/lsf/smoke_%J.err
 # Usage: invoke train.hpc-smoke
 #   or:  bsub < scripts/hpc/05_smoke_test.sh
 

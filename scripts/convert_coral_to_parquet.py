@@ -202,7 +202,7 @@ def convert_split(
 
 
 def write_stats_tsv(stats: list[dict], path: Path) -> None:
-    """Write language distribution stats TSV."""
+    """Write language distribution stats TSV with hours column derived from total_audio_seconds."""
     path.parent.mkdir(parents=True, exist_ok=True)
     rows = [{**s, "hours": round(s["total_audio_seconds"] / 3600, 6)} for s in stats]
     with Path.open(path, "w", newline="") as f:
