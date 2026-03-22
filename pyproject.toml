@@ -52,7 +52,6 @@ dependencies = [
     # DVC
     "dvc>=3.0.0",
     "dvc-gs>=3.0.0",
-    "tensorboard>=2.20.0",
 ]
 
 [dependency-groups]
@@ -73,6 +72,7 @@ dev = [
     "mypy>=1.19.1",
     "pip-audit>=2.10.0",
     "bandit>=1.9.3",
+    "tensorboard>=2.20.0",
 ]
 
 [tool.uv.sources]
