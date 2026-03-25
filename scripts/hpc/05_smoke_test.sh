@@ -5,7 +5,7 @@
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -W 0:30
+#BSUB -W 0:35
 #BSUB -B
 #BSUB -N
 #BSUB -u s204696@dtu.dk
@@ -39,4 +39,4 @@ source .venv/bin/activate
 python scripts/hpc/run_training.py \
     --config configs/fairseq2/ctc-finetune-smoke.yaml \
     --wandb-resume never \
-    --wandb-tags "smoke,hpc,a100"
+    --wandb-tags "smoke,validation,hpc,a100"
