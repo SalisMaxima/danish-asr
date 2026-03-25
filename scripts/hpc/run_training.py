@@ -261,7 +261,9 @@ def main() -> None:
             sig_name = sig_map.get(sig_num, str(sig_num))
             return_code = 128 + sig_num
             logger.error(f"Training KILLED by signal {sig_name} after {elapsed / 3600:.1f}h (exit code: {return_code})")
-            logger.error("If SIGKILL: likely OOM. Check GPU stats CSV and increase rusage[mem] or reduce batch size.")
+            logger.error(
+                "If SIGKILL: likely OOM. Increase rusage[mem] (CPU) or reduce max_num_elements in config (GPU)."
+            )
         elif return_code != 0:
             logger.error(f"Training FAILED after {elapsed / 3600:.1f}h (exit code: {return_code})")
         else:
