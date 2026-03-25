@@ -1,18 +1,19 @@
 #!/bin/bash
-#BSUB -J danish_asr_smoke
+#BSUB -J danish_asr_smoke_val
 #BSUB -q gpua100
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -W 0:30
+#BSUB -W 1:00
 #BSUB -B
 #BSUB -N
 #BSUB -u s204696@dtu.dk
-#BSUB -o /work3/s204696/logs/lsf/smoke_%J.out
-#BSUB -e /work3/s204696/logs/lsf/smoke_%J.err
-# Usage: invoke train.hpc-smoke
-#   or:  bsub < scripts/hpc/05_smoke_test.sh
+#BSUB -o /work3/s204696/logs/lsf/smoke_val_%J.out
+#BSUB -e /work3/s204696/logs/lsf/smoke_val_%J.err
+# Usage: bsub < scripts/hpc/06_smoke_test_val.sh
+# 500-step smoke test with WER validation at step 500.
+# CTC blank phase ends ~100-500 steps (Meta recommendation).
 
 set -euo pipefail
 
@@ -37,6 +38,6 @@ cd "$PROJECT_DIR"
 source .venv/bin/activate
 
 python scripts/hpc/run_training.py \
-    --config configs/fairseq2/ctc-finetune-smoke.yaml \
+    --config configs/fairseq2/ctc-finetune-smoke-val.yaml \
     --wandb-resume never \
-    --wandb-tags "smoke,hpc,a100"
+    --wandb-tags "smoke,validation,hpc,a100"
