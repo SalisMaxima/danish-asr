@@ -1,0 +1,25 @@
+program: scripts/hpc/sweep_agent_wrapper.py
+method: bayes
+name: omniasr-ctc-danish-sweep
+run_cap: 20
+
+metric:
+  name: val/wer
+  goal: minimize
+
+early_terminate:
+  type: hyperband
+  min_iter: 500
+  eta: 3
+
+parameters:
+  lr:
+    distribution: log_uniform_values
+    min: 1e-6
+    max: 1e-3
+  freeze_encoder_for_n_steps:
+    values: [0, 500, 1000, 2000]
+  max_num_elements:
+    values: [1920000, 3840000]
+  grad_accumulation:
+    values: [2, 4, 8]

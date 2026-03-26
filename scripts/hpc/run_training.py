@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import re
 import shlex
 import signal
 import subprocess
@@ -30,21 +29,11 @@ from scripts.hpc.common import (
     PROJECT_DIR,
     SCRATCH_DIR,
     log_gpu_info,
+    log_line_to_wandb,
     log_system_info,
     setup_hpc_environment,
     setup_logging,
 )
-
-# Fairseq2 metric extraction patterns — validated against smoke test output.
-# Fairseq2 CTC typically logs lines like:
-#   | train | step 100 | loss 1.234 | ...
-#   | valid | step 500 | wer 0.42 | cer 0.12 | ...
-# All fairseq2 stdout lines are forwarded to INFO; these patterns are used
-# best-effort to extract scalar metrics for W&B logging.
-_LOSS_PATTERN = re.compile(r"\bloss[:\s]+([\d.]+)", re.IGNORECASE)
-_WER_PATTERN = re.compile(r"\bwer[:\s]+([\d.]+)", re.IGNORECASE)
-_CER_PATTERN = re.compile(r"\bcer[:\s]+([\d.]+)", re.IGNORECASE)
-_STEP_PATTERN = re.compile(r"\bstep[:\s]+(\d+)", re.IGNORECASE)
 
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines
 
@@ -136,41 +125,6 @@ def _init_wandb(args: argparse.Namespace, config: Path) -> object | None:
         return None
 
 
-def _log_line_to_wandb(line: str, wandb_run: object | None) -> None:
-    """Parse a fairseq2 output line and log matching metrics to W&B."""
-    if wandb_run is None:
-        return
-    try:
-        import wandb
-
-        metrics: dict[str, float] = {}
-        step: int | None = None
-
-        step_match = _STEP_PATTERN.search(line)
-        if step_match:
-            step = int(step_match.group(1))
-
-        if "train" in line.lower():
-            loss_match = _LOSS_PATTERN.search(line)
-            if loss_match:
-                metrics["train/loss"] = float(loss_match.group(1))
-        elif "valid" in line.lower():
-            wer_match = _WER_PATTERN.search(line)
-            cer_match = _CER_PATTERN.search(line)
-            loss_match = _LOSS_PATTERN.search(line)
-            if wer_match:
-                metrics["val/wer"] = float(wer_match.group(1))
-            if cer_match:
-                metrics["val/cer"] = float(cer_match.group(1))
-            if loss_match:
-                metrics["val/loss"] = float(loss_match.group(1))
-
-        if metrics and step is not None:
-            wandb.log(metrics, step=step)
-    except Exception as e:
-        logger.debug(f"W&B metric parse failed for line ({type(e).__name__}: {e}): {line[:80]}")
-
-
 def main() -> None:
     default_config = PROJECT_DIR / "configs" / "fairseq2" / "ctc-finetune-hpc.yaml"
 
@@ -244,7 +198,7 @@ def main() -> None:
             line = line.rstrip()
             logger.info(f"[fairseq2] {line}")
 
-            _log_line_to_wandb(line, wandb_run)
+            log_line_to_wandb(line, wandb_run)
 
             now = time.time()
             if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
