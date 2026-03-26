@@ -14,7 +14,10 @@ Usage (typically called by wandb agent, not directly):
 from __future__ import annotations
 
 import argparse
+import contextlib
 import copy
+import os
+import re
 import shlex
 import signal
 import subprocess
@@ -32,11 +35,11 @@ from scripts.hpc.common import (
     PROJECT_DIR,
     SCRATCH_DIR,
     log_gpu_info,
-    log_line_to_wandb,
     log_system_info,
     setup_hpc_environment,
     setup_logging,
 )
+from scripts.hpc.run_training import _MetricParser
 
 _HEARTBEAT_INTERVAL = 300  # seconds
 
@@ -103,6 +106,30 @@ def _check_prerequisites(config_path: Path) -> None:
         sys.exit(1)
 
 
+def _upload_new_checkpoints(output_dir: Path, uploaded: set[Path], wandb_run: Any) -> None:
+    """Scan for new checkpoint files and upload as W&B artifacts (single artifact name, auto-versioned)."""
+    try:
+        import wandb
+
+        current = set(output_dir.glob("**/*.pt"))
+        for ckpt in sorted(current - uploaded):
+            ckpt_step = None
+            m = re.search(r"(\d+)", ckpt.stem)
+            if m:
+                ckpt_step = int(m.group(1))
+            artifact = wandb.Artifact(
+                name="omniasr-ctc-danish-checkpoint",
+                type="checkpoint",
+                metadata={"step": ckpt_step, "path": str(ckpt), "sweep_run_id": wandb_run.id},
+            )
+            artifact.add_file(str(ckpt))
+            wandb_run.log_artifact(artifact)
+            uploaded.add(ckpt)
+            logger.info(f"W&B checkpoint artifact uploaded: step={ckpt_step} ({ckpt.name})")
+    except Exception as e:
+        logger.debug(f"Checkpoint upload failed: {type(e).__name__}: {e}")
+
+
 def main() -> None:
     default_config = PROJECT_DIR / "configs" / "fairseq2" / "ctc-finetune-hpc.yaml"
 
@@ -127,7 +154,18 @@ def main() -> None:
     # --- W&B init (sweep controller populates wandb.config) ---
     import wandb
 
-    run = wandb.init()
+    run = wandb.init(
+        job_type="train",
+        tags=["sweep", "hpc", "a100"],
+    )
+
+    # Define metric summary statistics so the runs table shows best values
+    run.define_metric("val/wer", summary="min")
+    run.define_metric("val/cer", summary="min")
+    run.define_metric("val/uer", summary="min")
+    run.define_metric("val/loss", summary="min")
+    run.define_metric("train/loss", summary="min")
+
     sweep_config = dict(wandb.config)
     logger.info(f"W&B sweep run: {run.url}")
     logger.info(f"Sweep hyperparameters: {sweep_config}")
@@ -150,6 +188,22 @@ def main() -> None:
 
     # Log full config to W&B
     wandb.config.update({"fairseq2": patched, "base_config": str(args.base_config)})
+
+    # Git metadata
+    try:
+        git_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(PROJECT_DIR), text=True).strip()
+        git_branch = subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=str(PROJECT_DIR), text=True
+        ).strip()
+        run.config.update({"git_sha": git_sha, "git_branch": git_branch})
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        pass
+
+    # HPC job ID
+    job_id = os.environ.get("LSB_JOBID")
+    if job_id:
+        run.config.update({"lsf_job_id": job_id})
+
     wandb.save(str(run_config_path), base_path=str(output_dir), policy="now")
 
     # --- Run fairseq2 recipe ---
@@ -166,6 +220,7 @@ def main() -> None:
 
     logger.info(f"Command: {' '.join(cmd)}")
 
+    return_code = 1
     try:
         start_time = time.time()
         process = subprocess.Popen(
@@ -177,17 +232,32 @@ def main() -> None:
         )
         logger.info(f"Training subprocess started (PID={process.pid})")
 
+        uploaded_checkpoints: set[Path] = set()
+        metric_parser = _MetricParser()
         last_heartbeat = time.time()
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
             logger.info(f"[fairseq2] {line}")
-            log_line_to_wandb(line, run)
+
+            metrics, step = metric_parser.parse_line(line)
+            if metrics and step is not None:
+                try:
+                    wandb.log(metrics, step=step)
+                except Exception as e:
+                    logger.debug(f"W&B log failed: {type(e).__name__}: {e}")
 
             now = time.time()
             if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
                 elapsed = now - start_time
                 logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines={line_count}")
+                _upload_new_checkpoints(output_dir, uploaded_checkpoints, run)
                 last_heartbeat = now
+
+        # Flush any remaining metrics from the last block
+        metrics, step = metric_parser.finalize()
+        if metrics and step is not None:
+            with contextlib.suppress(Exception):
+                wandb.log(metrics, step=step)
 
         return_code = process.wait()
         elapsed = time.time() - start_time
@@ -203,6 +273,9 @@ def main() -> None:
         else:
             logger.info(f"Training completed successfully in {elapsed / 3600:.1f}h")
 
+        # Upload any remaining checkpoints
+        _upload_new_checkpoints(output_dir, uploaded_checkpoints, run)
+
         # Summary
         checkpoints = sorted(output_dir.glob("**/*.pt"))
         wandb.summary["exit_code"] = return_code
@@ -216,10 +289,9 @@ def main() -> None:
 
     except Exception as e:
         logger.exception(f"Sweep run failed: {e}")
-        wandb.finish(exit_code=1)
-        sys.exit(1)
+    finally:
+        wandb.finish(exit_code=return_code)
 
-    wandb.finish(exit_code=return_code)
     sys.exit(return_code)
 
 
