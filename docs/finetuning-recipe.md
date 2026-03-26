@@ -145,7 +145,7 @@ For our single-language finetuning, far fewer GPUs are needed. On DTU HPC:
 **Single A100 (40GB or 80GB):**
 ```yaml
 max_audio_len: 960_000       # can handle 60s
-max_num_elements: 7_680_000  # larger batches
+max_num_elements: 3_840_000  # reduced from 7.68M — higher values cause memory fragmentation crashes
 grad_accumulation:
   num_batches: 4             # less accumulation needed
 ```

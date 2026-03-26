@@ -16,7 +16,7 @@ dataset:
   asr_task_config:
     min_audio_len: 32_000
     max_audio_len: 960_000
-    max_num_elements: 7_680_000
+    max_num_elements: 3_840_000
     batch_shuffle_window: 1
     normalize_audio: true
     example_shuffle_window: 1
@@ -36,8 +36,8 @@ trainer:
     num_batches: 4
 
 regime:
-  num_steps: 50
-  validate_after_n_steps: 50  # CTC outputs all-blank early → zero-length hyps crash WER; skip validation in smoke test
-  validate_every_n_steps: 10
-  checkpoint_every_n_steps: 25
-  publish_metrics_every_n_steps: 5
+  num_steps: 500
+  validate_after_n_steps: 500  # CTC blank phase lasts ~100-500 steps (Meta recommends 500 for this model)
+  validate_every_n_steps: 500
+  checkpoint_every_n_steps: 250
+  publish_metrics_every_n_steps: 50

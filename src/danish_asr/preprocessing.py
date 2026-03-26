@@ -80,9 +80,10 @@ if _PYARROW_AVAILABLE:
             ("text", pa.string()),  # type: ignore[union-attr]
             ("audio_bytes", pa.binary()),  # type: ignore[union-attr]
             ("audio_size", pa.int64()),  # type: ignore[union-attr]
-            ("corpus", pa.dictionary(pa.int32(), pa.string())),  # type: ignore[union-attr]
-            ("split", pa.dictionary(pa.int32(), pa.string())),  # type: ignore[union-attr]
-            ("language", pa.dictionary(pa.int32(), pa.string())),  # type: ignore[union-attr]
+            # corpus/split/language are omitted here — they are already encoded in the
+            # Hive partition path (corpus=.../split=.../language=...) and PyArrow adds
+            # them automatically on read. Writing them in-file too creates duplicate
+            # columns that trigger a pandas warning.
         ]
     )
     UNIVERSAL_SCHEMA = pa.schema(  # type: ignore[union-attr]
@@ -143,9 +144,6 @@ def write_fairseq2_parquet(rows: list[dict], path: Path) -> None:
         "text": pa.array([r["text"] for r in rows], type=pa.string()),
         "audio_bytes": pa.array([r["audio_bytes"] for r in rows], type=pa.binary()),
         "audio_size": pa.array([r["audio_size"] for r in rows], type=pa.int64()),
-        "corpus": pa.array([r["corpus"] for r in rows]).dictionary_encode(),
-        "split": pa.array([r["split"] for r in rows]).dictionary_encode(),
-        "language": pa.array([r["language"] for r in rows]).dictionary_encode(),
     }
     table = pa.table(arrays, schema=FAIRSEQ2_SCHEMA)
     tmp_path = path.with_suffix(".tmp")
