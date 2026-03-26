@@ -49,10 +49,10 @@ dependencies = [
     "bitsandbytes>=0.43.0",
     "jiwer>=3.0.0",
     "accelerate>=0.28.0",
+    "pyyaml>=6.0",
     # DVC
     "dvc>=3.0.0",
     "dvc-gs>=3.0.0",
-    "types-pyyaml>=6.0.12.20250915",
 ]
 
 [dependency-groups]

@@ -99,7 +99,7 @@ lr: 1e-05
 **Key config for A100 (40/80GB):**
 ```yaml
 max_audio_len: 960_000       # 60s
-max_num_elements: 7_680_000
+max_num_elements: 3_840_000  # reduced from 7.68M — higher values cause memory fragmentation crashes
 grad_accumulation: 4
 lr: 1e-05
 ```
