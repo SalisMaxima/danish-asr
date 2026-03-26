@@ -8,10 +8,18 @@ Usage:
     python scripts/hpc/patch_wer_calculator.py
 """
 
+import getpass
 from pathlib import Path
 
 WER_CALC = (
-    Path("/work3") / "s204696" / "omnilingual-asr" / "workflows" / "recipes" / "wav2vec2" / "asr" / "wer_calculator.py"
+    Path("/work3")
+    / getpass.getuser()
+    / "omnilingual-asr"
+    / "workflows"
+    / "recipes"
+    / "wav2vec2"
+    / "asr"
+    / "wer_calculator.py"
 )
 
 OLD = "hyp_seq = hyp_seq[hyp_seq != self._blank_label]"

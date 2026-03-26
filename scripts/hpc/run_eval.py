@@ -87,6 +87,7 @@ def main() -> None:
             project=args.wandb_project,
             id=args.wandb_run_id or None,
             resume="allow" if args.wandb_run_id else None,
+            job_type="eval",
             tags=["eval", "hpc"],
             config={"checkpoint_dir": str(args.checkpoint_dir), "config_file": str(args.config)},
         )
@@ -113,8 +114,8 @@ def main() -> None:
     try:
         # Run evaluation
         start_time = time.time()
-        wer_pattern = re.compile(r"WER[:\s]+([\d.]+)", re.IGNORECASE)
-        cer_pattern = re.compile(r"CER[:\s]+([\d.]+)", re.IGNORECASE)
+        wer_pattern = re.compile(r"\(WER\):\s*([\d.]+)")
+        cer_pattern = re.compile(r"\(CER\):\s*([\d.]+)")
         wer_value = None
         cer_value = None
 
