@@ -48,8 +48,11 @@ LOGS_DIR = SCRATCH_DIR / "logs" / "python"
 # ---------------------------------------------------------------------------
 
 
-def setup_logging(script_name: str) -> None:
-    """Configure loguru with console (INFO) and file (DEBUG) sinks."""
+def setup_logging(script_name: str) -> Path:
+    """Configure loguru with console (INFO) and file (DEBUG) sinks.
+
+    Returns the path to the debug log file.
+    """
     logger.remove()
 
     # Console sink — no color (LSF captures stderr)
@@ -71,6 +74,7 @@ def setup_logging(script_name: str) -> None:
         format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} | {message}",
     )
     logger.info(f"Log file: {log_file}")
+    return log_file
 
 
 # ---------------------------------------------------------------------------
