@@ -37,19 +37,90 @@ from scripts.hpc.common import (
     setup_logging,
 )
 
-# Fairseq2 metric extraction patterns — validated against smoke test output.
-# Fairseq2 CTC typically logs lines like:
-#   | train | step 100 | loss 1.234 | ...
-#   | valid | step 500 | wer 0.42 | cer 0.12 | ...
-# All fairseq2 output (stdout + stderr, merged via subprocess) is forwarded
-# to INFO; these patterns are used best-effort to extract scalar metrics
-# for W&B logging.
-_LOSS_PATTERN = re.compile(r"\bloss[:\s]+([\d.]+)", re.IGNORECASE)
-_WER_PATTERN = re.compile(r"\bwer[:\s]+([\d.]+)", re.IGNORECASE)
-_CER_PATTERN = re.compile(r"\bcer[:\s]+([\d.]+)", re.IGNORECASE)
-_STEP_PATTERN = re.compile(r"\bstep[:\s]+(\d+)", re.IGNORECASE)
+# Fairseq2 metric extraction patterns.
+# Fairseq2 CTC outputs metrics across multiple lines:
+#   Training Metrics (step 100) - CTC
+#                                Loss: 5.432 | Gradient Norm: 1.23 | ...
+#   Validation Metrics (step 500) - CTC
+#                                Loss: 103.296 | Unit Error Rate (UER): 23.98 |
+#                                Word Error Rate (WER): 59.88 | ...
+# The header line has the step + context (train/valid), metric values follow
+# on continuation lines. A stateful parser (_MetricParser) tracks the current
+# step and context across lines.
+_HEADER_PATTERN = re.compile(r"(Training|Validation) Metrics \(step (\d+)\)", re.IGNORECASE)
+_LOSS_PATTERN = re.compile(r"\bLoss:\s*([\d.]+)")
+_WER_PATTERN = re.compile(r"\(WER\):\s*([\d.]+)")
+_CER_PATTERN = re.compile(r"\(CER\):\s*([\d.]+)")
+_UER_PATTERN = re.compile(r"\(UER\):\s*([\d.]+)")
+_GRAD_NORM_PATTERN = re.compile(r"Gradient Norm:\s*([\d.]+)")
 
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines and checkpoint upload scans
+
+
+class _MetricParser:
+    """Stateful parser that tracks fairseq2's multi-line metric blocks."""
+
+    def __init__(self) -> None:
+        self._step: int | None = None
+        self._context: str | None = None  # "train" or "val"
+        self._metrics: dict[str, float] = {}
+
+    def parse_line(self, line: str) -> tuple[dict[str, float], int | None]:
+        """Parse a line, returning (metrics_dict, step) when a block is complete."""
+        header = _HEADER_PATTERN.search(line)
+        if header:
+            # Flush any pending metrics from the previous block
+            flushed = self._flush()
+            # Start new block
+            ctx = header.group(1).lower()
+            self._context = "train" if ctx == "training" else "val"
+            self._step = int(header.group(2))
+            self._metrics = {}
+            return flushed
+
+        # Not a header — try to extract metrics from continuation lines
+        if self._step is not None:
+            prefix = self._context or "train"
+
+            loss = _LOSS_PATTERN.search(line)
+            if loss:
+                self._metrics[f"{prefix}/loss"] = float(loss.group(1))
+
+            wer = _WER_PATTERN.search(line)
+            if wer:
+                self._metrics[f"{prefix}/wer"] = float(wer.group(1))
+
+            cer = _CER_PATTERN.search(line)
+            if cer:
+                self._metrics[f"{prefix}/cer"] = float(cer.group(1))
+
+            uer = _UER_PATTERN.search(line)
+            if uer:
+                self._metrics[f"{prefix}/uer"] = float(uer.group(1))
+
+            grad = _GRAD_NORM_PATTERN.search(line)
+            if grad:
+                self._metrics[f"{prefix}/grad_norm"] = float(grad.group(1))
+
+        # Check if this line ends a block (blank line or non-metric line after metrics)
+        if self._step is not None and self._metrics and not line.strip():
+            return self._flush()
+
+        return {}, None
+
+    def _flush(self) -> tuple[dict[str, float], int | None]:
+        """Return accumulated metrics and reset state."""
+        if self._metrics and self._step is not None:
+            result = (dict(self._metrics), self._step)
+            self._metrics = {}
+            self._step = None
+            self._context = None
+            return result
+        return {}, None
+
+    def finalize(self) -> tuple[dict[str, float], int | None]:
+        """Flush any remaining metrics at end of stream."""
+        return self._flush()
 
 
 def ensure_data_symlink() -> None:
@@ -126,6 +197,7 @@ def _init_wandb(args: argparse.Namespace, config: Path, config_dict: dict) -> An
             project=args.wandb_project,
             name=args.wandb_name or None,
             tags=tags or None,
+            job_type="train",
             config={
                 "config_file": str(config),
                 "output_dir": str(args.output_dir),
@@ -133,6 +205,13 @@ def _init_wandb(args: argparse.Namespace, config: Path, config_dict: dict) -> An
             },
             resume=args.wandb_resume,
         )
+
+        # Define metric summary statistics so the runs table shows best values
+        run.define_metric("val/wer", summary="min")
+        run.define_metric("val/cer", summary="min")
+        run.define_metric("val/uer", summary="min")
+        run.define_metric("val/loss", summary="min")
+        run.define_metric("train/loss", summary="min")
 
         # Git metadata
         try:
@@ -169,41 +248,17 @@ def _init_wandb(args: argparse.Namespace, config: Path, config_dict: dict) -> An
 _wandb_consecutive_failures = 0
 
 
-def _log_line_to_wandb(line: str, wandb_run: Any) -> None:
-    """Parse a fairseq2 output line and log matching metrics to W&B."""
+def _log_metrics_to_wandb(metrics: dict[str, float], step: int | None, wandb_run: Any) -> None:
+    """Log parsed metrics to W&B."""
     global _wandb_consecutive_failures
-    if wandb_run is None:
+    if wandb_run is None or not metrics or step is None:
         return
     try:
         import wandb
 
-        metrics: dict[str, float] = {}
-        step: int | None = None
-
-        step_match = _STEP_PATTERN.search(line)
-        if step_match:
-            step = int(step_match.group(1))
-
-        if "train" in line.lower():
-            loss_match = _LOSS_PATTERN.search(line)
-            if loss_match:
-                metrics["train/loss"] = float(loss_match.group(1))
-        elif "valid" in line.lower():
-            wer_match = _WER_PATTERN.search(line)
-            cer_match = _CER_PATTERN.search(line)
-            loss_match = _LOSS_PATTERN.search(line)
-            if wer_match:
-                metrics["val/wer"] = float(wer_match.group(1))
-            if cer_match:
-                metrics["val/cer"] = float(cer_match.group(1))
-            if loss_match:
-                metrics["val/loss"] = float(loss_match.group(1))
-
-        if metrics and step is not None:
-            wandb.log(metrics, step=step)
-            _wandb_consecutive_failures = 0
-    except (ValueError, re.error) as e:
-        logger.debug(f"Metric parse failed: {e}: {line[:80]}")
+        wandb.log(metrics, step=step)
+        logger.debug(f"W&B logged step {step}: {metrics}")
+        _wandb_consecutive_failures = 0
     except Exception as e:
         _wandb_consecutive_failures += 1
         if _wandb_consecutive_failures <= 3:
@@ -224,16 +279,15 @@ def _upload_checkpoint_artifact(
     try:
         import wandb
 
-        step_label = f"step_{step}" if step is not None else checkpoint_path.stem
-        artifact_name = f"omniasr-ctc-danish-{step_label}"
         artifact = wandb.Artifact(
-            name=artifact_name,
+            name="omniasr-ctc-danish-checkpoint",
             type=artifact_type,
             metadata={"step": step, "path": str(checkpoint_path)},
         )
         artifact.add_file(str(checkpoint_path))
         wandb_run.log_artifact(artifact)
-        logger.info(f"W&B artifact uploaded: {artifact_name} ({checkpoint_path.name})")
+        step_label = f"step_{step}" if step is not None else checkpoint_path.stem
+        logger.info(f"W&B artifact uploaded: {step_label} ({checkpoint_path.name})")
     except Exception as e:
         logger.warning(
             f"W&B checkpoint upload failed for {checkpoint_path.name}: "
@@ -347,29 +401,25 @@ def main() -> None:
         logger.info(f"Training subprocess started (PID={process.pid})")
 
         uploaded_checkpoints: set[Path] = set()
+        metric_parser = _MetricParser()
         last_heartbeat = time.time()
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
             logger.info(f"[fairseq2] {line}")
 
-            _log_line_to_wandb(line, wandb_run)
+            metrics, step = metric_parser.parse_line(line)
+            _log_metrics_to_wandb(metrics, step, wandb_run)
 
             now = time.time()
             if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
                 elapsed = now - start_time
-                gpu_msg = ""
-                try:
-                    import torch
-
-                    if torch.cuda.is_available():
-                        alloc = torch.cuda.memory_allocated() / (1024**3)
-                        peak = torch.cuda.max_memory_allocated() / (1024**3)
-                        gpu_msg = f", gpu_mem={alloc:.1f}GB, gpu_peak={peak:.1f}GB"
-                except Exception:
-                    pass
-                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_logged={line_count}{gpu_msg}")
+                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_logged={line_count}")
                 _check_and_upload_new_checkpoints(output_dir, uploaded_checkpoints, wandb_run)
                 last_heartbeat = now
+
+        # Flush any remaining metrics from the last block
+        metrics, step = metric_parser.finalize()
+        _log_metrics_to_wandb(metrics, step, wandb_run)
 
         return_code = process.wait()
         elapsed = time.time() - start_time
