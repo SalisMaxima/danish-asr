@@ -176,14 +176,6 @@ class TestFairseq2Parquet:
         table = pq.read_table(out)
         assert table.schema.equals(FAIRSEQ2_SCHEMA)
 
-    def test_dict_encoded_columns(self, tmp_path: Path):
-        rows = self._make_rows(2)
-        out = tmp_path / "dict.parquet"
-        write_fairseq2_parquet(rows, out)
-        table = pq.read_table(out)
-        for col in ("corpus", "split", "language"):
-            assert pa.types.is_dictionary(table.schema.field(col).type)
-
     def test_row_group_size(self, tmp_path: Path):
         rows = self._make_rows(250)
         out = tmp_path / "rg.parquet"

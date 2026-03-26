@@ -21,7 +21,9 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
+import yaml
 from loguru import logger
 
 from scripts.hpc.common import (
@@ -39,14 +41,15 @@ from scripts.hpc.common import (
 # Fairseq2 CTC typically logs lines like:
 #   | train | step 100 | loss 1.234 | ...
 #   | valid | step 500 | wer 0.42 | cer 0.12 | ...
-# All fairseq2 stdout lines are forwarded to INFO; these patterns are used
-# best-effort to extract scalar metrics for W&B logging.
+# All fairseq2 output (stdout + stderr, merged via subprocess) is forwarded
+# to INFO; these patterns are used best-effort to extract scalar metrics
+# for W&B logging.
 _LOSS_PATTERN = re.compile(r"\bloss[:\s]+([\d.]+)", re.IGNORECASE)
 _WER_PATTERN = re.compile(r"\bwer[:\s]+([\d.]+)", re.IGNORECASE)
 _CER_PATTERN = re.compile(r"\bcer[:\s]+([\d.]+)", re.IGNORECASE)
 _STEP_PATTERN = re.compile(r"\bstep[:\s]+(\d+)", re.IGNORECASE)
 
-_HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines
+_HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines and checkpoint upload scans
 
 
 def ensure_data_symlink() -> None:
@@ -113,7 +116,7 @@ def check_prerequisites(config: Path) -> None:
         sys.exit(1)
 
 
-def _init_wandb(args: argparse.Namespace, config: Path) -> object | None:
+def _init_wandb(args: argparse.Namespace, config: Path, config_dict: dict) -> Any:
     """Initialise W&B run. Returns the run object or None if W&B is unavailable."""
     try:
         import wandb
@@ -123,21 +126,52 @@ def _init_wandb(args: argparse.Namespace, config: Path) -> object | None:
             project=args.wandb_project,
             name=args.wandb_name or None,
             tags=tags or None,
-            config={"config_file": str(config), "output_dir": str(args.output_dir)},
+            config={
+                "config_file": str(config),
+                "output_dir": str(args.output_dir),
+                "fairseq2": config_dict,
+            },
             resume=args.wandb_resume,
         )
+
+        # Git metadata
+        try:
+            git_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(PROJECT_DIR), text=True).strip()
+            git_branch = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=str(PROJECT_DIR), text=True
+            ).strip()
+            git_dirty = bool(
+                subprocess.check_output(["git", "status", "--porcelain"], cwd=str(PROJECT_DIR), text=True).strip()
+            )
+            run.config.update({"git_sha": git_sha, "git_branch": git_branch, "git_dirty": git_dirty})
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+            logger.warning(f"Could not read git metadata: {type(e).__name__}: {e}")
+
+        # HPC job ID
+        job_id = os.environ.get("LSB_JOBID")
+        if job_id:
+            run.config.update({"lsf_job_id": job_id})
+
+        # Save verbatim config file to W&B Files tab
+        wandb.save(str(config), base_path=str(config.parent), policy="now")
+
         logger.info(f"W&B run initialised: {run.url}")
         return run
     except ImportError:
         logger.warning("wandb not installed — skipping W&B logging")
         return None
     except Exception as e:
-        logger.warning(f"W&B init failed ({type(e).__name__}: {e}) — continuing without it")
+        logger.error(f"W&B init failed ({type(e).__name__}: {e}) — continuing without W&B")
+        logger.error("Check W&B API key, network connectivity, and config serialization")
         return None
 
 
-def _log_line_to_wandb(line: str, wandb_run: object | None) -> None:
+_wandb_consecutive_failures = 0
+
+
+def _log_line_to_wandb(line: str, wandb_run: Any) -> None:
     """Parse a fairseq2 output line and log matching metrics to W&B."""
+    global _wandb_consecutive_failures
     if wandb_run is None:
         return
     try:
@@ -167,8 +201,62 @@ def _log_line_to_wandb(line: str, wandb_run: object | None) -> None:
 
         if metrics and step is not None:
             wandb.log(metrics, step=step)
+            _wandb_consecutive_failures = 0
+    except (ValueError, re.error) as e:
+        logger.debug(f"Metric parse failed: {e}: {line[:80]}")
     except Exception as e:
-        logger.debug(f"W&B metric parse failed for line ({type(e).__name__}: {e}): {line[:80]}")
+        _wandb_consecutive_failures += 1
+        if _wandb_consecutive_failures <= 3:
+            logger.warning(f"W&B logging failed ({type(e).__name__}: {e})")
+        elif _wandb_consecutive_failures == 10:
+            logger.error("W&B logging has failed 10 times consecutively — metrics may be lost")
+
+
+def _upload_checkpoint_artifact(
+    checkpoint_path: Path,
+    wandb_run: Any,
+    step: int | None,
+    artifact_type: str = "checkpoint",
+) -> None:
+    """Upload a single checkpoint file as a W&B artifact."""
+    if wandb_run is None:
+        return
+    try:
+        import wandb
+
+        step_label = f"step_{step}" if step is not None else checkpoint_path.stem
+        artifact_name = f"omniasr-ctc-danish-{step_label}"
+        artifact = wandb.Artifact(
+            name=artifact_name,
+            type=artifact_type,
+            metadata={"step": step, "path": str(checkpoint_path)},
+        )
+        artifact.add_file(str(checkpoint_path))
+        wandb_run.log_artifact(artifact)
+        logger.info(f"W&B artifact uploaded: {artifact_name} ({checkpoint_path.name})")
+    except Exception as e:
+        logger.warning(
+            f"W&B checkpoint upload failed for {checkpoint_path.name}: "
+            f"{type(e).__name__}: {e} — checkpoint is still saved locally at {checkpoint_path}"
+        )
+
+
+def _check_and_upload_new_checkpoints(
+    output_dir: Path,
+    uploaded: set[Path],
+    wandb_run: Any,
+) -> None:
+    """Scan for new checkpoint files and upload them as W&B artifacts."""
+    if wandb_run is None:
+        return
+    current = set(output_dir.glob("**/*.pt"))
+    for ckpt in sorted(current - uploaded):
+        ckpt_step = None
+        m = re.search(r"(\d+)", ckpt.stem)
+        if m:
+            ckpt_step = int(m.group(1))
+        _upload_checkpoint_artifact(ckpt, wandb_run, step=ckpt_step)
+        uploaded.add(ckpt)
 
 
 def main() -> None:
@@ -190,7 +278,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    setup_logging("run_training")
+    log_file_path = setup_logging("run_training")
     setup_hpc_environment()
     log_system_info()
     log_gpu_info()
@@ -207,7 +295,26 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Output directory: {output_dir}")
 
-    wandb_run = _init_wandb(args, args.config)
+    # Parse config for W&B logging and final model metadata
+    config_dict: dict = {}
+    try:
+        with args.config.open() as f:
+            config_dict = yaml.safe_load(f) or {}
+    except Exception as e:
+        logger.error(f"Failed to parse config YAML for W&B metadata: {type(e).__name__}: {e}")
+        config_dict = {"_parse_error": str(e)}
+
+    wandb_run = _init_wandb(args, args.config, config_dict)
+
+    # Live-sync loguru debug log to W&B Files tab
+    if wandb_run is not None:
+        try:
+            import wandb
+
+            wandb.save(str(log_file_path), base_path=str(log_file_path.parent), policy="live")
+            logger.info(f"W&B live-syncing log file: {log_file_path}")
+        except Exception as e:
+            logger.warning(f"W&B log file sync failed: {type(e).__name__}: {e}")
 
     cmd = [
         sys.executable,
@@ -239,6 +346,7 @@ def main() -> None:
 
         logger.info(f"Training subprocess started (PID={process.pid})")
 
+        uploaded_checkpoints: set[Path] = set()
         last_heartbeat = time.time()
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
@@ -249,7 +357,18 @@ def main() -> None:
             now = time.time()
             if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
                 elapsed = now - start_time
-                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_logged={line_count}")
+                gpu_msg = ""
+                try:
+                    import torch
+
+                    if torch.cuda.is_available():
+                        alloc = torch.cuda.memory_allocated() / (1024**3)
+                        peak = torch.cuda.max_memory_allocated() / (1024**3)
+                        gpu_msg = f", gpu_mem={alloc:.1f}GB, gpu_peak={peak:.1f}GB"
+                except Exception:
+                    pass
+                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_logged={line_count}{gpu_msg}")
+                _check_and_upload_new_checkpoints(output_dir, uploaded_checkpoints, wandb_run)
                 last_heartbeat = now
 
         return_code = process.wait()
@@ -269,14 +388,45 @@ def main() -> None:
         else:
             logger.info(f"Training completed successfully in {elapsed / 3600:.1f}h")
 
+        # Upload any remaining checkpoints not yet uploaded
+        _check_and_upload_new_checkpoints(output_dir, uploaded_checkpoints, wandb_run)
+
         # List checkpoints
-        checkpoints = sorted(output_dir.glob("**/*.pt"))
+        def _ckpt_step(p: Path) -> int:
+            """Extract step number from checkpoint filename for numeric sorting."""
+            m = re.search(r"(\d+)", p.stem)
+            return int(m.group(1)) if m else 0
+
+        checkpoints = sorted(output_dir.glob("**/*.pt"), key=_ckpt_step)
         if checkpoints:
             logger.info(f"Checkpoints found ({len(checkpoints)}):")
             for ckpt in checkpoints:
                 logger.info(f"  {ckpt}")
         else:
             logger.warning("No checkpoint files found in output directory")
+
+        # Upload final model as a distinct "model" artifact
+        if return_code == 0 and checkpoints and wandb_run is not None:
+            try:
+                import wandb
+
+                final_ckpt = checkpoints[-1]
+                num_steps = config_dict.get("regime", {}).get("num_steps") if config_dict else None
+                artifact = wandb.Artifact(
+                    name="omniasr-ctc-danish-final",
+                    type="model",
+                    description="Final trained omniASR CTC model for Danish",
+                    metadata={
+                        "total_steps": num_steps,
+                        "config_file": str(args.config),
+                        "output_dir": str(output_dir),
+                    },
+                )
+                artifact.add_file(str(final_ckpt))
+                wandb_run.log_artifact(artifact)
+                logger.info(f"W&B final model artifact uploaded: {final_ckpt.name}")
+            except Exception as e:
+                logger.warning(f"W&B final model upload failed: {type(e).__name__}: {e}")
 
         if wandb_run is not None:
             try:

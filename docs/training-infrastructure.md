@@ -69,9 +69,9 @@ max_duration: 30.0
 | Setting | Local (12GB) | HPC A100 |
 |---|---|---|
 | `max_audio_len` | 480,000 (30s) | 960,000 (60s) |
-| `max_num_elements` | 3,840,000 | 7,680,000 |
+| `max_num_elements` | 3,840,000 | 3,840,000 |
 | `grad_accumulation.num_batches` | 8 | 4 |
-| Training VRAM | ~10–12 GB | ~30–36 GB |
+| Training VRAM | ~10–12 GB | ~20–25 GB |
 
 ---
 
@@ -152,7 +152,7 @@ These are standalone YAMLs consumed directly by the fairseq2 recipe, not by Hydr
 | File | Target | max_audio_len | max_num_elements | grad_accum |
 |---|---|---|---|---|
 | `configs/fairseq2/ctc-finetune-local.yaml` | RTX 3080 12GB | 480,000 (30s) | 3,840,000 | 8 |
-| `configs/fairseq2/ctc-finetune-hpc.yaml` | A100 40/80GB | 960,000 (60s) | 7,680,000 | 4 |
+| `configs/fairseq2/ctc-finetune-hpc.yaml` | A100 40/80GB | 960,000 (60s) | 3,840,000 | 4 |
 
 Both use: `lr=1e-5`, `num_steps=5000`, validate/checkpoint every 500 steps, `bfloat16`.
 

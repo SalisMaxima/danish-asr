@@ -22,6 +22,7 @@ export HF_DATASETS_CACHE=/work3/$USER/hf_cache/datasets
 export FAIRSEQ2_CACHE_DIR=/work3/$USER/fairseq2_cache
 export TMPDIR=/work3/$USER/tmp
 mkdir -p "$TMPDIR"
+mkdir -p /work3/$USER/logs/lsf
 
 # The pip-installed omnilingual-asr package does not include the workflows/ recipe module
 OMNI_ASR_DIR="/work3/$USER/omnilingual-asr"
