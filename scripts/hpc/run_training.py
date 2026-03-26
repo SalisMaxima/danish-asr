@@ -79,31 +79,37 @@ class _MetricParser:
             return flushed
 
         # Not a header — try to extract metrics from continuation lines
+        found_metric = False
         if self._step is not None:
             prefix = self._context or "train"
 
             loss = _LOSS_PATTERN.search(line)
             if loss:
                 self._metrics[f"{prefix}/loss"] = float(loss.group(1))
+                found_metric = True
 
             wer = _WER_PATTERN.search(line)
             if wer:
                 self._metrics[f"{prefix}/wer"] = float(wer.group(1))
+                found_metric = True
 
             cer = _CER_PATTERN.search(line)
             if cer:
                 self._metrics[f"{prefix}/cer"] = float(cer.group(1))
+                found_metric = True
 
             uer = _UER_PATTERN.search(line)
             if uer:
                 self._metrics[f"{prefix}/uer"] = float(uer.group(1))
+                found_metric = True
 
             grad = _GRAD_NORM_PATTERN.search(line)
             if grad:
                 self._metrics[f"{prefix}/grad_norm"] = float(grad.group(1))
+                found_metric = True
 
-        # Check if this line ends a block (blank line or non-metric line after metrics)
-        if self._step is not None and self._metrics and not line.strip():
+        # Flush when the block ends: blank line or non-metric line after collected metrics
+        if self._step is not None and self._metrics and (not line.strip() or not found_metric):
             return self._flush()
 
         return {}, None
@@ -254,9 +260,7 @@ def _log_metrics_to_wandb(metrics: dict[str, float], step: int | None, wandb_run
     if wandb_run is None or not metrics or step is None:
         return
     try:
-        import wandb
-
-        wandb.log(metrics, step=step)
+        wandb_run.log(metrics, step=step)
         logger.debug(f"W&B logged step {step}: {metrics}")
         _wandb_consecutive_failures = 0
     except Exception as e:
@@ -264,7 +268,9 @@ def _log_metrics_to_wandb(metrics: dict[str, float], step: int | None, wandb_run
         if _wandb_consecutive_failures <= 3:
             logger.warning(f"W&B logging failed ({type(e).__name__}: {e})")
         elif _wandb_consecutive_failures == 10:
-            logger.error("W&B logging has failed 10 times consecutively — metrics may be lost")
+            logger.error("W&B logging has failed 10 consecutive times — metrics are being lost")
+        elif _wandb_consecutive_failures % 50 == 0:
+            logger.error(f"W&B logging has failed {_wandb_consecutive_failures} consecutive times")
 
 
 def _upload_checkpoint_artifact(
@@ -272,15 +278,16 @@ def _upload_checkpoint_artifact(
     wandb_run: Any,
     step: int | None,
     artifact_type: str = "checkpoint",
-) -> None:
-    """Upload a single checkpoint file as a W&B artifact."""
+) -> bool:
+    """Upload a single checkpoint file as a W&B artifact. Returns True on success."""
     if wandb_run is None:
-        return
+        return False
     try:
         import wandb
 
+        run_id = wandb_run.id or "unknown"
         artifact = wandb.Artifact(
-            name="omniasr-ctc-danish-checkpoint",
+            name=f"omniasr-ctc-danish-{run_id}",
             type=artifact_type,
             metadata={"step": step, "path": str(checkpoint_path)},
         )
@@ -288,11 +295,13 @@ def _upload_checkpoint_artifact(
         wandb_run.log_artifact(artifact)
         step_label = f"step_{step}" if step is not None else checkpoint_path.stem
         logger.info(f"W&B artifact uploaded: {step_label} ({checkpoint_path.name})")
+        return True
     except Exception as e:
         logger.warning(
             f"W&B checkpoint upload failed for {checkpoint_path.name}: "
             f"{type(e).__name__}: {e} — checkpoint is still saved locally at {checkpoint_path}"
         )
+        return False
 
 
 def _check_and_upload_new_checkpoints(
@@ -309,8 +318,8 @@ def _check_and_upload_new_checkpoints(
         m = re.search(r"(\d+)", ckpt.stem)
         if m:
             ckpt_step = int(m.group(1))
-        _upload_checkpoint_artifact(ckpt, wandb_run, step=ckpt_step)
-        uploaded.add(ckpt)
+        if _upload_checkpoint_artifact(ckpt, wandb_run, step=ckpt_step):
+            uploaded.add(ckpt)
 
 
 def main() -> None:
@@ -355,8 +364,9 @@ def main() -> None:
         with args.config.open() as f:
             config_dict = yaml.safe_load(f) or {}
     except Exception as e:
-        logger.error(f"Failed to parse config YAML for W&B metadata: {type(e).__name__}: {e}")
-        config_dict = {"_parse_error": str(e)}
+        logger.error(f"Failed to parse config YAML: {type(e).__name__}: {e}")
+        logger.error(f"Fix the config file at {args.config} before running training")
+        sys.exit(1)
 
     wandb_run = _init_wandb(args, args.config, config_dict)
 
@@ -462,8 +472,9 @@ def main() -> None:
 
                 final_ckpt = checkpoints[-1]
                 num_steps = config_dict.get("regime", {}).get("num_steps") if config_dict else None
+                run_id = wandb_run.id or "unknown"
                 artifact = wandb.Artifact(
-                    name="omniasr-ctc-danish-final",
+                    name=f"omniasr-ctc-danish-{run_id}-final",
                     type="model",
                     description="Final trained omniASR CTC model for Danish",
                     metadata={
