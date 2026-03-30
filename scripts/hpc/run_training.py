@@ -48,11 +48,20 @@ from scripts.hpc.common import (
 # on continuation lines. A stateful parser (_MetricParser) tracks the current
 # step and context across lines.
 _HEADER_PATTERN = re.compile(r"(Training|Validation) Metrics \(step (\d+)\)", re.IGNORECASE)
-_LOSS_PATTERN = re.compile(r"\bLoss:\s*([\d.]+)")
-_WER_PATTERN = re.compile(r"\(WER\):\s*([\d.]+)")
-_CER_PATTERN = re.compile(r"\(CER\):\s*([\d.]+)")
-_UER_PATTERN = re.compile(r"\(UER\):\s*([\d.]+)")
-_GRAD_NORM_PATTERN = re.compile(r"Gradient Norm:\s*([\d.]+)")
+_NUMERIC_PATTERN = r"([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)"
+_LOSS_PATTERN = re.compile(rf"\bLoss:\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_WER_PATTERN = re.compile(rf"\(WER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_CER_PATTERN = re.compile(rf"\(CER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_UER_PATTERN = re.compile(rf"\(UER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_GRAD_NORM_PATTERN = re.compile(rf"Gradient Norm:\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_CONTEXT_PATTERN = re.compile(r"\|\s*(train|valid|validation)\s*\|", re.IGNORECASE)
+_LEGACY_STEP_PATTERN = re.compile(r"\bstep[:\s]+(\d+)", re.IGNORECASE)
+_LEGACY_LOSS_PATTERN = re.compile(rf"\bloss[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_WER_PATTERN = re.compile(rf"\bwer[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_CER_PATTERN = re.compile(rf"\bcer[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_UER_PATTERN = re.compile(rf"\buer[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_GRAD_NORM_PATTERN = re.compile(rf"\bgrad(?:ient)?[_\s-]?norm[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_CONTEXT_TO_PREFIX = {"train": "train", "valid": "val", "validation": "val"}
 
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines and checkpoint upload scans
 
@@ -67,6 +76,13 @@ class _MetricParser:
 
     def parse_line(self, line: str) -> tuple[dict[str, float], int | None]:
         """Parse a line, returning (metrics_dict, step) when a block is complete."""
+        # Legacy fairseq2 format:
+        #   | train | step 100 | loss 1.234 | ...
+        #   | valid | step 500 | wer 0.42 | cer 0.12 | ...
+        inline_metrics, inline_step = self._parse_legacy_metrics_line(line)
+        if inline_metrics and inline_step is not None:
+            return inline_metrics, inline_step
+
         header = _HEADER_PATTERN.search(line)
         if header:
             # Flush any pending metrics from the previous block
@@ -122,6 +138,33 @@ class _MetricParser:
             self._step = None
             self._context = None
             return result
+        return {}, None
+
+    def _parse_legacy_metrics_line(self, line: str) -> tuple[dict[str, float], int | None]:
+        """Parse single-line fairseq2 metrics format (pipe-delimited)."""
+        context_match = _LEGACY_CONTEXT_PATTERN.search(line)
+        step_match = _LEGACY_STEP_PATTERN.search(line)
+        if not context_match or not step_match:
+            return {}, None
+
+        context = context_match.group(1).lower()
+        prefix = _LEGACY_CONTEXT_TO_PREFIX[context]
+        step = int(step_match.group(1))
+        metrics: dict[str, float] = {}
+
+        if loss := _LEGACY_LOSS_PATTERN.search(line):
+            metrics[f"{prefix}/loss"] = float(loss.group(1))
+        if wer := _LEGACY_WER_PATTERN.search(line):
+            metrics[f"{prefix}/wer"] = float(wer.group(1))
+        if cer := _LEGACY_CER_PATTERN.search(line):
+            metrics[f"{prefix}/cer"] = float(cer.group(1))
+        if uer := _LEGACY_UER_PATTERN.search(line):
+            metrics[f"{prefix}/uer"] = float(uer.group(1))
+        if grad := _LEGACY_GRAD_NORM_PATTERN.search(line):
+            metrics[f"{prefix}/grad_norm"] = float(grad.group(1))
+
+        if metrics:
+            return metrics, step
         return {}, None
 
     def finalize(self) -> tuple[dict[str, float], int | None]:
