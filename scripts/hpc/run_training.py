@@ -48,19 +48,20 @@ from scripts.hpc.common import (
 # on continuation lines. A stateful parser (_MetricParser) tracks the current
 # step and context across lines.
 _HEADER_PATTERN = re.compile(r"(Training|Validation) Metrics \(step (\d+)\)", re.IGNORECASE)
-_NUMBER = r"([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)"
-_LOSS_PATTERN = re.compile(rf"\bLoss:\s*{_NUMBER}%?", re.IGNORECASE)
-_WER_PATTERN = re.compile(rf"\(WER\):\s*{_NUMBER}%?", re.IGNORECASE)
-_CER_PATTERN = re.compile(rf"\(CER\):\s*{_NUMBER}%?", re.IGNORECASE)
-_UER_PATTERN = re.compile(rf"\(UER\):\s*{_NUMBER}%?", re.IGNORECASE)
-_GRAD_NORM_PATTERN = re.compile(rf"Gradient Norm:\s*{_NUMBER}%?", re.IGNORECASE)
+_NUMERIC_PATTERN = r"([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)"
+_LOSS_PATTERN = re.compile(rf"\bLoss:\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_WER_PATTERN = re.compile(rf"\(WER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_CER_PATTERN = re.compile(rf"\(CER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_UER_PATTERN = re.compile(rf"\(UER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_GRAD_NORM_PATTERN = re.compile(rf"Gradient Norm:\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
 _LEGACY_CONTEXT_PATTERN = re.compile(r"\|\s*(train|valid|validation)\s*\|", re.IGNORECASE)
 _LEGACY_STEP_PATTERN = re.compile(r"\bstep[:\s]+(\d+)", re.IGNORECASE)
-_LEGACY_LOSS_PATTERN = re.compile(rf"\bloss[:\s]+{_NUMBER}%?", re.IGNORECASE)
-_LEGACY_WER_PATTERN = re.compile(rf"\bwer[:\s]+{_NUMBER}%?", re.IGNORECASE)
-_LEGACY_CER_PATTERN = re.compile(rf"\bcer[:\s]+{_NUMBER}%?", re.IGNORECASE)
-_LEGACY_UER_PATTERN = re.compile(rf"\buer[:\s]+{_NUMBER}%?", re.IGNORECASE)
-_LEGACY_GRAD_NORM_PATTERN = re.compile(rf"\bgrad(?:ient)?[_\s-]?norm[:\s]+{_NUMBER}%?", re.IGNORECASE)
+_LEGACY_LOSS_PATTERN = re.compile(rf"\bloss[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_WER_PATTERN = re.compile(rf"\bwer[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_CER_PATTERN = re.compile(rf"\bcer[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_UER_PATTERN = re.compile(rf"\buer[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_GRAD_NORM_PATTERN = re.compile(rf"\bgrad(?:ient)?[_\s-]?norm[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_CONTEXT_TO_PREFIX = {"train": "train", "valid": "val", "validation": "val"}
 
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines and checkpoint upload scans
 
@@ -147,7 +148,7 @@ class _MetricParser:
             return {}, None
 
         context = context_match.group(1).lower()
-        prefix = "train" if context == "train" else "val"
+        prefix = _LEGACY_CONTEXT_TO_PREFIX[context]
         step = int(step_match.group(1))
         metrics: dict[str, float] = {}
 
