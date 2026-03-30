@@ -42,6 +42,15 @@ from scripts.hpc.common import (
 from scripts.hpc.run_training import _MetricParser
 
 _HEARTBEAT_INTERVAL = 300  # seconds
+_MUTED_FAIRSEQ2_WARNING_SUBSTRINGS = (
+    "UserWarning: DataFrame columns are not unique, some columns will be omitted.",
+    "records = table.to_pandas(memory_pool=memory_pool, self_destruct=True).to_dict(",
+)
+
+
+def _should_log_fairseq2_line(line: str) -> bool:
+    """Return whether a fairseq2 subprocess log line should be emitted."""
+    return not any(part in line for part in _MUTED_FAIRSEQ2_WARNING_SUBSTRINGS)
 
 
 def _apply_sweep_overrides(base: dict[str, Any], sweep_config: dict[str, Any]) -> dict[str, Any]:
@@ -237,7 +246,8 @@ def main() -> None:
         last_heartbeat = time.time()
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
-            logger.info(f"[fairseq2] {line}")
+            if _should_log_fairseq2_line(line):
+                logger.info(f"[fairseq2] {line}")
 
             metrics, step = metric_parser.parse_line(line)
             if metrics and step is not None:

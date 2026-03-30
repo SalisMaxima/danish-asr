@@ -64,6 +64,18 @@ _LEGACY_GRAD_NORM_PATTERN = re.compile(rf"\bgrad(?:ient)?[_\s-]?norm[:\s]+{_NUME
 _LEGACY_CONTEXT_TO_PREFIX = {"train": "train", "valid": "val", "validation": "val"}
 
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines and checkpoint upload scans
+_MUTED_FAIRSEQ2_WARNING_SUBSTRINGS = (
+    "UserWarning: DataFrame columns are not unique, some columns will be omitted.",
+    "records = table.to_pandas(memory_pool=memory_pool, self_destruct=True).to_dict(",
+)
+
+
+def _should_log_fairseq2_line(line: str) -> bool:
+    """Return whether a fairseq2 subprocess log line should be emitted.
+
+    Mutes known-noisy duplicate-column warnings from omnilingual-asr Parquet loading.
+    """
+    return not any(part in line for part in _MUTED_FAIRSEQ2_WARNING_SUBSTRINGS)
 
 
 class _MetricParser:
@@ -458,7 +470,8 @@ def main() -> None:
         last_heartbeat = time.time()
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
-            logger.info(f"[fairseq2] {line}")
+            if _should_log_fairseq2_line(line):
+                logger.info(f"[fairseq2] {line}")
 
             metrics, step = metric_parser.parse_line(line)
             _log_metrics_to_wandb(metrics, step, wandb_run)

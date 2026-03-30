@@ -28,6 +28,15 @@ from scripts.hpc.common import (
 )
 
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines
+_MUTED_FAIRSEQ2_WARNING_SUBSTRINGS = (
+    "UserWarning: DataFrame columns are not unique, some columns will be omitted.",
+    "records = table.to_pandas(memory_pool=memory_pool, self_destruct=True).to_dict(",
+)
+
+
+def _should_log_fairseq2_line(line: str) -> bool:
+    """Return whether a fairseq2 subprocess log line should be emitted."""
+    return not any(part in line for part in _MUTED_FAIRSEQ2_WARNING_SUBSTRINGS)
 
 
 def check_prerequisites(checkpoint_dir: Path, config: Path) -> None:
@@ -136,7 +145,8 @@ def main() -> None:
         last_heartbeat = time.time()
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
-            logger.info(f"[fairseq2] {line}")
+            if _should_log_fairseq2_line(line):
+                logger.info(f"[fairseq2] {line}")
 
             # Try to parse WER/CER from output
             wer_match = wer_pattern.search(line)
