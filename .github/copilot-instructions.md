@@ -111,9 +111,13 @@ export HF_HOME=/work3/$USER/hf_cache
 export HF_DATASETS_CACHE=/work3/$USER/hf_cache/datasets
 export FAIRSEQ2_CACHE_DIR=/work3/$USER/fairseq2_cache
 export TMPDIR=/work3/$USER/tmp
+export WANDB_DIR=/work3/$USER/wandb
+export WANDB_DATA_DIR=/work3/$USER/wandb
+export WANDB_CACHE_DIR=/work3/$USER/wandb/cache
 mkdir -p "$TMPDIR"
 mkdir -p /work3/$USER/logs/lsf
 mkdir -p /work3/$USER/logs/python
+mkdir -p /work3/$USER/wandb/cache
 
 PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
 cd "$PROJECT_DIR"
