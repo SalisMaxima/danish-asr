@@ -1,0 +1,40 @@
+# Whisper smoke test — validate pipeline in <15 min
+
+model_name: "openai/whisper-large-v3"
+language: "da"
+task: "transcribe"
+
+# Training
+max_steps: 500
+per_device_train_batch_size: 2
+per_device_eval_batch_size: 4
+gradient_accumulation_steps: 4
+learning_rate: 1.0e-5
+warmup_steps: 50
+lr_scheduler_type: "linear"
+weight_decay: 0.01
+
+# Precision & memory
+bf16: true
+gradient_checkpointing: true  # needed even for smoke due to model size
+
+# Seq2seq
+predict_with_generate: true
+generation_max_length: 225
+
+# Evaluation & saving
+logging_steps: 50
+eval_steps: 250
+save_steps: 250
+save_total_limit: 2
+metric_for_best_model: "cer"
+
+# Data — read_aloud only for speed
+max_duration: 30.0
+sample_rate: 16000
+subsets:
+  - read_aloud
+dataloader_num_workers: 4
+
+# Reproducibility
+seed: 42
