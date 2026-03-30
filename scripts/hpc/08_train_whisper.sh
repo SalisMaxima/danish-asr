@@ -34,8 +34,14 @@ PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
 cd "$PROJECT_DIR"
 source .venv/bin/activate
 
+# Fixed run directory — reused across sequential jobs so checkpoint resume works.
+# Override with WHISPER_RUN_DIR to use a different path.
+RUN_DIR="${WHISPER_RUN_DIR:-/work3/$USER/outputs/whisper_full}"
+mkdir -p "$RUN_DIR"
+
 python -m scripts.hpc.train_whisper \
     --config configs/hf_baseline/whisper_full.yaml \
+    --output-dir "$RUN_DIR" \
     --wandb-tags "train,full,hpc,a100,whisper" \
     --wandb-resume allow \
     ${RESUME_CKPT:+--resume-from-checkpoint "$RESUME_CKPT"}

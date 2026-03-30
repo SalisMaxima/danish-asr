@@ -1,5 +1,10 @@
 # HF Baseline Training: Wav2Vec2 & Whisper
 
+> **Note:** These HuggingFace-based scripts are **optional baselines only** for Wav2Vec2 and Whisper,
+> used to reproduce CoRal-style benchmarks. The **primary training workflow** for this project uses
+> fairseq2 + omnilingual-asr (see `docs/omnilingual-asr-overview.md` and `docs/finetuning-recipe.md`).
+> All main experiments should follow those fairseq2 entrypoints rather than these HF Trainer baselines.
+
 Fine-tune Wav2Vec2-XLS-R-300M (CTC) and Whisper-large-v3 (seq2seq) on CoRal-v3 Danish data using HuggingFace Trainer, to produce baselines comparable to CoRal's published benchmarks.
 
 ## Target Benchmarks (CoRal)
@@ -36,15 +41,24 @@ Monitor with `bpeek -f <jobid>` or check W&B dashboard.
 
 ### Wav2Vec2 (~57h, needs 3x24h jobs)
 
-```bash
-# First submission
-bsub < scripts/hpc/07_train_wav2vec2.sh
+The scripts pin a fixed `RUN_DIR` (default: `/work3/$USER/outputs/wav2vec2_full`) so all sequential
+jobs share the same output directory and checkpoint resume works automatically.
 
-# After first job finishes, resume from checkpoint
+```bash
+# First submission — starts fresh (no checkpoints yet)
+RESUME_CKPT=latest bsub < scripts/hpc/07_train_wav2vec2.sh
+
+# Second submission — auto-resumes from the latest checkpoint-* in RUN_DIR
 RESUME_CKPT=latest bsub < scripts/hpc/07_train_wav2vec2.sh
 
 # Third submission if needed
 RESUME_CKPT=latest bsub < scripts/hpc/07_train_wav2vec2.sh
+```
+
+To use a custom output directory:
+
+```bash
+WAV2VEC2_RUN_DIR=/work3/$USER/outputs/my_run RESUME_CKPT=latest bsub < scripts/hpc/07_train_wav2vec2.sh
 ```
 
 ### Whisper (~17h, fits in one 24h job)
@@ -57,8 +71,10 @@ bsub < scripts/hpc/08_train_whisper.sh
 
 The scripts support checkpoint resume via the `RESUME_CKPT` environment variable:
 
-- **`RESUME_CKPT=latest`** — HF Trainer auto-detects the latest `checkpoint-*` directory in the output dir
-- **`RESUME_CKPT=/path/to/checkpoint-NNNNN`** — Resume from a specific checkpoint
+- **`RESUME_CKPT=latest`** — HF Trainer auto-detects the latest `checkpoint-*` directory in the pinned
+  `RUN_DIR`. If no checkpoints exist yet (first run), training starts from scratch automatically.
+- **`RESUME_CKPT=/path/to/checkpoint-NNNNN`** — Resume from a specific checkpoint (also requires
+  `WAV2VEC2_RUN_DIR` / `WHISPER_RUN_DIR` to point at that checkpoint's parent directory)
 
 W&B run continuity is handled by `--wandb-resume allow` (default for full training).
 
@@ -81,9 +97,9 @@ Configs are in `configs/hf_baseline/`:
 - **Live output**: `bpeek -f <jobid>`
 
 Key W&B metrics:
-- `eval/wer`, `eval/cer` — validation error rates
-- `eval/loss` — validation loss
-- `train/loss` — training loss
+- `eval_wer`, `eval_cer` — validation error rates
+- `eval_loss` — validation loss
+- `loss` — training loss
 
 ## Resource Requirements
 

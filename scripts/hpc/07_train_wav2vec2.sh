@@ -38,8 +38,14 @@ PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
 cd "$PROJECT_DIR"
 source .venv/bin/activate
 
+# Fixed run directory — reused across sequential jobs so checkpoint resume works.
+# Override with WAV2VEC2_RUN_DIR to use a different path.
+RUN_DIR="${WAV2VEC2_RUN_DIR:-/work3/$USER/outputs/wav2vec2_full}"
+mkdir -p "$RUN_DIR"
+
 python -m scripts.hpc.train_wav2vec2 \
     --config configs/hf_baseline/wav2vec2_full.yaml \
+    --output-dir "$RUN_DIR" \
     --wandb-tags "train,full,hpc,a100,wav2vec2" \
     --wandb-resume allow \
     ${RESUME_CKPT:+--resume-from-checkpoint "$RESUME_CKPT"}

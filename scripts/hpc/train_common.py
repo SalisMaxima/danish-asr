@@ -263,11 +263,11 @@ def init_wandb(
             resume=resume,
         )
 
-        # Metric summaries for the runs table
-        run.define_metric("eval/wer", summary="min")
-        run.define_metric("eval/cer", summary="min")
-        run.define_metric("eval/loss", summary="min")
-        run.define_metric("train/loss", summary="min")
+        # Metric summaries for the runs table (match HF Trainer metric keys)
+        run.define_metric("eval_wer", summary="min")
+        run.define_metric("eval_cer", summary="min")
+        run.define_metric("eval_loss", summary="min")
+        run.define_metric("loss", summary="min")
 
         # Git metadata
         try:

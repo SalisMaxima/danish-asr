@@ -2,8 +2,8 @@
 
 Usage::
 
-    python scripts/hpc/train_whisper.py --config configs/hf_baseline/whisper_full.yaml
-    python scripts/hpc/train_whisper.py --config configs/hf_baseline/whisper_smoke.yaml
+    python -m scripts.hpc.train_whisper --config configs/hf_baseline/whisper_full.yaml
+    python -m scripts.hpc.train_whisper --config configs/hf_baseline/whisper_smoke.yaml
 """
 
 from __future__ import annotations
@@ -154,16 +154,15 @@ def main() -> None:
     if resume_ckpt == "latest":
         existing_ckpts = sorted(output_dir.glob("checkpoint-*"))
         if not existing_ckpts:
-            logger.error(
+            logger.warning(
                 f"--resume-from-checkpoint latest requested but no checkpoint-* "
                 f"directories found in {output_dir}. "
-                f"Omit --resume-from-checkpoint to start fresh, or point --output-dir "
-                f"at a directory that already contains checkpoints."
+                f"Starting training from scratch."
             )
-            finish_wandb(wandb_run, exit_code=1)
-            sys.exit(1)
-        logger.info(f"Resuming from latest checkpoint: {existing_ckpts[-1].name}")
-        resume_ckpt = True  # HF Trainer auto-detects latest checkpoint in output_dir
+            resume_ckpt = None
+        else:
+            logger.info(f"Resuming from latest checkpoint: {existing_ckpts[-1].name}")
+            resume_ckpt = True  # HF Trainer auto-detects latest checkpoint in output_dir
 
     logger.info(f"Starting training (max_steps={cfg['max_steps']}, resume={resume_ckpt})")
 
