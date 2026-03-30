@@ -14,7 +14,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     # Deep Learning
-    "torch>=2.7.0",
+    "torch>=2.11.0",
     "pytorch-lightning>=2.1.0",
     "torchmetrics>=1.0.0",
     "rich>=13.0.0",
