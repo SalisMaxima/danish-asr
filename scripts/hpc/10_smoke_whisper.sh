@@ -12,7 +12,7 @@
 #BSUB -o /work3/s204696/logs/lsf/whisper_smoke_%J.out
 #BSUB -e /work3/s204696/logs/lsf/whisper_smoke_%J.err
 #
-# Whisper smoke test — validates pipeline in <15 min.
+# Whisper smoke test — validates HF Trainer pipeline in <15 min.
 #
 # Usage: bsub < scripts/hpc/10_smoke_whisper.sh
 
