@@ -457,7 +457,7 @@ def main() -> None:
         uploaded_checkpoints: set[Path] = set()
         metric_parser = _MetricParser()
         last_heartbeat = time.time()
-        for line_count, line in enumerate(process.stdout, 1):
+        for lines_read, line in enumerate(process.stdout, 1):
             line = line.rstrip()
             if should_log_fairseq2_line(line):
                 logger.info(f"[fairseq2] {line}")
@@ -468,7 +468,7 @@ def main() -> None:
             now = time.time()
             if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
                 elapsed = now - start_time
-                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_logged={line_count}")
+                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_read={lines_read}")
                 _check_and_upload_new_checkpoints(output_dir, uploaded_checkpoints, wandb_run)
                 last_heartbeat = now
 

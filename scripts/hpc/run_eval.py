@@ -135,7 +135,7 @@ def main() -> None:
         logger.info(f"Eval subprocess started (PID={process.pid})")
 
         last_heartbeat = time.time()
-        for line_count, line in enumerate(process.stdout, 1):
+        for lines_read, line in enumerate(process.stdout, 1):
             line = line.rstrip()
             if should_log_fairseq2_line(line):
                 logger.info(f"[fairseq2] {line}")
@@ -151,7 +151,7 @@ def main() -> None:
             now = time.time()
             if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
                 elapsed = now - start_time
-                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_logged={line_count}")
+                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_read={lines_read}")
                 last_heartbeat = now
 
         return_code = process.wait()
