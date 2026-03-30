@@ -5,6 +5,7 @@ from __future__ import annotations
 import getpass
 import os
 import platform
+import re
 import shutil
 import sys
 from datetime import datetime
@@ -26,6 +27,11 @@ __all__ = [
     "PROJECT_DIR",
     "SCRATCH_DIR",
     "UNIVERSAL_DIR",
+    "LOSS_PATTERN",
+    "WER_PATTERN",
+    "CER_PATTERN",
+    "STEP_PATTERN",
+    "log_line_to_wandb",
     "log_gpu_info",
     "log_system_info",
     "setup_hpc_environment",
@@ -120,6 +126,54 @@ def log_system_info() -> None:
             logger.info(f"Disk {path_name} ({path}): {used_gb:.1f} / {total_gb:.1f} GB used")
         except OSError as e:
             logger.warning(f"Disk {path_name} ({path}): not accessible — {type(e).__name__}: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Fairseq2 metric extraction patterns
+# ---------------------------------------------------------------------------
+# Fairseq2 CTC typically logs lines like:
+#   | train | step 100 | loss 1.234 | ...
+#   | valid | step 500 | wer 0.42 | cer 0.12 | ...
+
+LOSS_PATTERN = re.compile(r"\bloss[:\s]+([\d.]+)", re.IGNORECASE)
+WER_PATTERN = re.compile(r"\bwer[:\s]+([\d.]+)", re.IGNORECASE)
+CER_PATTERN = re.compile(r"\bcer[:\s]+([\d.]+)", re.IGNORECASE)
+STEP_PATTERN = re.compile(r"\bstep[:\s]+(\d+)", re.IGNORECASE)
+
+
+def log_line_to_wandb(line: str, wandb_run: object | None) -> None:
+    """Parse a fairseq2 output line and log matching metrics to W&B."""
+    if wandb_run is None:
+        return
+    try:
+        import wandb
+
+        metrics: dict[str, float] = {}
+        step: int | None = None
+
+        step_match = STEP_PATTERN.search(line)
+        if step_match:
+            step = int(step_match.group(1))
+
+        if "train" in line.lower():
+            loss_match = LOSS_PATTERN.search(line)
+            if loss_match:
+                metrics["train/loss"] = float(loss_match.group(1))
+        elif "valid" in line.lower():
+            wer_match = WER_PATTERN.search(line)
+            cer_match = CER_PATTERN.search(line)
+            loss_match = LOSS_PATTERN.search(line)
+            if wer_match:
+                metrics["val/wer"] = float(wer_match.group(1))
+            if cer_match:
+                metrics["val/cer"] = float(cer_match.group(1))
+            if loss_match:
+                metrics["val/loss"] = float(loss_match.group(1))
+
+        if metrics and step is not None:
+            wandb.log(metrics, step=step)
+    except Exception as e:
+        logger.debug(f"W&B metric parse failed for line ({type(e).__name__}: {e}): {line[:80]}")
 
 
 def log_gpu_info() -> None:

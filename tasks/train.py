@@ -97,6 +97,38 @@ def hpc_smoke(ctx: Context) -> None:
     )
 
 
+@task(name="omniasr-sweep")
+def omniasr_sweep(ctx: Context, project: str = "danish-asr", entity: str = "") -> None:
+    """Create a W&B sweep for omniASR hyperparameter tuning. Prints the sweep ID."""
+    sweep_config = PROJECT_ROOT / "configs" / "sweeps" / "omniasr_sweep.yaml"
+    if not sweep_config.exists():
+        logger.error(f"Sweep config not found: {sweep_config}")
+        return
+    cmd = f"uv run wandb sweep {sweep_config} --project {project}"
+    if entity:
+        cmd += f" --entity {entity}"
+    ctx.run(cmd, echo=True, pty=not WINDOWS)
+
+
+@task(name="hpc-sweep")
+def hpc_sweep(ctx: Context, sweep_id: str) -> None:
+    """Submit W&B sweep agent job array to DTU HPC (requires VPN).
+
+    Usage: invoke train.hpc-sweep --sweep-id entity/project/abc123
+    """
+    if not re.fullmatch(r"[a-zA-Z0-9_./-]+", sweep_id):
+        logger.error(f"Invalid sweep ID: {sweep_id!r}")
+        return
+    ctx.run(
+        f"ssh {HPC_LOGIN} '"
+        f"cd ~/danish_asr && git pull && "
+        f"mkdir -p /work3/$USER/logs/lsf && "
+        f"SWEEP_ID={sweep_id} "
+        f"bsub < scripts/hpc/06_sweep.sh'",
+        pty=not WINDOWS,
+    )
+
+
 @task
 def omniasr_eval(ctx: Context, checkpoint_dir: str, hardware: str = "local") -> None:
     """Evaluate omniASR checkpoint."""

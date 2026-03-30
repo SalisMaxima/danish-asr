@@ -1,18 +1,30 @@
 #!/bin/bash
-#BSUB -J danish_asr_train
+#BSUB -J danish_asr_sweep[1-4]
 #BSUB -q gpua100
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -W 4:00
+#BSUB -W 24:00
 #BSUB -B
 #BSUB -N
 #BSUB -u s204696@dtu.dk
-#BSUB -o /work3/s204696/logs/lsf/train_%J.out
-#BSUB -e /work3/s204696/logs/lsf/train_%J.err
+#BSUB -o /work3/s204696/logs/lsf/sweep_%J_%I.out
+#BSUB -e /work3/s204696/logs/lsf/sweep_%J_%I.err
+# Usage:
+#   SWEEP_ID=entity/project/abc123 bsub < scripts/hpc/06_sweep.sh
+#
+# Each array element runs --count sequential training runs.
+# 4 array elements x 5 runs = 20 total (matches run_cap in sweep config).
 
 set -euo pipefail
+
+# --- Validate SWEEP_ID ---
+if [ -z "${SWEEP_ID:-}" ]; then
+    echo "ERROR: SWEEP_ID env var is required." >&2
+    echo "Usage: SWEEP_ID=entity/project/abc123 bsub < scripts/hpc/06_sweep.sh" >&2
+    exit 1
+fi
 
 # --- Environment ---
 export HF_HOME=/work3/$USER/hf_cache
@@ -33,12 +45,17 @@ if [ ! -d "$OMNI_ASR_DIR/workflows" ]; then
     echo "Clone it: git clone https://github.com/facebookresearch/omnilingual-asr.git $OMNI_ASR_DIR" >&2
     exit 1
 fi
-export PYTHONPATH="$OMNI_ASR_DIR:${PYTHONPATH:-}"
-
 PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
+
+# Project root needed for scripts.hpc.common imports; omnilingual-asr for workflows.recipes
+export PYTHONPATH="$PROJECT_DIR:$OMNI_ASR_DIR:${PYTHONPATH:-}"
+
 cd "$PROJECT_DIR"
 source .venv/bin/activate
 
-python scripts/hpc/run_training.py \
-    --config configs/fairseq2/ctc-finetune-hpc.yaml \
-    --wandb-tags "train,full,hpc,a100"
+echo "=== Sweep agent starting ==="
+echo "SWEEP_ID: $SWEEP_ID"
+echo "Array index: ${LSB_JOBINDEX:-N/A}"
+echo "Job ID: ${LSB_JOBID:-N/A}"
+
+wandb agent --count 5 "$SWEEP_ID"
