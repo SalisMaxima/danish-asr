@@ -3,7 +3,7 @@
 from scripts.hpc.fairseq2_logging import should_log_fairseq2_line
 
 
-def test_should_log_fairseq2_line_filters_duplicate_dataframe_warning() -> None:
+def test_should_log_fairseq2_line() -> None:
     assert (
         should_log_fairseq2_line(
             "/path/mixture_parquet_storage.py:438: UserWarning: DataFrame columns are not unique, some columns will be omitted."

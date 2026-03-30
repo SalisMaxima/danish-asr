@@ -1,6 +1,5 @@
 """Tests for HPC run_training metric parsing."""
 
-from scripts.hpc.fairseq2_logging import should_log_fairseq2_line
 from scripts.hpc.run_training import _MetricParser
 
 
@@ -44,17 +43,3 @@ def test_metric_parser_extracts_legacy_single_line_metrics() -> None:
     metrics, step = parser.parse_line("| valid | step 500 | wer 0.42 | cer 0.12 | loss 2.1 |")
     assert step == 500
     assert metrics == {"val/wer": 0.42, "val/cer": 0.12, "val/loss": 2.1}
-
-
-def test_should_log_fairseq2_line_mutes_duplicate_dataframe_warning() -> None:
-    assert (
-        should_log_fairseq2_line(
-            "/path/mixture_parquet_storage.py:438: UserWarning: DataFrame columns are not unique, some columns will be omitted."
-        )
-        is False
-    )
-    assert (
-        should_log_fairseq2_line("records = table.to_pandas(memory_pool=memory_pool, self_destruct=True).to_dict(")
-        is False
-    )
-    assert should_log_fairseq2_line("Training Metrics (step 100) - CTC") is True
