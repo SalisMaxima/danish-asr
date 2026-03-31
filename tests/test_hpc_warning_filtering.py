@@ -16,14 +16,20 @@ def test_should_log_fairseq2_line_filters_duplicate_column_warning() -> None:
     )
 
 
-def test_should_log_fairseq2_line_filters_warning_continuation_line() -> None:
+def test_should_log_fairseq2_line_filters_actual_hpc_warning_line() -> None:
     assert (
-        should_log_fairseq2_line("records = table.to_pandas(memory_pool=memory_pool, self_destruct=True).to_dict(")
+        should_log_fairseq2_line(
+            "/zhome/d8/4/155560/danish_asr/.venv/lib/python3.12/site-packages/omnilingual_asr/datasets/storage/mixture_parquet_storage.py:438: UserWarning: DataFrame columns are not unique, some columns will be omitted."
+        )
         is False
     )
+
+
+def test_should_log_fairseq2_line_keeps_to_pandas_source_line() -> None:
+    # This line appears in tracebacks when to_pandas raises — must NOT be suppressed.
     assert (
-        should_log_fairseq2_line("  records = table.to_pandas(memory_pool=memory_pool, self_destruct=True).to_dict(  ")
-        is False
+        should_log_fairseq2_line("  records = table.to_pandas(memory_pool=memory_pool, self_destruct=True).to_dict(")
+        is True
     )
 
 
