@@ -15,12 +15,21 @@
 # omniASR CTC 20k-step training on CoRal-v3 Danish (~8-16h on 1x A100).
 #
 # Resume support: fairseq2 auto-resumes when the output directory contains
-# checkpoints. The fixed RUN_DIR below means resubmitting this script
-# automatically continues from the last checkpoint.
+# checkpoints. The fixed RUN_DIR below means resubmitting this script with the
+# same RUN_DIR will automatically continue from the last checkpoint if one exists.
 #
 # Usage:
-#   bsub < scripts/hpc/03_train.sh                  # fresh start or auto-resume
-#   RESUME_DIR=/work3/$USER/outputs/omniasr_hpc_... bsub < scripts/hpc/03_train.sh  # resume from specific dir
+#   # Default: use fixed RUN_DIR. This will:
+#   #   - start a fresh run if /work3/$USER/outputs/omniasr_20k is empty or new, or
+#   #   - auto-resume if that directory already contains checkpoints.
+#   bsub < scripts/hpc/03_train.sh
+#
+#   # Resume from (or start fresh in) a specific directory:
+#   RESUME_DIR=/work3/$USER/outputs/omniasr_20k_run2 bsub < scripts/hpc/03_train.sh
+#
+#   # To force a truly fresh run when reusing the default path, either:
+#   #   - delete or move /work3/$USER/outputs/omniasr_20k, or
+#   #   - set RESUME_DIR to a new, unused output directory as above.
 
 set -euo pipefail
 
