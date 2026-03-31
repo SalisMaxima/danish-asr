@@ -125,7 +125,7 @@ regime:
 | `max_audio_len` | 960,000 (60s) | 480,000 (30s) | 960,000 (60s) | VRAM constraint on 12GB GPU (local only) |
 | `max_num_elements` | 960,000 | 3,840,000 | 3,840,000 | Allow multiple shorter samples per batch |
 | `lr` | 5e-05 | 1e-05 | 1e-05 | More conservative for finetuning |
-| `lr_scheduler` | cosine (default) | cosine (default) | cosine + 2k warmup | Explicit schedule over 20k steps |
+| `lr_scheduler` | `cosine_annealing` (default) | `cosine_annealing` (default) | `cosine_annealing` + 2k warmup | Explicit schedule over 20k steps |
 | `grad_accumulation` | 4 | 8 | 4 | Higher on local to compensate smaller batch |
 | `num_steps` | 20,000 | 5,000 | 20,000 | Matches upstream for full convergence |
 | `validate_every_n_steps` | 1,000 | 500 | 1,000 | More frequent on shorter runs |
