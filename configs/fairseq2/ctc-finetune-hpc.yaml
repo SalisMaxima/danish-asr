@@ -32,6 +32,9 @@ optimizer:
   config:
     lr: 1e-05
 
+gang:
+  timeout: 1200      # 20 hours in minutes — prevents fairseq2 from checkpoint-stopping at the default 15-min gang timeout
+
 trainer:
   freeze_encoder_for_n_steps: 0
   mixed_precision:
