@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-_MUTED_WARNING_SUBSTRINGS = (
-    "UserWarning: DataFrame columns are not unique, some columns will be omitted.",
-)
+_MUTED_WARNING_SUBSTRINGS = ("UserWarning: DataFrame columns are not unique, some columns will be omitted.",)
 _MUTED_WARNING_CONTINUATION_LINE = "records = table.to_pandas(memory_pool=memory_pool, self_destruct=True).to_dict("
 
 
@@ -26,7 +24,4 @@ def should_log_fairseq2_line(line: str) -> bool:
     # Match it exactly (after trimming) to avoid muting unrelated lines that might
     # only contain this text as a substring.
     stripped = line.strip()
-    if stripped == _MUTED_WARNING_CONTINUATION_LINE:
-        return False
-
-    return True
+    return stripped != _MUTED_WARNING_CONTINUATION_LINE
