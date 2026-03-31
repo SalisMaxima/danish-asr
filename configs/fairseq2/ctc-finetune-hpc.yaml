@@ -1,5 +1,6 @@
 # ARCHIVED: 5k-step config used for initial training run (effortless-wildflower-13).
-# For the extended 20k run with explicit LR scheduler, see ctc-finetune-hpc-20k.yaml.
+# This remains the default / legacy config used by scripts/hpc/run_training.py when --config is omitted.
+# For the extended 20k run with explicit LR scheduler, prefer ctc-finetune-hpc-20k.yaml (or pass --config explicitly).
 
 model:
   name: "omniASR_CTC_300M_v2"
