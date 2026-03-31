@@ -1,7 +1,3 @@
-# ARCHIVED: 5k-step config used for initial training run (effortless-wildflower-13).
-# This remains the default / legacy config used by scripts/hpc/run_training.py when --config is omitted.
-# For the extended 20k run with explicit LR scheduler, prefer ctc-finetune-hpc-20k.yaml (or pass --config explicitly).
-
 model:
   name: "omniASR_CTC_300M_v2"
 
@@ -32,6 +28,12 @@ optimizer:
   config:
     lr: 1e-05
 
+lr_scheduler:
+  name: "cosine_annealing"
+  config:
+    num_warmup_steps: 2000       # 10% warmup (0 → peak lr)
+    final_lr_scale: 0.05         # decay to 5e-7 at end
+
 trainer:
   freeze_encoder_for_n_steps: 0
   mixed_precision:
@@ -40,8 +42,8 @@ trainer:
     num_batches: 4
 
 regime:
-  num_steps: 5_000
-  validate_after_n_steps: 500  # CTC outputs all-blank early → zero-length hyps crash WER; matches official Meta default
-  validate_every_n_steps: 500
-  checkpoint_every_n_steps: 500
+  num_steps: 20_000
+  validate_after_n_steps: 500    # CTC outputs all-blank early → zero-length hyps crash WER
+  validate_every_n_steps: 1000
+  checkpoint_every_n_steps: 1000
   publish_metrics_every_n_steps: 100
