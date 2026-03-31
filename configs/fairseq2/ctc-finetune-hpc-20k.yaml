@@ -29,9 +29,10 @@ optimizer:
     lr: 1e-05
 
 lr_scheduler:
-  name: "cosine_annealing"
+  name: "tri_stage"
   config:
-    num_warmup_steps: 2000       # 10% warmup (0 → peak lr)
+    stage_ratio: [0.1, 0.0, 0.9] # 10% warmup, 0% hold, 90% cosine decay
+    start_lr_scale: 0.01         # start at 1% of peak lr
     final_lr_scale: 0.05         # decay to 5e-7 at end
 
 trainer:
