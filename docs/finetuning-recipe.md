@@ -120,15 +120,16 @@ regime:
 
 ### Key Differences from Upstream Default
 
-| Parameter | Upstream | Ours | Rationale |
-|---|---|---|---|
-| `max_audio_len` | 960,000 (60s) | 480,000 (30s) | VRAM constraint on 12GB GPU |
-| `max_num_elements` | 960,000 | 3,840,000 | Allow multiple shorter samples per batch |
-| `lr` | 5e-05 | 1e-05 | More conservative for finetuning |
-| `grad_accumulation` | 4 | 8 | Effective larger batch with limited VRAM |
-| `num_steps` | 20,000 | 5,000 | Single language, less data diversity |
-| `validate_every_n_steps` | 1,000 | 500 | More frequent validation |
-| `checkpoint_every_n_steps` | 1,000 | 500 | More frequent checkpointing |
+| Parameter | Upstream | Ours (local) | Ours (HPC 20k) | Rationale |
+|---|---|---|---|---|
+| `max_audio_len` | 960,000 (60s) | 480,000 (30s) | 960,000 (60s) | VRAM constraint on 12GB GPU (local only) |
+| `max_num_elements` | 960,000 | 3,840,000 | 3,840,000 | Allow multiple shorter samples per batch |
+| `lr` | 5e-05 | 1e-05 | 1e-05 | More conservative for finetuning |
+| `lr_scheduler` | cosine (default) | cosine (default) | cosine + 2k warmup | Explicit schedule over 20k steps |
+| `grad_accumulation` | 4 | 8 | 4 | Higher on local to compensate smaller batch |
+| `num_steps` | 20,000 | 5,000 | 20,000 | Matches upstream for full convergence |
+| `validate_every_n_steps` | 1,000 | 500 | 1,000 | More frequent on shorter runs |
+| `checkpoint_every_n_steps` | 1,000 | 500 | 1,000 | More frequent on shorter runs |
 
 ## Multi-GPU Training (DTU HPC)
 
@@ -175,12 +176,47 @@ For custom evaluation (per-dialect WER), use our `metrics.py`:
 from danish_asr.metrics import compute_wer, compute_cer
 ```
 
+## LR Scheduler
+
+fairseq2 supports several LR schedulers via the `lr_scheduler:` YAML key. If omitted, the default is `cosine_annealing` with `num_warmup_steps=0` and `final_lr_scale=0.2`.
+
+Our 20k HPC config (`ctc-finetune-hpc-20k.yaml`) uses an explicit cosine annealing schedule:
+
+```yaml
+lr_scheduler:
+  name: "cosine_annealing"
+  config:
+    num_warmup_steps: 2000       # 10% warmup (0 → peak lr)
+    final_lr_scale: 0.05         # decay to 5e-7 at end
+```
+
+Available schedulers: `cosine_annealing`, `tri_stage`, `polynomial_decay`, `myle`, `noam`.
+
+## Checkpoint Resume
+
+fairseq2 auto-resumes when the output directory contains checkpoints. The trainer restores model, optimizer, LR scheduler, and data reader state.
+
+```bash
+# Fresh start:
+bsub < scripts/hpc/03_train.sh
+
+# Auto-resume (resubmit same script — fixed output dir):
+bsub < scripts/hpc/03_train.sh
+
+# Resume from a specific directory:
+RESUME_DIR=/work3/$USER/outputs/omniasr_hpc_20250315_143000 bsub < scripts/hpc/03_train.sh
+```
+
+**Important:** If `step_nr >= num_steps` in config, training immediately stops. To extend a completed run, use a config with a higher `num_steps`.
+
 ## Hyperparameter Tuning Suggestions
 
 | Hyperparameter | Range to Try | Notes |
 |---|---|---|
 | `lr` | 5e-06 to 5e-05 | Start low, increase if underfitting |
-| `num_steps` | 3,000 to 10,000 | Monitor validation loss for convergence |
+| `num_steps` | 10,000 to 30,000 | Monitor validation loss for convergence |
+| `lr_scheduler.config.num_warmup_steps` | 500 to 3,000 | 5-10% of total steps |
+| `lr_scheduler.config.final_lr_scale` | 0.01 to 0.2 | Lower = more aggressive decay |
 | `freeze_encoder_for_n_steps` | 0 to 2,000 | Freeze encoder initially to stabilize |
 | `max_audio_len` | 480,000 to 960,000 | Depends on available VRAM |
 | `grad_accumulation.num_batches` | 4 to 16 | Trade-off: speed vs effective batch size |
@@ -188,15 +224,16 @@ from danish_asr.metrics import compute_wer, compute_cer
 ## Checkpoints & Storage
 
 - Each checkpoint: ~1.3 GiB (model size)
-- With checkpointing every 500 steps and 5,000 total: **~13 GiB** for checkpoints
+- 5k run (every 500 steps): **~13 GiB** for 10 checkpoints
+- 20k run (every 1000 steps): **~26 GiB** for 20 checkpoints
 - Output directory contains: checkpoints, training logs, metrics
 
 ## Training Duration Estimates
 
-| Setup | Estimated Time |
-|---|---|
-| 1x RTX 3060Ti (12GB) | ~8-12 hours for 5K steps |
-| 1x A100 (40GB, DTU) | ~2-4 hours for 5K steps |
-| 2x A100 (DTU) | ~1-2 hours for 5K steps |
+| Setup | 5K steps | 20K steps |
+|---|---|---|
+| 1x RTX 3060Ti (12GB) | ~8-12 hours | N/A (use HPC) |
+| 1x A100 (40GB, DTU) | ~2-4 hours | ~8-16 hours |
+| 2x A100 (DTU) | ~1-2 hours | ~4-8 hours |
 
 These are rough estimates — actual times depend on batch size, audio lengths, and I/O.
