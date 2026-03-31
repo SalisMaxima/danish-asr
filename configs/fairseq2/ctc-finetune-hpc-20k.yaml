@@ -35,6 +35,9 @@ lr_scheduler:
     start_lr_scale: 0.01         # start at 1% of peak lr
     final_lr_scale: 0.05         # decay to 5e-7 at end
 
+gang:
+  timeout: 1200      # 20 hours in minutes — prevents fairseq2 from checkpoint-stopping at the default 15-min gang timeout
+
 trainer:
   freeze_encoder_for_n_steps: 0
   mixed_precision:
