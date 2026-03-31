@@ -411,6 +411,16 @@ def main() -> None:
         logger.error(f"Fix the config file at {args.config} before running training")
         sys.exit(1)
 
+    gang_timeout = config_dict.get("gang", {}).get("timeout")
+    if gang_timeout is None:
+        logger.warning(
+            "gang.timeout not set — fairseq2 will use the default 15-minute timeout, "
+            "which causes training to checkpoint-stop at the first checkpoint boundary "
+            "after 15 min. Add 'gang:\\n  timeout: 1200' to your config for a 20h job."
+        )
+    else:
+        logger.info(f"gang.timeout: {gang_timeout} min")
+
     wandb_run = _init_wandb(args, args.config, config_dict)
 
     # Live-sync loguru debug log to W&B Files tab
