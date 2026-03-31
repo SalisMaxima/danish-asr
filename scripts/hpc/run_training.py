@@ -411,12 +411,23 @@ def main() -> None:
         logger.error(f"Fix the config file at {args.config} before running training")
         sys.exit(1)
 
-    gang_timeout = config_dict.get("gang", {}).get("timeout")
+    gang = config_dict.get("gang")
+    if gang is None:
+        gang_timeout = None
+    elif isinstance(gang, dict):
+        gang_timeout = gang.get("timeout")
+    else:
+        logger.warning(
+            "Config key 'gang' should be a mapping, but got "
+            f"{type(gang).__name__!r}; ignoring gang.timeout and using default behavior."
+        )
+        gang_timeout = None
     if gang_timeout is None:
         logger.warning(
             "gang.timeout not set — fairseq2 will use the default 15-minute timeout, "
-            "which causes training to checkpoint-stop at the first checkpoint boundary "
-            "after 15 min. Add 'gang:\\n  timeout: 1200' to your config for a 20h job."
+            "which causes training to checkpoint-stop at the first checkpoint boundary after 15 min.\n"
+            "Add 'gang:\n"
+            "  timeout: 1200' to your config for a 20h job."
         )
     else:
         logger.info(f"gang.timeout: {gang_timeout} min")
