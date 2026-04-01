@@ -9,7 +9,6 @@ import pytest
 
 from scripts.hpc.run_training import _DuplicateColWarningFilter, _MetricParser
 
-
 # ---------------------------------------------------------------------------
 # _DuplicateColWarningFilter
 # ---------------------------------------------------------------------------
@@ -106,9 +105,7 @@ class TestCheckPrerequisitesParquetSchema:
         pq.write_table(table, path)
         return path
 
-    def test_legacy_schema_raises_system_exit(
-        self, clean_fairseq2_dir: Path, tmp_path: Path
-    ) -> None:
+    def test_legacy_schema_raises_system_exit(self, clean_fairseq2_dir: Path, tmp_path: Path) -> None:
         """check_prerequisites() must sys.exit(1) when a Parquet file contains
         in-file partition columns (corpus / split / language)."""
         corpus_dir = clean_fairseq2_dir / "corpus=read_aloud" / "split=train" / "language=dan_Latn"
@@ -134,12 +131,9 @@ class TestCheckPrerequisitesParquetSchema:
                 run_training.check_prerequisites(config)
         assert exc_info.value.code == 1
 
-    def test_correct_schema_does_not_exit(
-        self, clean_fairseq2_dir: Path, tmp_path: Path
-    ) -> None:
+    def test_correct_schema_does_not_exit(self, clean_fairseq2_dir: Path, tmp_path: Path) -> None:
         """check_prerequisites() must NOT sys.exit from the Parquet check when
         files only contain the required columns (text, audio_bytes, audio_size)."""
-        from unittest.mock import MagicMock
 
         corpus_dir = clean_fairseq2_dir / "corpus=read_aloud" / "split=train" / "language=dan_Latn"
         self._make_parquet(
@@ -162,8 +156,9 @@ class TestCheckPrerequisitesParquetSchema:
         mock_torch.cuda.is_available.return_value = True
         mock_workflows = MagicMock()
 
-        with patch.object(run_training, "FAIRSEQ2_DIR", clean_fairseq2_dir):
-            with patch.dict(
+        with (
+            patch.object(run_training, "FAIRSEQ2_DIR", clean_fairseq2_dir),
+            patch.dict(
                 "sys.modules",
                 {
                     "torch": mock_torch,
@@ -172,9 +167,10 @@ class TestCheckPrerequisitesParquetSchema:
                     "workflows.recipes.wav2vec2": mock_workflows,
                     "workflows.recipes.wav2vec2.asr": mock_workflows,
                 },
-            ):
-                # Should complete without raising SystemExit
-                run_training.check_prerequisites(config)
+            ),
+        ):
+            # Should complete without raising SystemExit
+            run_training.check_prerequisites(config)
 
 
 # ---------------------------------------------------------------------------
@@ -222,4 +218,3 @@ def test_metric_parser_extracts_legacy_single_line_metrics() -> None:
     metrics, step = parser.parse_line("| valid | step 500 | wer 0.42 | cer 0.12 | loss 2.1 |")
     assert step == 500
     assert metrics == {"val/wer": 0.42, "val/cer": 0.12, "val/loss": 2.1}
-
