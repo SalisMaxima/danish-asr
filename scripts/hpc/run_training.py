@@ -66,6 +66,51 @@ _LEGACY_CONTEXT_TO_PREFIX = {"train": "train", "valid": "val", "validation": "va
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines and checkpoint upload scans
 
 
+class _DuplicateColWarningFilter:
+    """Suppress repeated 'DataFrame columns are not unique' warnings from fairseq2.
+
+    These warnings fire once per Parquet row-group and flood the log with thousands
+    of identical lines, burying real errors.  This filter logs the first occurrence
+    and suppresses the rest, including the 1-2 source-context lines that immediately
+    follow — but *only* those immediately-following lines, so real tracebacks from
+    the same module are still visible later.
+    """
+
+    _WARNING_TEXT = "DataFrame columns are not unique"
+    _CONTEXT_LINES_TO_SKIP = 2  # source-context lines printed right after the warning
+
+    def __init__(self) -> None:
+        self._warned = False
+        self._suppress_remaining = 0
+
+    def process(self, line: str) -> tuple[bool, str | None]:
+        """Decide whether to suppress *line* and optionally return a replacement.
+
+        Returns:
+            (suppress, replacement) where:
+              - ``suppress=True``  → drop the original line (do not pass to logger)
+              - ``replacement``    → if not None, log this string instead (first
+                                     warning occurrence only)
+        """
+        if self._WARNING_TEXT in line:
+            self._suppress_remaining = self._CONTEXT_LINES_TO_SKIP
+            if not self._warned:
+                self._warned = True
+                return True, "[fairseq2] DataFrame columns are not unique (further occurrences suppressed)"
+            return True, None
+
+        if self._suppress_remaining > 0:
+            self._suppress_remaining -= 1
+            return True, None
+
+        return False, None
+
+    @property
+    def warned(self) -> bool:
+        """True once the first warning occurrence has been seen."""
+        return self._warned
+
+
 class _MetricParser:
     """Stateful parser that tracks fairseq2's multi-line metric blocks."""
 
@@ -508,28 +553,15 @@ def main() -> None:
 
         uploaded_checkpoints: set[Path] = set()
         metric_parser = _MetricParser()
+        dup_col_filter = _DuplicateColWarningFilter()
         last_heartbeat = time.time()
-        # Track noisy warnings that should be logged once, then suppressed.
-        _duplicate_col_warned = False
-        _suppress_context_lines = 0  # remaining context lines to skip after a warning
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
 
-            # Suppress repeated "DataFrame columns are not unique" warnings from
-            # omnilingual-asr's mixture_parquet_storage.  These fire once per
-            # Parquet row-group and flood the log with thousands of identical
-            # lines, burying the real errors.  Log the first occurrence only.
-            # Each warning is followed by 1-2 source-context lines; skip those
-            # too, but only immediately after a warning — not globally, so real
-            # tracebacks from the same module are still visible.
-            if "DataFrame columns are not unique" in line:
-                if not _duplicate_col_warned:
-                    logger.warning("[fairseq2] DataFrame columns are not unique (further occurrences suppressed)")
-                    _duplicate_col_warned = True
-                _suppress_context_lines = 2
-                continue
-            if _suppress_context_lines > 0:
-                _suppress_context_lines -= 1
+            suppress, replacement = dup_col_filter.process(line)
+            if suppress:
+                if replacement:
+                    logger.warning(replacement)
                 continue
 
             logger.info(f"[fairseq2] {line}")
