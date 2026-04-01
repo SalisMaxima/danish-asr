@@ -126,9 +126,8 @@ class TestCheckPrerequisitesParquetSchema:
 
         from scripts.hpc import run_training
 
-        with patch.object(run_training, "FAIRSEQ2_DIR", clean_fairseq2_dir):
-            with pytest.raises(SystemExit) as exc_info:
-                run_training.check_prerequisites(config)
+        with patch.object(run_training, "FAIRSEQ2_DIR", clean_fairseq2_dir), pytest.raises(SystemExit) as exc_info:
+            run_training.check_prerequisites(config)
         assert exc_info.value.code == 1
 
     def test_correct_schema_does_not_exit(self, clean_fairseq2_dir: Path, tmp_path: Path) -> None:
