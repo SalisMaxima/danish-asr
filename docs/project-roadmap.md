@@ -116,6 +116,28 @@ lr: 1e-05
 
 Note: The CoRal team found that data augmentation (audio distortion to simulate real-life conditions) improved model robustness anecdotally, though they did not measure the exact contribution. Consider enabling fairseq2's built-in augmentation if available.
 
+### Phase 5B: Larger Model Investigation (if time and GPU budget permit)
+
+The omniASR family includes larger CTC models that all support the same fairseq2 finetuning recipe. Given that the 7B LLM zero-shot achieves 5.0% CER on Danish (vs ~10% for whisper-large-v3 zero-shot on CoRal read-aloud), there is headroom to gain from scale.
+
+| Model | Params | Training VRAM (est.) | Download |
+|-------|--------|----------------------|----------|
+| omniASR_CTC_300M_v2 | 325M | ~10–12 GB | 1.3 GiB |
+| omniASR_CTC_1B_v2 | 975M | ~18–22 GB | 3.7 GiB |
+| omniASR_CTC_3B_v2 | 3.1B | ~40–50 GB | 12.0 GiB |
+| omniASR_CTC_7B_v2 | 6.5B | >80 GB (multi-GPU) | 25.0 GiB |
+
+**Priority order:** Try `omniASR_CTC_1B_v2` first — fits on a single A100-40GB with grad accumulation, same recipe as 300M.
+
+| Step | Task | Where |
+|---|---|---|
+| 5B.1 | Run 300M to convergence, record best CER | HPC |
+| 5B.2 | Fine-tune 1B_v2 with same config, compare CER | HPC |
+| 5B.3 | If 1B improves significantly, try 3B_v2 (needs A100-80GB) | HPC |
+| 5B.4 | Compare: CER gain vs GPU cost across model sizes | Analysis |
+
+**Stopping criterion:** If 1B CER ≤ 300M CER + 1% (no meaningful gain), skip 3B.
+
 ## Phase 6: Evaluation & Fairness Analysis
 
 **Goal:** Comprehensive evaluation with demographic breakdown, inspired by the CoRal conference findings.

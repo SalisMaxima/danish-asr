@@ -424,13 +424,13 @@ def main() -> None:
         gang_timeout = None
     if gang_timeout is None:
         logger.warning(
-            "gang.timeout not set — fairseq2 will use the default 15-minute timeout, "
-            "which causes training to checkpoint-stop at the first checkpoint boundary after 15 min.\n"
+            "gang.timeout not set — fairseq2 will use the default 900s (15 min) timeout, "
+            "which aborts training when any sync point (validation, checkpoint) takes longer than 15 min.\n"
             "Add 'gang:\n"
-            "  timeout: 1200' to your config for a 20h job."
+            "  timeout: 86400  # 24h in seconds' to your config for long jobs."
         )
     else:
-        logger.info(f"gang.timeout: {gang_timeout} min")
+        logger.info(f"gang.timeout: {gang_timeout}s ({gang_timeout / 3600:.1f}h)")
 
     wandb_run = _init_wandb(args, args.config, config_dict)
 
