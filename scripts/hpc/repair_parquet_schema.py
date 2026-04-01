@@ -23,7 +23,20 @@ import argparse
 import sys
 from pathlib import Path
 
-import pyarrow.parquet as pq
+try:
+    import pyarrow.parquet as pq
+except ModuleNotFoundError as exc:
+    # Provide a helpful message instead of a bare ModuleNotFoundError.
+    # This script relies on the "omni" dependency group, which includes pyarrow.
+    if exc.name == "pyarrow":
+        print(
+            "Error: This script requires the 'pyarrow' package.\n"
+            "Install it by syncing the 'omni' dependency group:\n"
+            "    uv sync --group omni",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    raise
 from loguru import logger
 
 from scripts.hpc.common import FAIRSEQ2_DIR, setup_logging
