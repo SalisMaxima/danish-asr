@@ -511,6 +511,7 @@ def main() -> None:
         last_heartbeat = time.time()
         # Track noisy warnings that should be logged once, then suppressed.
         _duplicate_col_warned = False
+        _suppress_context_lines = 0  # remaining context lines to skip after a warning
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
 
@@ -518,12 +519,17 @@ def main() -> None:
             # omnilingual-asr's mixture_parquet_storage.  These fire once per
             # Parquet row-group and flood the log with thousands of identical
             # lines, burying the real errors.  Log the first occurrence only.
-            if "DataFrame columns are not unique" in line or (
-                _duplicate_col_warned and ("records = table.to_pandas(" in line or "mixture_parquet_storage.py" in line)
-            ):
+            # Each warning is followed by 1-2 source-context lines; skip those
+            # too, but only immediately after a warning — not globally, so real
+            # tracebacks from the same module are still visible.
+            if "DataFrame columns are not unique" in line:
                 if not _duplicate_col_warned:
                     logger.warning("[fairseq2] DataFrame columns are not unique (further occurrences suppressed)")
                     _duplicate_col_warned = True
+                _suppress_context_lines = 2
+                continue
+            if _suppress_context_lines > 0:
+                _suppress_context_lines -= 1
                 continue
 
             logger.info(f"[fairseq2] {line}")

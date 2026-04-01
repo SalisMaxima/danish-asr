@@ -28,7 +28,7 @@ from loguru import logger
 
 from scripts.hpc.common import FAIRSEQ2_DIR, setup_logging
 
-REQUIRED_COLUMNS = {"text", "audio_bytes", "audio_size"}
+REQUIRED_COLUMNS = ("text", "audio_bytes", "audio_size")
 PARTITION_COLUMNS = {"corpus", "split", "language"}
 
 
@@ -48,7 +48,7 @@ def repair_file(path: Path, dry_run: bool = False) -> bool:
         logger.info(f"[DRY RUN] Would repair {path} (extra columns: {extra_columns})")
         return True
 
-    table = pq.read_table(path, columns=list(REQUIRED_COLUMNS))
+    table = pq.read_table(path, columns=REQUIRED_COLUMNS)
     tmp_path = path.with_suffix(".tmp")
     pq.write_table(table, tmp_path, row_group_size=100)
     tmp_path.rename(path)
