@@ -457,6 +457,14 @@ def main() -> None:
 
     logger.info(f"Command: {' '.join(cmd)}")
 
+    # Suppress the noisy "DataFrame columns are not unique" pandas warning
+    # emitted by omnilingual-asr's mixture_parquet_storage on every row-group
+    # read.  This env var is inherited by the subprocess.
+    sub_env = os.environ.copy()
+    _existing_pw = sub_env.get("PYTHONWARNINGS", "")
+    _filter = "ignore::UserWarning:omnilingual_asr.datasets.storage.mixture_parquet_storage"
+    sub_env["PYTHONWARNINGS"] = f"{_existing_pw},{_filter}" if _existing_pw else _filter
+
     try:
         start_time = time.time()
         try:
@@ -466,6 +474,7 @@ def main() -> None:
                 stderr=subprocess.STDOUT,
                 text=True,
                 cwd=str(PROJECT_DIR),
+                env=sub_env,
             )
         except OSError as e:
             logger.error(f"Failed to launch training subprocess: {e}")
@@ -477,8 +486,23 @@ def main() -> None:
         uploaded_checkpoints: set[Path] = set()
         metric_parser = _MetricParser()
         last_heartbeat = time.time()
+        # Track noisy warnings that should be logged once, then suppressed.
+        _duplicate_col_warned = False
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
+
+            # Suppress repeated "DataFrame columns are not unique" warnings from
+            # omnilingual-asr's mixture_parquet_storage.  These fire once per
+            # Parquet row-group and flood the log with thousands of identical
+            # lines, burying the real errors.  Log the first occurrence only.
+            if "DataFrame columns are not unique" in line or (
+                _duplicate_col_warned and ("records = table.to_pandas(" in line or "mixture_parquet_storage.py" in line)
+            ):
+                if not _duplicate_col_warned:
+                    logger.warning("[fairseq2] DataFrame columns are not unique (further occurrences suppressed)")
+                    _duplicate_col_warned = True
+                continue
+
             logger.info(f"[fairseq2] {line}")
 
             metrics, step = metric_parser.parse_line(line)
