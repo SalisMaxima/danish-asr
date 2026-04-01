@@ -211,6 +211,25 @@ def check_prerequisites(config: Path) -> None:
         logger.error("Run convert_to_fairseq2.py first.")
         sys.exit(1)
 
+    # Check Parquet schema: partition columns (corpus, split, language) must NOT
+    # be present inside the files — they come from Hive directory paths.  The
+    # legacy converter wrote them in-file, causing duplicate columns on read.
+    import pyarrow.parquet as _pq
+
+    _partition_cols = {"corpus", "split", "language"}
+    _first_parquet = next(FAIRSEQ2_DIR.rglob("*.parquet"), None)
+    if _first_parquet is not None:
+        _schema = _pq.read_schema(_first_parquet)
+        _extra = set(_schema.names) & _partition_cols
+        if _extra:
+            logger.error(
+                f"Parquet files contain in-file partition columns {_extra} that duplicate "
+                "the Hive directory structure. This causes 'DataFrame columns are not unique' "
+                "warnings and data-loading errors."
+            )
+            logger.error("Fix: python scripts/hpc/repair_parquet_schema.py")
+            sys.exit(1)
+
     try:
         import torch
 
