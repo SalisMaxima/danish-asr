@@ -214,11 +214,21 @@ def check_prerequisites(config: Path) -> None:
     # Check Parquet schema: partition columns (corpus, split, language) must NOT
     # be present inside the files — they come from Hive directory paths.  The
     # legacy converter wrote them in-file, causing duplicate columns on read.
-    import pyarrow.parquet as _pq
-
     _partition_cols = {"corpus", "split", "language"}
     _first_parquet = next(FAIRSEQ2_DIR.rglob("*.parquet"), None)
     if _first_parquet is not None:
+        try:
+            import pyarrow.parquet as _pq
+        except ModuleNotFoundError:
+            logger.error(
+                "pyarrow is required to validate the Parquet schema but is not installed."
+            )
+            logger.error(
+                "Install it with either:\n"
+                "  uv sync --group omni\n"
+                "  uv add pyarrow"
+            )
+            sys.exit(1)
         _schema = _pq.read_schema(_first_parquet)
         _extra = set(_schema.names) & _partition_cols
         if _extra:
