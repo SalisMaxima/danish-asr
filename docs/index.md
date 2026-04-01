@@ -13,6 +13,7 @@ Fine-tuning Meta's Omnilingual ASR (`omniASR_CTC_300M_v2`) for Danish using CoRa
 | [Finetuning Recipe](finetuning-recipe.md) | CTC finetuning config, hyperparameters, and training commands |
 | [Training Infrastructure](training-infrastructure.md) | Hydra configs, hardware profiles, VRAM budgets, and usage commands for all 3 models |
 | [DTU HPC Setup](dtu-hpc-setup.md) | GPU queues, LSF job scripts, environment setup, storage layout |
+| [Experiment Plan](experiment-plan.md) | Short-term hyperparameter experiments (LR, steps, encoder freeze, batch size) |
 
 ## Quick Reference
 

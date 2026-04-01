@@ -1,6 +1,6 @@
-# ARCHIVED: 5k-step config used for initial training run (effortless-wildflower-13).
-# This remains the default / legacy config used by scripts/hpc/run_training.py when --config is omitted.
-# For the extended 20k run with explicit LR scheduler, prefer ctc-finetune-hpc-20k.yaml (or pass --config explicitly).
+# E2 experiment: higher learning rate (3e-5 vs baseline 1e-5).
+# Hypothesis: 1e-5 is too conservative; upstream Meta default is 5e-5.
+# See docs/experiment-plan.md §E2.
 
 model:
   name: "omniASR_CTC_300M_v2"
@@ -20,7 +20,7 @@ dataset:
   asr_task_config:
     min_audio_len: 32_000
     max_audio_len: 960_000
-    max_num_elements: 3_840_000  # reduced from 7.68M — higher values cause GPU memory fragmentation and crashes on A100-PCIE-40GB
+    max_num_elements: 3_840_000
     batch_shuffle_window: 1
     normalize_audio: true
     example_shuffle_window: 1
@@ -30,7 +30,14 @@ tokenizer:
 
 optimizer:
   config:
-    lr: 1e-05
+    lr: 3e-5                   # 3× baseline (1e-5); upstream Meta default is 5e-5
+
+lr_scheduler:
+  name: "tri_stage"
+  config:
+    stage_ratio: [0.1, 0.0, 0.9]  # 10% warmup (3k steps), 90% cosine decay
+    start_lr_scale: 0.01           # start at 1% of peak lr (3e-7)
+    final_lr_scale: 0.05           # decay to 5% of peak lr (1.5e-6)
 
 gang:
   timeout: 86400     # 24h in seconds — fairseq2 uses seconds, NOT minutes; default is 900s (15 min) which aborts at sync points
@@ -43,8 +50,8 @@ trainer:
     num_batches: 4
 
 regime:
-  num_steps: 5_000
-  validate_after_n_steps: 500  # CTC outputs all-blank early → zero-length hyps crash WER; matches official Meta default
-  validate_every_n_steps: 500
-  checkpoint_every_n_steps: 500
+  num_steps: 30_000
+  validate_after_n_steps: 500    # CTC outputs all-blank early → zero-length hyps crash WER
+  validate_every_n_steps: 1000
+  checkpoint_every_n_steps: 1000
   publish_metrics_every_n_steps: 100
