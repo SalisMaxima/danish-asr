@@ -1,0 +1,57 @@
+# E3 experiment: upstream Meta default learning rate (5e-5).
+# Hypothesis: the upstream default 5e-5 may be optimal for CTC fine-tuning.
+# See docs/experiment-plan.md §E3.
+
+model:
+  name: "omniASR_CTC_300M_v2"
+
+dataset:
+  name: "coral_v3_danish"
+  train_split: "train"
+  valid_split: "dev"
+  storage_mode: "MIXTURE_PARQUET"
+  task_mode: "ASR"
+  mixture_parquet_storage_config:
+    dataset_summary_path: "data/parquet/version=0/language_distribution_0.tsv"
+    beta_corpus: 0.5
+    beta_language: 0.5
+    fragment_loading:
+      cache: true
+  asr_task_config:
+    min_audio_len: 32_000
+    max_audio_len: 960_000
+    max_num_elements: 3_840_000
+    batch_shuffle_window: 1
+    normalize_audio: true
+    example_shuffle_window: 1
+
+tokenizer:
+  name: "omniASR_tokenizer_written_v2"
+
+optimizer:
+  config:
+    lr: 5e-5                   # upstream Meta default learning rate
+
+lr_scheduler:
+  name: "tri_stage"
+  config:
+    stage_ratio: [0.1, 0.0, 0.9]  # 10% warmup (3k steps), 90% cosine decay
+    start_lr_scale: 0.01           # start at 1% of peak lr (5e-7)
+    final_lr_scale: 0.05           # decay to 5% of peak lr (2.5e-6)
+
+gang:
+  timeout: 86400     # 24h in seconds — fairseq2 uses seconds, NOT minutes; default is 900s (15 min) which aborts at sync points
+
+trainer:
+  freeze_encoder_for_n_steps: 0
+  mixed_precision:
+    dtype: "torch.bfloat16"
+  grad_accumulation:
+    num_batches: 4
+
+regime:
+  num_steps: 30_000
+  validate_after_n_steps: 500    # CTC outputs all-blank early → zero-length hyps crash WER
+  validate_every_n_steps: 1000
+  checkpoint_every_n_steps: 1000
+  publish_metrics_every_n_steps: 100
