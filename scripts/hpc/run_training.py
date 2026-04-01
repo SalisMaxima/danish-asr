@@ -220,14 +220,8 @@ def check_prerequisites(config: Path) -> None:
         try:
             import pyarrow.parquet as _pq
         except ModuleNotFoundError:
-            logger.error(
-                "pyarrow is required to validate the Parquet schema but is not installed."
-            )
-            logger.error(
-                "Install it with either:\n"
-                "  uv sync --group omni\n"
-                "  uv add pyarrow"
-            )
+            logger.error("pyarrow is required to validate the Parquet schema but is not installed.")
+            logger.error("Install it with either:\n  uv sync --group omni\n  uv add pyarrow")
             sys.exit(1)
         _schema = _pq.read_schema(_first_parquet)
         _extra = set(_schema.names) & _partition_cols
