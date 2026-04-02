@@ -460,12 +460,18 @@ def main() -> None:
     try:
         start_time = time.time()
         try:
+            # PYTHONUNBUFFERED prevents CPython from overriding the real exit
+            # code to 120 when flushing stdout to the pipe fails at shutdown.
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
+
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 cwd=str(PROJECT_DIR),
+                env=env,
             )
         except OSError as e:
             logger.error(f"Failed to launch training subprocess: {e}")
@@ -509,6 +515,11 @@ def main() -> None:
             )
         elif return_code != 0:
             logger.error(f"Training FAILED after {elapsed / 3600:.1f}h (exit code: {return_code})")
+            if return_code == 120:
+                logger.error(
+                    "Exit code 120 = CPython pipe-flush error at shutdown. "
+                    "The REAL error was logged above — search for the last error/exception in the output."
+                )
         else:
             logger.info(f"Training completed successfully in {elapsed / 3600:.1f}h")
 
