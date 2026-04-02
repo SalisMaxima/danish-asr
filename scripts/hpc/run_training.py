@@ -537,7 +537,7 @@ def main() -> None:
             now = time.time()
             if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
                 elapsed = now - start_time
-                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_logged={line_count}")
+                logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_read={line_count}")
                 last_heartbeat = now
 
         # Flush any remaining metrics from the last block
@@ -569,9 +569,9 @@ def main() -> None:
         else:
             logger.info(f"Training completed successfully in {elapsed / 3600:.1f}h")
 
-        # List checkpoints (no W&B artifact uploads — checkpoints are 4GB each and stored
-        # locally on HPC scratch; artifact uploads cache a full copy in WANDB_CACHE_DIR
-        # before uploading, which reliably exhausts the 200 GB /work3 NVME quota)
+        # List checkpoints. Artifact uploads are disabled in this wrapper — wandb.log_artifact()
+        # caches a full copy of every .pt file in WANDB_CACHE_DIR before uploading (4 GB/ckpt),
+        # which reliably exhausts the 200 GB /work3 NVME quota. Checkpoints stay on HPC scratch.
         def _ckpt_step(p: Path) -> int:
             """Extract step number from checkpoint path (parent dir is step_N) for numeric sorting."""
             m = re.search(r"step_(\d+)", str(p))
@@ -582,10 +582,6 @@ def main() -> None:
             logger.info(f"Checkpoints found ({len(checkpoints)}):")
             for ckpt in checkpoints:
                 logger.info(f"  {ckpt}")
-            if wandb_run is not None:
-                wandb_run.summary["checkpoint_dir"] = str(output_dir)
-                wandb_run.summary["num_checkpoints"] = len(checkpoints)
-                wandb_run.summary["latest_checkpoint"] = str(checkpoints[-1])
         else:
             logger.warning("No checkpoint files found in output directory")
 
@@ -593,9 +589,12 @@ def main() -> None:
             try:
                 import wandb
 
-                wandb.summary["exit_code"] = return_code
-                wandb.summary["elapsed_hours"] = round(elapsed / 3600, 2)
-                wandb.summary["num_checkpoints"] = len(checkpoints)
+                wandb_run.summary["exit_code"] = return_code
+                wandb_run.summary["elapsed_hours"] = round(elapsed / 3600, 2)
+                wandb_run.summary["num_checkpoints"] = len(checkpoints)
+                if checkpoints:
+                    wandb_run.summary["checkpoint_dir"] = str(output_dir)
+                    wandb_run.summary["latest_checkpoint"] = str(checkpoints[-1])
                 wandb.finish(exit_code=return_code)
             except Exception as e:
                 logger.warning(f"W&B finish failed: {type(e).__name__}: {e}")
