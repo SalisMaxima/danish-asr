@@ -40,4 +40,6 @@ regime:
   validate_after_n_steps: 500  # CTC outputs all-blank early → zero-length hyps crash WER; matches official Meta default
   validate_every_n_steps: 500
   checkpoint_every_n_steps: 500
+  keep_last_n_checkpoints: 2
+  keep_best_n_checkpoints: 1
   publish_metrics_every_n_steps: 100

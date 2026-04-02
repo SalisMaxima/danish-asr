@@ -54,4 +54,6 @@ regime:
   validate_after_n_steps: 500    # CTC outputs all-blank early → zero-length hyps crash WER
   validate_every_n_steps: 1000
   checkpoint_every_n_steps: 1000
+  keep_last_n_checkpoints: 2      # avoid disk bloat — 30k steps × ~4GB/ckpt = 120GB without pruning
+  keep_best_n_checkpoints: 1      # also keep best WER checkpoint regardless of recency
   publish_metrics_every_n_steps: 100

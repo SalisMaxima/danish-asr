@@ -36,6 +36,42 @@ Request a temporary increase: email support@cc.dtu.dk. Only granted for limited 
 
 ---
 
+## GOTCHA: /work3 NVME pool has a 200 GB hard quota
+
+`/work3` spans multiple storage pools. The **NVME pool (pool 6)** has a **200 GB hard limit**.
+When this is hit, all `write()` calls fail silently — training jobs exit with code 120 and leave
+no traceback, making the root cause invisible.
+
+Check your usage before and after every training run:
+
+```bash
+getquota_work3.sh   # look at storagepool 6 "NVMEs added in 2024"
+```
+
+**Sources of runaway disk usage:**
+- fairseq2 checkpoints: ~4 GB per checkpoint × 30 steps = 120 GB without pruning
+- W&B artifact cache (`/work3/$USER/wandb/cache/`): `log_artifact()` copies every uploaded `.pt` file locally before uploading — **`run_training.py` disables all checkpoint artifact uploads** to prevent this; W&B only receives metrics, config, and logs
+
+**Mandatory mitigations for every training config:**
+```yaml
+regime:
+  keep_last_n_checkpoints: 2    # keep only 2 most recent
+  keep_best_n_checkpoints: 1    # also keep best WER checkpoint
+```
+
+**`run_training.py` checkpoint upload policy:** checkpoint artifact uploads are fully disabled.
+W&B receives metrics (loss/WER/CER), the config YAML, and the log file only.
+Checkpoints live exclusively on HPC scratch — retrieve them with `rsync`/`scp`.
+
+**Emergency cleanup:**
+```bash
+rm -rf /work3/$USER/wandb/cache/
+rm -rf /work3/$USER/wandb/run-*/
+rm -rf /work3/$USER/outputs/<run_dir>/   # only if you don't need checkpoints
+```
+
+---
+
 ## /work3 scratch filesystem
 
 Work3 (and work1) use **BeeGFS** — a distributed parallel filesystem over Infiniband, designed for high-throughput I/O with large datasets.

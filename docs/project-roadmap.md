@@ -74,6 +74,35 @@ See [data-preparation.md](data-preparation.md) for full details.
 | `split` | split name | `validation` → `dev` |
 | `language` | constant | `"dan_Latn"` |
 
+## Scratch Space Management (MANDATORY for every training run)
+
+> **Gotcha:** `/work3` NVME pool (storagepool 6) has a **200 GB hard quota**. When hit, jobs exit
+> silently with code 120 and leave no traceback. This has caused multiple lost training runs.
+
+**Before every job submission:**
+```bash
+getquota_work3.sh          # storagepool 6 must be under 200 GB
+rm -rf /work3/$USER/outputs/<old_run>/   # remove runs you no longer need
+```
+
+**Every fairseq2 training config must include:**
+```yaml
+regime:
+  keep_last_n_checkpoints: 2    # ~4 GB × 2 = 8 GB on disk
+  keep_best_n_checkpoints: 1    # +4 GB for best WER ckpt
+```
+
+**`run_training.py` W&B policy:** checkpoint artifact uploads are fully disabled — `wandb.log_artifact()` caches the full `.pt` file locally before uploading, which would add 4 GB per checkpoint to `wandb/cache/`. W&B only receives metrics, config, and logs. Checkpoints stay on HPC scratch.
+
+**Budget with these settings:**
+- Data: ~71 GB (fixed)
+- Checkpoints: ~12 GB (3 × 4 GB max)
+- W&B cache: ~0 GB (no artifact uploads in `run_training.py`)
+- Caches/logs: ~2 GB
+- **Total: ~85 GB — well under the 200 GB limit**
+
+---
+
 ## Phase 4: Training Setup & Smoke Test
 
 **Goal:** Verify training runs without errors before committing to a long run.

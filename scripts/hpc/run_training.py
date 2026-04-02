@@ -396,55 +396,6 @@ def _log_metrics_to_wandb(metrics: dict[str, float], step: int | None, wandb_run
             logger.error(f"W&B logging has failed {_wandb_consecutive_failures} consecutive times")
 
 
-def _upload_checkpoint_artifact(
-    checkpoint_path: Path,
-    wandb_run: Any,
-    step: int | None,
-    artifact_type: str = "checkpoint",
-) -> bool:
-    """Upload a single checkpoint file as a W&B artifact. Returns True on success."""
-    if wandb_run is None:
-        return False
-    try:
-        import wandb
-
-        run_id = wandb_run.id or "unknown"
-        artifact = wandb.Artifact(
-            name=f"omniasr-ctc-danish-{run_id}",
-            type=artifact_type,
-            metadata={"step": step, "path": str(checkpoint_path)},
-        )
-        artifact.add_file(str(checkpoint_path))
-        wandb_run.log_artifact(artifact)
-        step_label = f"step_{step}" if step is not None else checkpoint_path.stem
-        logger.info(f"W&B artifact uploaded: {step_label} ({checkpoint_path.name})")
-        return True
-    except Exception as e:
-        logger.warning(
-            f"W&B checkpoint upload failed for {checkpoint_path.name}: "
-            f"{type(e).__name__}: {e} — checkpoint is still saved locally at {checkpoint_path}"
-        )
-        return False
-
-
-def _check_and_upload_new_checkpoints(
-    output_dir: Path,
-    uploaded: set[Path],
-    wandb_run: Any,
-) -> None:
-    """Scan for new checkpoint files and upload them as W&B artifacts."""
-    if wandb_run is None:
-        return
-    current = set(output_dir.glob("**/*.pt"))
-    for ckpt in sorted(current - uploaded):
-        ckpt_step = None
-        m = re.search(r"(\d+)", ckpt.stem)
-        if m:
-            ckpt_step = int(m.group(1))
-        if _upload_checkpoint_artifact(ckpt, wandb_run, step=ckpt_step):
-            uploaded.add(ckpt)
-
-
 def main() -> None:
     default_config = PROJECT_DIR / "configs" / "fairseq2" / "ctc-finetune-hpc.yaml"
 
@@ -540,11 +491,6 @@ def main() -> None:
     # Suppress the noisy "DataFrame columns are not unique" pandas warning
     # emitted by omnilingual-asr's mixture_parquet_storage on every row-group
     # read.  This env var is inherited by the subprocess.
-    sub_env = os.environ.copy()
-    _existing_pw = sub_env.get("PYTHONWARNINGS", "")
-    _filter = "ignore::UserWarning:omnilingual_asr.datasets.storage.mixture_parquet_storage"
-    sub_env["PYTHONWARNINGS"] = f"{_existing_pw},{_filter}" if _existing_pw else _filter
-
     try:
         start_time = time.time()
         try:
@@ -552,6 +498,9 @@ def main() -> None:
             # code to 120 when flushing stdout to the pipe fails at shutdown.
             env = os.environ.copy()
             env["PYTHONUNBUFFERED"] = "1"
+            _existing_pw = env.get("PYTHONWARNINGS", "")
+            _filter = "ignore::UserWarning:omnilingual_asr.datasets.storage.mixture_parquet_storage"
+            env["PYTHONWARNINGS"] = f"{_existing_pw},{_filter}" if _existing_pw else _filter
 
             process = subprocess.Popen(
                 cmd,
@@ -568,7 +517,6 @@ def main() -> None:
 
         logger.info(f"Training subprocess started (PID={process.pid})")
 
-        uploaded_checkpoints: set[Path] = set()
         metric_parser = _MetricParser()
         dup_col_filter = _DuplicateColWarningFilter()
         last_heartbeat = time.time()
@@ -590,7 +538,6 @@ def main() -> None:
             if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
                 elapsed = now - start_time
                 logger.info(f"[heartbeat] Job alive — elapsed {elapsed:.0f}s, lines_logged={line_count}")
-                _check_and_upload_new_checkpoints(output_dir, uploaded_checkpoints, wandb_run)
                 last_heartbeat = now
 
         # Flush any remaining metrics from the last block
@@ -613,19 +560,21 @@ def main() -> None:
             logger.error(f"Training FAILED after {elapsed / 3600:.1f}h (exit code: {return_code})")
             if return_code == 120:
                 logger.error(
-                    "Exit code 120 = CPython pipe-flush error at shutdown. "
-                    "The REAL error was logged above — search for the last error/exception in the output."
+                    "Exit code 120: most likely /work3 NVME quota exhausted (storagepool 6, "
+                    "200 GB hard limit). Run getquota_work3.sh — if storagepool 6 is at or "
+                    "near 200 GB, that is the cause. Clean old checkpoint dirs and wandb/cache/. "
+                    "If quota is fine, this is a CPython pipe-flush error at shutdown — "
+                    "the real error should appear in the log above."
                 )
         else:
             logger.info(f"Training completed successfully in {elapsed / 3600:.1f}h")
 
-        # Upload any remaining checkpoints not yet uploaded
-        _check_and_upload_new_checkpoints(output_dir, uploaded_checkpoints, wandb_run)
-
-        # List checkpoints
+        # List checkpoints (no W&B artifact uploads — checkpoints are 4GB each and stored
+        # locally on HPC scratch; artifact uploads cache a full copy in WANDB_CACHE_DIR
+        # before uploading, which reliably exhausts the 200 GB /work3 NVME quota)
         def _ckpt_step(p: Path) -> int:
-            """Extract step number from checkpoint filename for numeric sorting."""
-            m = re.search(r"(\d+)", p.stem)
+            """Extract step number from checkpoint path (parent dir is step_N) for numeric sorting."""
+            m = re.search(r"step_(\d+)", str(p))
             return int(m.group(1)) if m else 0
 
         checkpoints = sorted(output_dir.glob("**/*.pt"), key=_ckpt_step)
@@ -633,32 +582,12 @@ def main() -> None:
             logger.info(f"Checkpoints found ({len(checkpoints)}):")
             for ckpt in checkpoints:
                 logger.info(f"  {ckpt}")
+            if wandb_run is not None:
+                wandb_run.summary["checkpoint_dir"] = str(output_dir)
+                wandb_run.summary["num_checkpoints"] = len(checkpoints)
+                wandb_run.summary["latest_checkpoint"] = str(checkpoints[-1])
         else:
             logger.warning("No checkpoint files found in output directory")
-
-        # Upload final model as a distinct "model" artifact
-        if return_code == 0 and checkpoints and wandb_run is not None:
-            try:
-                import wandb
-
-                final_ckpt = checkpoints[-1]
-                num_steps = config_dict.get("regime", {}).get("num_steps") if config_dict else None
-                run_id = wandb_run.id or "unknown"
-                artifact = wandb.Artifact(
-                    name=f"omniasr-ctc-danish-{run_id}-final",
-                    type="model",
-                    description="Final trained omniASR CTC model for Danish",
-                    metadata={
-                        "total_steps": num_steps,
-                        "config_file": str(args.config),
-                        "output_dir": str(output_dir),
-                    },
-                )
-                artifact.add_file(str(final_ckpt))
-                wandb_run.log_artifact(artifact)
-                logger.info(f"W&B final model artifact uploaded: {final_ckpt.name}")
-            except Exception as e:
-                logger.warning(f"W&B final model upload failed: {type(e).__name__}: {e}")
 
         if wandb_run is not None:
             try:
