@@ -217,3 +217,55 @@ def test_metric_parser_extracts_legacy_single_line_metrics() -> None:
     metrics, step = parser.parse_line("| valid | step 500 | wer 0.42 | cer 0.12 | loss 2.1 |")
     assert step == 500
     assert metrics == {"val/wer": 0.42, "val/cer": 0.12, "val/loss": 2.1}
+
+
+def test_metric_parser_loss_value_on_next_line_after_header_ending_with_loss_colon() -> None:
+    """Header ending with 'Loss:' — numeric loss value leads the next continuation line."""
+    parser = _MetricParser()
+
+    # Header ends with "Loss:" — value is NOT yet on this line
+    metrics, step = parser.parse_line("Train Metrics (step 200) - CTC Loss:")
+    assert metrics == {}
+    assert step is None
+
+    # Next line starts with the numeric loss value
+    metrics, step = parser.parse_line("  3.210 | Gradient Norm: 0.87 |")
+    assert metrics == {}
+    assert step is None
+
+    # Flush on empty line
+    metrics, step = parser.parse_line("")
+    assert step == 200
+    assert metrics == {"train/loss": 3.21, "train/grad_norm": 0.87}
+
+
+def test_metric_parser_loss_value_on_next_line_with_additional_metrics() -> None:
+    """Loss continuation also parses WER/CER/UER from later continuation lines."""
+    parser = _MetricParser()
+
+    parser.parse_line("Train Metrics (step 300) - CTC Loss:")
+    # Leading numeric = loss
+    parser.parse_line("  2.500")
+    # Further continuation with WER/CER
+    parser.parse_line("  Word Error Rate (WER): 45.00 | Character Error Rate (CER): 20.00 |")
+
+    metrics, step = parser.parse_line("")
+    assert step == 300
+    assert metrics["train/loss"] == 2.5
+    assert metrics["train/wer"] == 45.0
+    assert metrics["train/cer"] == 20.0
+
+
+def test_metric_parser_header_not_ending_with_loss_colon_does_not_treat_next_line_as_loss() -> None:
+    """A normal header (not ending with 'Loss:') must NOT consume the next line as a loss value."""
+    parser = _MetricParser()
+
+    parser.parse_line("Training Metrics (step 50) - CTC")
+    # Continuation line starts with a number but should be parsed via _LOSS_PATTERN, not leading-number
+    metrics, step = parser.parse_line("Loss: 1.111 | Gradient Norm: 0.50 |")
+    assert metrics == {}
+    assert step is None
+
+    metrics, step = parser.parse_line("")
+    assert step == 50
+    assert metrics == {"train/loss": 1.111, "train/grad_norm": 0.5}
