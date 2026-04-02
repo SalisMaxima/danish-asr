@@ -1,6 +1,6 @@
-# E2 experiment: higher learning rate (3e-5 vs baseline 1e-5).
-# Hypothesis: 1e-5 is too conservative; upstream Meta default is 5e-5.
-# See docs/experiment-plan.md §E2.
+# E3 experiment: upstream Meta default learning rate (5e-5).
+# Hypothesis: the upstream default 5e-5 may be optimal for CTC fine-tuning.
+# See docs/experiment-plan.md §E3.
 
 model:
   name: "omniASR_CTC_300M_v2"
@@ -20,7 +20,7 @@ dataset:
   asr_task_config:
     min_audio_len: 32_000
     max_audio_len: 960_000
-    max_num_elements: 2_560_000
+    max_num_elements: 3_840_000
     batch_shuffle_window: 1
     normalize_audio: true
     example_shuffle_window: 1
@@ -30,14 +30,14 @@ tokenizer:
 
 optimizer:
   config:
-    lr: 3e-5                   # 3× baseline (1e-5); upstream Meta default is 5e-5
+    lr: 5e-5                   # upstream Meta default learning rate
 
 lr_scheduler:
   name: "tri_stage"
   config:
     stage_ratio: [0.1, 0.0, 0.9]  # 10% warmup (3k steps), 90% cosine decay
-    start_lr_scale: 0.01           # start at 1% of peak lr (3e-7)
-    final_lr_scale: 0.05           # decay to 5% of peak lr (1.5e-6)
+    start_lr_scale: 0.01           # start at 1% of peak lr (5e-7)
+    final_lr_scale: 0.05           # decay to 5% of peak lr (2.5e-6)
 
 gang:
   timeout: 86400     # 24h in seconds — fairseq2 uses seconds, NOT minutes; default is 900s (15 min) which aborts at sync points

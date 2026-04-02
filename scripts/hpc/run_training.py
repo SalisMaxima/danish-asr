@@ -66,6 +66,51 @@ _LEGACY_CONTEXT_TO_PREFIX = {"train": "train", "valid": "val", "validation": "va
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines and checkpoint upload scans
 
 
+class _DuplicateColWarningFilter:
+    """Suppress repeated 'DataFrame columns are not unique' warnings from fairseq2.
+
+    These warnings fire once per Parquet row-group and flood the log with thousands
+    of identical lines, burying real errors.  This filter logs the first occurrence
+    and suppresses the rest, including the 1-2 source-context lines that immediately
+    follow — but *only* those immediately-following lines, so real tracebacks from
+    the same module are still visible later.
+    """
+
+    _WARNING_TEXT = "DataFrame columns are not unique"
+    _CONTEXT_LINES_TO_SKIP = 2  # source-context lines printed right after the warning
+
+    def __init__(self) -> None:
+        self._warned = False
+        self._suppress_remaining = 0
+
+    def process(self, line: str) -> tuple[bool, str | None]:
+        """Decide whether to suppress *line* and optionally return a replacement.
+
+        Returns:
+            (suppress, replacement) where:
+              - ``suppress=True``  → drop the original line (do not pass to logger)
+              - ``replacement``    → if not None, log this string instead (first
+                                     warning occurrence only)
+        """
+        if self._WARNING_TEXT in line:
+            self._suppress_remaining = self._CONTEXT_LINES_TO_SKIP
+            if not self._warned:
+                self._warned = True
+                return True, "[fairseq2] DataFrame columns are not unique (further occurrences suppressed)"
+            return True, None
+
+        if self._suppress_remaining > 0:
+            self._suppress_remaining -= 1
+            return True, None
+
+        return False, None
+
+    @property
+    def warned(self) -> bool:
+        """True once the first warning occurrence has been seen."""
+        return self._warned
+
+
 class _MetricParser:
     """Stateful parser that tracks fairseq2's multi-line metric blocks."""
 
@@ -210,6 +255,29 @@ def check_prerequisites(config: Path) -> None:
         logger.error(f"No corpus directories in {FAIRSEQ2_DIR}")
         logger.error("Run convert_to_fairseq2.py first.")
         sys.exit(1)
+
+    # Check Parquet schema: partition columns (corpus, split, language) must NOT
+    # be present inside the files — they come from Hive directory paths.  The
+    # legacy converter wrote them in-file, causing duplicate columns on read.
+    _partition_cols = {"corpus", "split", "language"}
+    _first_parquet = next(FAIRSEQ2_DIR.rglob("*.parquet"), None)
+    if _first_parquet is not None:
+        try:
+            import pyarrow.parquet as _pq
+        except ModuleNotFoundError:
+            logger.error("pyarrow is required to validate the Parquet schema but is not installed.")
+            logger.error("Install it with either:\n  uv sync --group omni\n  uv add pyarrow")
+            sys.exit(1)
+        _schema = _pq.read_schema(_first_parquet)
+        _extra = set(_schema.names) & _partition_cols
+        if _extra:
+            logger.error(
+                f"Parquet files contain in-file partition columns {_extra} that duplicate "
+                "the Hive directory structure. This causes 'DataFrame columns are not unique' "
+                "warnings and data-loading errors."
+            )
+            logger.error("Fix: python scripts/hpc/repair_parquet_schema.py")
+            sys.exit(1)
 
     try:
         import torch
@@ -457,6 +525,14 @@ def main() -> None:
 
     logger.info(f"Command: {' '.join(cmd)}")
 
+    # Suppress the noisy "DataFrame columns are not unique" pandas warning
+    # emitted by omnilingual-asr's mixture_parquet_storage on every row-group
+    # read.  This env var is inherited by the subprocess.
+    sub_env = os.environ.copy()
+    _existing_pw = sub_env.get("PYTHONWARNINGS", "")
+    _filter = "ignore::UserWarning:omnilingual_asr.datasets.storage.mixture_parquet_storage"
+    sub_env["PYTHONWARNINGS"] = f"{_existing_pw},{_filter}" if _existing_pw else _filter
+
     try:
         start_time = time.time()
         try:
@@ -482,9 +558,17 @@ def main() -> None:
 
         uploaded_checkpoints: set[Path] = set()
         metric_parser = _MetricParser()
+        dup_col_filter = _DuplicateColWarningFilter()
         last_heartbeat = time.time()
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
+
+            suppress, replacement = dup_col_filter.process(line)
+            if suppress:
+                if replacement:
+                    logger.warning(replacement)
+                continue
+
             logger.info(f"[fairseq2] {line}")
 
             metrics, step = metric_parser.parse_line(line)
