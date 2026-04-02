@@ -47,7 +47,7 @@ from scripts.hpc.common import (
 # The header line has the step + context (train/valid), metric values follow
 # on continuation lines. A stateful parser (_MetricParser) tracks the current
 # step and context across lines.
-_HEADER_PATTERN = re.compile(r"(Training|Validation) Metrics \(step (\d+)\)", re.IGNORECASE)
+_HEADER_PATTERN = re.compile(r"(Train(?:ing)?|Validation) Metrics \(step (\d+)\)", re.IGNORECASE)
 _NUMERIC_PATTERN = r"([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)"
 _LOSS_PATTERN = re.compile(rf"\bLoss:\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
 _WER_PATTERN = re.compile(rf"\(WER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
@@ -73,6 +73,7 @@ class _MetricParser:
         self._step: int | None = None
         self._context: str | None = None  # "train" or "val"
         self._metrics: dict[str, float] = {}
+        self._loss_on_next_line: bool = False  # header ended with "Loss:" — value is leading number on next line
 
     def parse_line(self, line: str) -> tuple[dict[str, float], int | None]:
         """Parse a line, returning (metrics_dict, step) when a block is complete."""
@@ -89,15 +90,26 @@ class _MetricParser:
             flushed = self._flush()
             # Start new block
             ctx = header.group(1).lower()
-            self._context = "train" if ctx == "training" else "val"
+            self._context = "train" if ctx in ("training", "train") else "val"
             self._step = int(header.group(2))
             self._metrics = {}
+            # fairseq2 train format ends the header with "Loss:" and puts the
+            # value as the leading number on the next continuation line.
+            self._loss_on_next_line = line.rstrip().endswith("Loss:")
             return flushed
 
         # Not a header — try to extract metrics from continuation lines
         found_metric = False
         if self._step is not None:
             prefix = self._context or "train"
+
+            # Handle train format where loss value leads the first continuation line
+            if self._loss_on_next_line:
+                leading = re.match(r"\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)", line)
+                if leading:
+                    self._metrics[f"{prefix}/loss"] = float(leading.group(1))
+                    found_metric = True
+                self._loss_on_next_line = False
 
             loss = _LOSS_PATTERN.search(line)
             if loss:
