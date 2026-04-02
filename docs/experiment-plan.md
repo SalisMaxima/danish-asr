@@ -26,8 +26,9 @@ we are 5× more conservative with no evidence that warrants it.
 2. **Clean old outputs:** `rm -rf /work3/$USER/outputs/<old_run>/` (W&B cache no longer accumulates — checkpoint artifact uploads are disabled in `run_training.py`)
 3. **Verify config has checkpoint pruning:**
    ```yaml
-   keep_last_n_checkpoints: 2
-   keep_best_n_checkpoints: 1
+   regime:
+     keep_last_n_checkpoints: 2
+     keep_best_n_checkpoints: 1
    ```
    Without this, 30k steps × ~4 GB/checkpoint = 120 GB, which reliably hits the 200 GB quota and kills the job silently with exit code 120.
 

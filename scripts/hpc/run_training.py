@@ -560,8 +560,11 @@ def main() -> None:
             logger.error(f"Training FAILED after {elapsed / 3600:.1f}h (exit code: {return_code})")
             if return_code == 120:
                 logger.error(
-                    "Exit code 120 = CPython pipe-flush error at shutdown. "
-                    "The REAL error was logged above — search for the last error/exception in the output."
+                    "Exit code 120: most likely /work3 NVME quota exhausted (storagepool 6, "
+                    "200 GB hard limit). Run getquota_work3.sh — if storagepool 6 is at or "
+                    "near 200 GB, that is the cause. Clean old checkpoint dirs and wandb/cache/. "
+                    "If quota is fine, this is a CPython pipe-flush error at shutdown — "
+                    "the real error should appear in the log above."
                 )
         else:
             logger.info(f"Training completed successfully in {elapsed / 3600:.1f}h")
@@ -582,7 +585,7 @@ def main() -> None:
             if wandb_run is not None:
                 wandb_run.summary["checkpoint_dir"] = str(output_dir)
                 wandb_run.summary["num_checkpoints"] = len(checkpoints)
-                wandb_run.summary["best_checkpoint"] = str(checkpoints[-1])
+                wandb_run.summary["latest_checkpoint"] = str(checkpoints[-1])
         else:
             logger.warning("No checkpoint files found in output directory")
 
