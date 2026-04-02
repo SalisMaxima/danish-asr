@@ -162,6 +162,7 @@ source .venv/bin/activate
 | `TERM_RUNLIMIT` | Increase `-W` walltime (default is 15 min!) |
 | `TERM_CWD_NOTEXIST` | `mkdir -p logs` before submitting |
 | Job stuck in PEND | `bjobs -l <jobid>` for reasons; try different queue |
+| **Exit code 120, no traceback** | **`/work3` NVME pool quota hit (200 GB hard limit). Run `getquota_work3.sh` — check storagepool 6. Clean `wandb/cache/` and old checkpoint dirs. Every training config MUST have `keep_last_n_checkpoints: 2` + `keep_best_n_checkpoints: 1`.** |
 
 ### Interactive GPU session
 
