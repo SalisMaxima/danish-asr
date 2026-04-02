@@ -438,7 +438,7 @@ def _check_and_upload_new_checkpoints(
     current = set(output_dir.glob("**/*.pt"))
     for ckpt in sorted(current - uploaded):
         ckpt_step = None
-        m = re.search(r"(\d+)", ckpt.stem)
+        m = re.search(r"step_(\d+)", str(ckpt))
         if m:
             ckpt_step = int(m.group(1))
         if _upload_checkpoint_artifact(ckpt, wandb_run, step=ckpt_step):
@@ -624,8 +624,8 @@ def main() -> None:
 
         # List checkpoints
         def _ckpt_step(p: Path) -> int:
-            """Extract step number from checkpoint filename for numeric sorting."""
-            m = re.search(r"(\d+)", p.stem)
+            """Extract step number from checkpoint path (parent dir is step_N) for numeric sorting."""
+            m = re.search(r"step_(\d+)", str(p))
             return int(m.group(1)) if m else 0
 
         checkpoints = sorted(output_dir.glob("**/*.pt"), key=_ckpt_step)
