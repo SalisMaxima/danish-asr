@@ -71,8 +71,16 @@ def main() -> None:
     kept = 0
     with args.input.open(newline="") as fh_in, output.open("w", newline="") as fh_out:
         reader = csv.DictReader(fh_in, delimiter="\t")
-        assert reader.fieldnames is not None
-        writer = csv.DictWriter(fh_out, fieldnames=reader.fieldnames, delimiter="\t")
+        fieldnames = reader.fieldnames
+        if fieldnames is None:
+            print(f"ERROR: input TSV is empty or missing a header row: {args.input}", file=sys.stderr)
+            output.unlink(missing_ok=True)
+            sys.exit(1)
+        if "corpus" not in fieldnames:
+            print(f"ERROR: input TSV is missing required 'corpus' column: {args.input}", file=sys.stderr)
+            output.unlink(missing_ok=True)
+            sys.exit(1)
+        writer = csv.DictWriter(fh_out, fieldnames=fieldnames, delimiter="\t")
         writer.writeheader()
         for row in reader:
             if row["corpus"] == corpus:
