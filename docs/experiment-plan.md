@@ -10,13 +10,15 @@ observed at step ~10k with val/WER ~47–49% and curves still clearly descending
 
 ## Current Baseline
 
-| Run | Steps | LR | Scheduler | grad_accum | Encoder freeze | WER @ 10k |
-|-----|-------|----|-----------|------------|----------------|-----------|
-| effortless-wildflower-13 | 5k | 1e-5 | none | 4 | 0 | ~49% (stopped) |
-| warm-frost-17 | 20k | 1e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | ~47.5% (running) |
+| Run | Steps | LR | Scheduler | grad_accum | Encoder freeze | Final WER | Status |
+|-----|-------|----|-----------|------------|----------------|-----------|--------|
+| effortless-wildflower-13 | 5k | 1e-5 | none | 4 | 0 | ~49% | stopped early |
+| warm-frost-17 | 20k | 1e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | ~47.5% | completed |
+| autumn-dawn (E2) | 30k | 3e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | **38.6%** | completed ✓ |
 
-**Problem:** Curves not converged. Model likely underfitting — upstream Meta default is `lr=5e-5`,
-we are 5× more conservative with no evidence that warrants it.
+**E2 result (2026-04-02):** val/WER 38.6%, UER 15.2% at step 30k. No divergence — lr=3e-5 is safe.
+Curves still descending at termination (loss, UER, WER all declining). Runtime: 5h on A100.
+Decision: proceed with E5 (E2 settings + encoder freeze + 40k steps).
 
 ---
 
@@ -32,17 +34,19 @@ we are 5× more conservative with no evidence that warrants it.
    ```
    Without this, 30k steps × ~4 GB/checkpoint = 120 GB, which reliably hits the 200 GB quota and kills the job silently with exit code 120.
 
+**Current quota status (2026-04-03):** 87.35 / 200 GB used on storagepool 6 → 112 GB free.
+With pruning enabled, each 30k run uses ~7.4 GB (measured from E2). E3 + E5 + eval ≈ 25 GB total,
+leaving ~87 GB headroom. Safe to queue all three simultaneously.
+
 ---
 
 ## Experiment Queue
 
 Run in this order. Each changes **one variable** from the settled baseline (warm-frost-17).
 
-### E0 — Wait for warm-frost-17 to finish (no action needed)
+### E0 — Wait for warm-frost-17 to finish ✓ DONE
 
-Let the 20k run complete. This gives the true baseline: tri_stage scheduler + 1e-5 + 20k steps.
-
-**Decision gate:** If final WER > 35%, the LR is too low or steps too few — proceed with E1 and E2 in parallel.
+Completed. Final WER ~47.5% — LR too low, steps too few. E1 and E2 submitted in parallel.
 
 ---
 
@@ -66,9 +70,12 @@ lr_scheduler:
 
 ---
 
-### E2 — Higher learning rate
+### E2 — Higher learning rate ✓ DONE (autumn-dawn, 2026-04-02)
 
-**Hypothesis:** 1e-5 is too conservative. The upstream default is 5e-5 and roest models use similar.
+**Result:** val/WER **38.6%** at step 30k. No divergence. Curves still descending at termination.
+Runtime 5h on A100. Config: `configs/fairseq2/ctc-finetune-hpc-e2.yaml`.
+Checkpoint: `/work3/s204696/outputs/omniasr_e2`
+Eval: `bsub < scripts/hpc/11_eval_e2.sh` (combined test), subset configs also available.
 
 ```yaml
 optimizer:
@@ -86,27 +93,25 @@ regime:
   num_steps: 30_000
 ```
 
-**Watch for:** Training loss spike or divergence in first 3k steps → revert to 1e-5.
-**Expected outcome:** Faster convergence; potentially lower final WER.
-
 ---
 
-### E3 — Encoder freezing during warmup
+### E3 — Upstream Meta LR (5e-5), 30k steps
 
-**Hypothesis:** Letting the CTC head stabilize before the encoder moves prevents early catastrophic
-forgetting of the multilingual wav2vec2 representations.
+**Hypothesis:** 5e-5 (upstream default) converges faster than E2's 3e-5 with identical other settings.
+Config: `configs/fairseq2/ctc-finetune-hpc-e3.yaml` (max_num_elements matches E2 for clean comparison).
+Script: `scripts/hpc/05_train_e3.sh` (walltime 14h, conservative).
 
 ```yaml
-trainer:
-  freeze_encoder_for_n_steps: 2000   # freeze encoder for first 2k steps
+optimizer:
+  config:
+    lr: 5e-5
 
 regime:
   num_steps: 30_000
 ```
 
-All other parameters same as warm-frost-17. Combine with E2's LR if E2 shows improvement.
-
-**Expected outcome:** Faster early convergence; smoother loss curve in steps 0–5k.
+**Watch for:** Divergence in first 3k steps. Compare final WER directly against E2 (38.6%).
+**Expected outcome:** Faster convergence; possibly lower WER floor. If it diverges, E2's 3e-5 is the ceiling.
 
 ---
 
@@ -126,19 +131,20 @@ trainer:
 
 ---
 
-### E5 — Combined best settings (final run)
+### E5 — Combined best settings (final run) → QUEUED
 
-After E1–E4, combine the settings that showed improvement:
+E2 validated lr=3e-5 (no divergence, WER 38.6%, curves still descending).
+E5 combines: lr=3e-5 + freeze_encoder 2k steps + 40k steps for more headroom.
+Config: `configs/fairseq2/ctc-finetune-hpc-e5.yaml`
+Script: `scripts/hpc/10_train_e5.sh` (walltime 8h — based on E2's 5h/30k rate)
 
 ```yaml
 optimizer:
   config:
-    lr: <best from E2>
+    lr: 3e-5
 
 trainer:
-  freeze_encoder_for_n_steps: <best from E3>
-  grad_accumulation:
-    num_batches: <best from E4>
+  freeze_encoder_for_n_steps: 2000
 
 regime:
   num_steps: 40_000
@@ -151,14 +157,14 @@ This is the run to report in the final evaluation.
 ## Decision Tree
 
 ```
-warm-frost-17 finishes
+warm-frost-17 finishes ✓ WER ~47.5% → ran E2 in parallel
     │
-    ├─ WER < 30% → run E3 + E5 only (already in good shape)
-    │
-    └─ WER > 30% → run E1 and E2 in parallel
+    └─ WER > 30% → ran E2 (lr=3e-5, 30k) ✓
                        │
-                       ├─ E2 diverges → stick with 1e-5, run E1 longer
-                       └─ E2 improves → combine with E3 for E5
+                       └─ E2 WER 38.6%, no divergence, curves descending
+                              │
+                              ├─ Submit E5 (lr=3e-5 + freeze + 40k) ← NEXT
+                              └─ Submit E3 (lr=5e-5, 30k) for LR upper bound
 ```
 
 ---
@@ -193,14 +199,16 @@ Report both CER (primary metric for CoRal-v3 comparisons) and WER.
 
 ## GPU Budget Estimate
 
-| Experiment | Steps | Est. A100 hours |
-|------------|-------|-----------------|
-| E0 (wait) | 20k (10k remaining) | ~4h remaining |
-| E1 | 40k | ~16h |
-| E2 | 30k | ~12h |
-| E3 | 30k | ~12h |
-| E5 (combined) | 40k | ~16h |
-| **Total** | | **~60h** |
+Actual timing from E2: **5h for 30k steps** on A100. Disk: **7.4 GB per 30k run** with pruning
+(`keep_last_n_checkpoints: 2` + `keep_best_n_checkpoints: 1`).
 
-Fits within the ~30h remaining in the Phase 5 budget if E1 and E2 are run in parallel,
-and E3/E4 are skipped if E0/E2 already hit the target.
+| Experiment | Steps | Est. A100 hours | Est. disk | Status |
+|------------|-------|-----------------|-----------|--------|
+| E0 (warm-frost-17) | 20k | ~3.3h | — | ✓ done |
+| E2 (autumn-dawn) | 30k | **5h actual** | **7.4 GB actual** | ✓ done |
+| E3 (lr=5e-5) | 30k | ~5h | ~7.4 GB | pending |
+| E5 (combined) | 40k | ~7h | ~10 GB | pending |
+| E2 eval | — | <1h | negligible | pending |
+| **Remaining** | | **~13h** | **~18 GB** | |
+
+Scratch headroom: 112 GB free — safe to queue E3, E5, and eval simultaneously.

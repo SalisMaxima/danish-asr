@@ -1,6 +1,8 @@
-# E3 experiment: upstream Meta default learning rate (5e-5).
-# Hypothesis: the upstream default 5e-5 may be optimal for CTC fine-tuning.
-# See docs/experiment-plan.md §E3.
+# E5 experiment: combined best settings — lr=3e-5 + encoder freeze + 40k steps.
+# Combines E2 (lr=3e-5, validated no divergence, WER 38.6% at 30k) with
+# E3 hypothesis (freeze encoder for 2k steps to stabilise CTC head before encoder moves).
+# 40k steps because val curves were still clearly descending at E2 step 30k.
+# See docs/experiment-plan.md §E5.
 
 model:
   name: "omniASR_CTC_300M_v2"
@@ -30,30 +32,30 @@ tokenizer:
 
 optimizer:
   config:
-    lr: 5e-5                   # upstream Meta default learning rate
+    lr: 3e-5                   # validated by E2 — no divergence, improved over 1e-5 baseline
 
 lr_scheduler:
   name: "tri_stage"
   config:
-    stage_ratio: [0.1, 0.0, 0.9]  # 10% warmup (3k steps), 90% cosine decay
-    start_lr_scale: 0.01           # start at 1% of peak lr (5e-7)
-    final_lr_scale: 0.05           # decay to 5% of peak lr (2.5e-6)
+    stage_ratio: [0.1, 0.0, 0.9]  # 10% warmup (4k steps), 90% cosine decay
+    start_lr_scale: 0.01           # start at 1% of peak lr (3e-7)
+    final_lr_scale: 0.05           # decay to 5% of peak lr (1.5e-6)
 
 gang:
   timeout: 86400     # 24h in seconds — fairseq2 uses seconds, NOT minutes; default is 900s (15 min) which aborts at sync points
 
 trainer:
-  freeze_encoder_for_n_steps: 0
+  freeze_encoder_for_n_steps: 2000  # freeze encoder for first 2k steps — stabilise CTC head before encoder updates
   mixed_precision:
     dtype: "torch.bfloat16"
   grad_accumulation:
     num_batches: 4
 
 regime:
-  num_steps: 30_000
+  num_steps: 40_000
   validate_after_n_steps: 500    # CTC outputs all-blank early → zero-length hyps crash WER
   validate_every_n_steps: 1000
   checkpoint_every_n_steps: 1000
-  keep_last_n_checkpoints: 2
-  keep_best_n_checkpoints: 1
+  keep_last_n_checkpoints: 2      # avoid disk bloat — 40k steps × ~4GB/ckpt = 160GB without pruning
+  keep_best_n_checkpoints: 1      # also keep best WER checkpoint regardless of recency
   publish_metrics_every_n_steps: 100

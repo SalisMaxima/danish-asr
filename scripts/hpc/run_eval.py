@@ -68,6 +68,7 @@ def main() -> None:
     parser.add_argument(
         "--wandb-run-id", type=str, default="", help="W&B run ID to resume (links eval to training run)"
     )
+    parser.add_argument("--wandb-tags", type=str, default="", help="Comma-separated W&B tags for this eval run")
     args = parser.parse_args()
 
     setup_logging("run_eval")
@@ -83,12 +84,13 @@ def main() -> None:
     try:
         import wandb
 
+        extra_tags = [t.strip() for t in args.wandb_tags.split(",") if t.strip()]
         wandb_run = wandb.init(
             project=args.wandb_project,
             id=args.wandb_run_id or None,
             resume="allow" if args.wandb_run_id else None,
             job_type="eval",
-            tags=["eval", "hpc"],
+            tags=["eval", "hpc"] + extra_tags,
             config={"checkpoint_dir": str(args.checkpoint_dir), "config_file": str(args.config)},
         )
         logger.info(f"W&B run initialised: {wandb_run.url}")
