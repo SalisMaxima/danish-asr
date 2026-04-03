@@ -60,6 +60,14 @@ def main() -> None:
 
     output = args.output or args.input.parent / f"language_distribution_{args.subset}.tsv"
 
+    input_path = args.input.resolve()
+    output_path = output.resolve(strict=False)
+    if input_path == output_path:
+        print(
+            f"ERROR: input and output paths must differ: {args.input} == {output}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     kept = 0
     with args.input.open(newline="") as fh_in, output.open("w", newline="") as fh_out:
         reader = csv.DictReader(fh_in, delimiter="\t")
