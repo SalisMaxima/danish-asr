@@ -11,6 +11,7 @@
 
 model:
   name: "omniASR_CTC_300M_v2"
+  path: /work3/s204696/outputs/omniasr_e2/ws_1.ae9e8b6b/checkpoints/step_30000
 
 dataset:
   name: "coral_v3_danish"
