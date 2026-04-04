@@ -7,7 +7,8 @@
 # (run this from the project root on HPC before submitting the eval job)
 #
 # Used by: scripts/hpc/11_eval_e2.sh (with --config override)
-# Checkpoint: /work3/$USER/outputs/omniasr_e2
+# Checkpoint: /work3/s204696/outputs/omniasr_e2/ws_1.ae9e8b6b/checkpoints/step_30000
+#   (hardcoded via model.path; not auto-selected at runtime)
 
 model:
   name: "omniASR_CTC_300M_v2"

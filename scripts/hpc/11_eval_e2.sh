@@ -65,8 +65,9 @@ if [ ! -d "$CHECKPOINT_DIR" ]; then
 fi
 
 echo "=== Evaluating E2 checkpoint ==="
-echo "Checkpoint: $CHECKPOINT_DIR"
-echo "Eval output: $EVAL_OUT_DIR"
+echo "Training workspace (existence check only): $CHECKPOINT_DIR"
+echo "Checkpoint source: hardcoded via model.path in $CONFIG"
+echo "Eval workspace (--checkpoint-dir):         $EVAL_OUT_DIR"
 echo "Config:     $CONFIG"
 echo "Started:    $(date)"
 echo "Node:       $(hostname)"
