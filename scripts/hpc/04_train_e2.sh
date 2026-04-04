@@ -25,28 +25,8 @@
 set -euo pipefail
 
 # --- Environment ---
-export HF_HOME=/work3/$USER/hf_cache
-export HF_DATASETS_CACHE=/work3/$USER/hf_cache/datasets
-export FAIRSEQ2_CACHE_DIR=/work3/$USER/fairseq2_cache
-export TMPDIR=/work3/$USER/tmp
-export WANDB_DIR=/work3/$USER/wandb
-export WANDB_DATA_DIR=/work3/$USER/wandb
-export WANDB_CACHE_DIR=/work3/$USER/wandb/cache
-mkdir -p "$TMPDIR"
-mkdir -p /work3/$USER/logs/lsf
-mkdir -p /work3/$USER/wandb/cache
-
-OMNI_ASR_DIR="/work3/$USER/omnilingual-asr"
-if [ ! -d "$OMNI_ASR_DIR/workflows" ]; then
-    echo "ERROR: omnilingual-asr repo not found at $OMNI_ASR_DIR" >&2
-    echo "Clone it: git clone https://github.com/facebookresearch/omnilingual-asr.git $OMNI_ASR_DIR" >&2
-    exit 1
-fi
-export PYTHONPATH="$OMNI_ASR_DIR:${PYTHONPATH:-}"
-
-PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
-cd "$PROJECT_DIR"
-source .venv/bin/activate
+source "$(dirname "$0")/env.sh"
+setup_omniasr
 
 RUN_DIR="${RESUME_DIR:-/work3/$USER/outputs/omniasr_e2}"
 mkdir -p "$RUN_DIR"

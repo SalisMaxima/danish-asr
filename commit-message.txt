@@ -1,0 +1,33 @@
+chore: remove dead template code, clean deps, deduplicate HPC scripts
+
+This repo was scaffolded from a classification template. Most of the
+template code (API, Docker, monitoring, deployment, loss functions) was
+never implemented for ASR. This commit removes all confirmed dead code,
+drops 16 unused dependencies, and extracts duplicated HPC environment
+setup into a shared env.sh file.
+
+Deleted (~900+ lines of dead code):
+- Source stubs: evaluate.py, losses.py, api.py, feedback_store.py,
+  analysis/, monitoring/
+- Task modules: deploy.py, docker.py, eval.py, monitor.py, git_tasks.py
+- HPC scripts: upload_step15k.py, repair_parquet_schema.py
+- Docker infrastructure: dockerfiles/, .dockerignore
+- Tests: test_api.py (tested deleted api.py)
+- Junk files: +, +**Mandatory, +**Every
+- Config: configs/model/default.yaml (num_classes: 2 remnant)
+
+Dependency cleanup (pyproject.toml):
+- Removed 14 unused core deps (fastapi, uvicorn, scikit-learn,
+  matplotlib, pandas, librosa, scipy, bitsandbytes, evidently,
+  prometheus-*, httpx, psutil, python-multipart)
+- Removed 3 unused dev deps (locust, tensorboard, zensical)
+- Removed dead entry points (evaluate, api)
+
+HPC script deduplication:
+- Created scripts/hpc/env.sh with shared env vars, dirs, venv
+  activation, and setup_omniasr() helper
+- Replaced 10-20 line duplicated blocks in 16 scripts with
+  `source env.sh`
+- Fixed executable permissions on 8 scripts
+
+All 92 tests pass. See docs/cleanup-summary.md for full details.

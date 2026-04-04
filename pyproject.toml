@@ -23,33 +23,19 @@ dependencies = [
     "hydra-core>=1.3.0",
     "omegaconf>=2.3.0",
     "loguru>=0.7.3",
-    # API & CLI
-    "fastapi>=0.115.0",
+    # CLI
     "typer>=0.9.0",
-    "uvicorn>=0.30.0",
-    # Data Science
+    # Core
     "numpy>=1.24.0",
-    "scikit-learn>=1.3.0",
-    "matplotlib>=3.8.0",
-    "pandas>=2.0.0",
-    "python-multipart>=0.0.21",
-    "httpx>=0.28.1",
-    "psutil>=5.9.0",
-    "prometheus-fastapi-instrumentator>=7.0.0",
-    "evidently>=0.7.20",
-    "prometheus-client>=0.24.1",
-    "scipy>=1.16.3",
+    "pyyaml>=6.0",
     # ASR-specific
     "torchaudio>=2.7.0",
     "transformers>=4.40.0",
     "datasets==4.8.3",
-    "librosa>=0.10.0",
     "soundfile>=0.12.0",
     "peft>=0.10.0",
-    "bitsandbytes>=0.43.0",
     "jiwer>=3.0.0",
     "accelerate>=0.28.0",
-    "pyyaml>=6.0",
     # DVC
     "dvc>=3.0.0",
     "dvc-gs>=3.0.0",
@@ -63,17 +49,14 @@ omni = [
 dev = [
     "coverage>=7.6.0",
     "invoke>=2.2.0",
-    "zensical>=0.0.23,<0.1.0",
     "pre-commit>=4.0.0",
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
     "ruff>=0.8.0",
     "mkdocstrings-python>=1.12.0",
-    "locust>=2.20.0",
     "mypy>=1.19.1",
     "pip-audit>=2.10.0",
     "bandit>=1.9.3",
-    "tensorboard>=2.20.0",
     "types-pyyaml>=6.0.12.20250915",
 ]
 
@@ -163,5 +146,3 @@ danish_asr = "danish_asr:setup_fairseq2_extension"
 [project.scripts]
 train = "danish_asr.train:train"
 sweep-train = "danish_asr.sweep_train:main"
-evaluate = "danish_asr.evaluate:evaluate_model"
-api = "danish_asr.api:app"

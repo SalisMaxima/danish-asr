@@ -20,19 +20,7 @@
 set -euo pipefail
 
 # --- Environment ---
-export HF_HOME=/work3/$USER/hf_cache
-export HF_DATASETS_CACHE=/work3/$USER/hf_cache/datasets
-export TMPDIR=/work3/$USER/tmp
-export WANDB_DIR=/work3/$USER/wandb
-export WANDB_DATA_DIR=/work3/$USER/wandb
-export WANDB_CACHE_DIR=/work3/$USER/wandb/cache
-mkdir -p "$TMPDIR"
-mkdir -p /work3/$USER/logs/lsf
-mkdir -p /work3/$USER/wandb/cache
-
-PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
-cd "$PROJECT_DIR"
-source .venv/bin/activate
+source "$(dirname "$0")/env.sh"
 
 # Fixed run directory — reused across sequential jobs so checkpoint resume works.
 # Override with WHISPER_RUN_DIR to use a different path.
