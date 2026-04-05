@@ -16,14 +16,15 @@ the eval recipe to decide whether evaluation is already done. If a score file ex
 the recipe silently no-ops — even if the eval config targets a different split (e.g.
 ``valid_split: "test"``).
 
-This wrapper renames any existing score file to ``{name}_val.txt`` before invoking
-the recipe, so the recipe always runs fresh on whatever split the config specifies.
-After the recipe writes the test score to ``{name}.txt``, this wrapper reads it
-directly (the score is stored as a negative float: WER = abs(score)).
+This wrapper renames any existing score file to a ``.val.bak`` sibling (for example,
+``{name}.txt`` → ``{name}.val.bak``) before invoking the recipe, so the recipe
+always runs fresh on whatever split the config specifies. After the recipe writes
+the fresh score to ``{name}.txt``, this wrapper reads it directly (the score is
+stored as a negative float: WER = abs(score)).
 
 Usage:
-    python scripts/hpc/run_eval.py \\
-        --checkpoint-dir /work3/$USER/outputs/omniasr_e2_eval \\
+    python scripts/hpc/run_eval.py \
+        --checkpoint-dir /work3/$USER/outputs/omniasr_e2_eval \
         --config configs/fairseq2/ctc-eval-e2.yaml
 """
 
@@ -121,13 +122,23 @@ def _get_score_file(model_path: Path) -> Path:
 
 
 def _backup_score_file(score_file: Path) -> Path | None:
-    """Rename an existing score file to a .val.bak sibling so the recipe re-runs.
+    """Rename an existing score file to a unique .val.bak sibling so the recipe re-runs.
 
     Returns the backup path if a backup was made, else None.
     """
     if not score_file.exists():
         return None
+
     backup = score_file.with_suffix(".val.bak")
+    if backup.exists():
+        counter = 1
+        while True:
+            candidate = score_file.with_suffix(f".val.{counter}.bak")
+            if not candidate.exists():
+                backup = candidate
+                break
+            counter += 1
+
     score_file.rename(backup)
     logger.info(f"Renamed existing score file to {backup.name} — recipe will run fresh on the configured split")
     return backup
@@ -145,7 +156,7 @@ def _read_score_file(score_file: Path) -> float | None:
     try:
         raw = score_file.read_text().strip()
         return abs(float(raw))
-    except (ValueError, OSError) as e:
+    except (ValueError, OSError, UnicodeError) as e:
         logger.warning(f"Could not read score file {score_file}: {e}")
         return None
 
