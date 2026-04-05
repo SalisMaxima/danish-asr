@@ -6,9 +6,24 @@ Runs the fairseq2 eval recipe on a trained checkpoint with full logging.
 there. It is NOT the trained checkpoint location. The checkpoint to evaluate is
 resolved from ``model.path`` in the config file.
 
+Score file handling
+-------------------
+fairseq2 stores validation scores alongside checkpoints at:
+  {model_path.parent}/scores/{model_path.name}.txt
+
+These score files are written during training (on the dev split) and are reused by
+the eval recipe to decide whether evaluation is already done. If a score file exists,
+the recipe silently no-ops — even if the eval config targets a different split (e.g.
+``valid_split: "test"``).
+
+This wrapper renames any existing score file to ``{name}_val.txt`` before invoking
+the recipe, so the recipe always runs fresh on whatever split the config specifies.
+After the recipe writes the test score to ``{name}.txt``, this wrapper reads it
+directly (the score is stored as a negative float: WER = abs(score)).
+
 Usage:
-    python scripts/hpc/run_eval.py \
-        --checkpoint-dir /work3/$USER/outputs/omniasr_e2_eval \
+    python scripts/hpc/run_eval.py \\
+        --checkpoint-dir /work3/$USER/outputs/omniasr_e2_eval \\
         --config configs/fairseq2/ctc-eval-e2.yaml
 """
 
@@ -36,8 +51,11 @@ from scripts.hpc.common import (
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines
 
 
-def check_prerequisites(checkpoint_dir: Path, config: Path) -> None:
+def check_prerequisites(checkpoint_dir: Path, config: Path) -> Path | None:
     """Verify evaluation prerequisites.
+
+    Returns the resolved model_path (from model.path in the config), or None
+    if model.path is not set. Exits on any unrecoverable error.
 
     ``checkpoint_dir`` is the eval output workspace, not the checkpoint source.
     The checkpoint to evaluate is resolved from ``model.path`` in the config.
@@ -49,6 +67,8 @@ def check_prerequisites(checkpoint_dir: Path, config: Path) -> None:
     if not config.exists():
         logger.error(f"Config not found: {config}")
         sys.exit(1)
+
+    model_path: Path | None = None
 
     # Validate the checkpoint path set via model.path in the config.
     try:
@@ -85,6 +105,50 @@ def check_prerequisites(checkpoint_dir: Path, config: Path) -> None:
         logger.error("PyTorch not installed")
         sys.exit(1)
 
+    return model_path
+
+
+def _get_score_file(model_path: Path) -> Path:
+    """Return the fairseq2 score file path for a checkpoint directory.
+
+    fairseq2 writes checkpoint scores to:
+      {model_path.parent}/scores/{model_path.name}.txt
+
+    e.g. for model_path = .../ws_1.abc/checkpoints/step_40000:
+      → .../ws_1.abc/checkpoints/scores/step_40000.txt
+    """
+    return model_path.parent / "scores" / f"{model_path.name}.txt"
+
+
+def _backup_score_file(score_file: Path) -> Path | None:
+    """Rename an existing score file to a .val.bak sibling so the recipe re-runs.
+
+    Returns the backup path if a backup was made, else None.
+    """
+    if not score_file.exists():
+        return None
+    backup = score_file.with_suffix(".val.bak")
+    score_file.rename(backup)
+    logger.info(f"Renamed existing score file to {backup.name} — recipe will run fresh on the configured split")
+    return backup
+
+
+def _read_score_file(score_file: Path) -> float | None:
+    """Read WER from a fairseq2 score file.
+
+    fairseq2 stores scores as negative floats (higher-is-better convention).
+    WER = abs(stored_value).
+    Returns None if the file does not exist or cannot be parsed.
+    """
+    if not score_file.exists():
+        return None
+    try:
+        raw = score_file.read_text().strip()
+        return abs(float(raw))
+    except (ValueError, OSError) as e:
+        logger.warning(f"Could not read score file {score_file}: {e}")
+        return None
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="omniASR evaluation wrapper")
@@ -108,9 +172,16 @@ def main() -> None:
     log_system_info()
     log_gpu_info()
 
-    check_prerequisites(args.checkpoint_dir, args.config)
+    model_path = check_prerequisites(args.checkpoint_dir, args.config)
     logger.info(f"Eval workspace:        {args.checkpoint_dir}")
     logger.info(f"Config:                {args.config}")
+
+    # Rename any existing score file so the recipe runs fresh on the configured split
+    # (fairseq2 silently no-ops if a score file already exists for the checkpoint).
+    score_file: Path | None = None
+    if model_path is not None:
+        score_file = _get_score_file(model_path)
+        _backup_score_file(score_file)
 
     # Initialise W&B
     wandb_run = None
@@ -194,11 +265,19 @@ def main() -> None:
             logger.error(f"Evaluation FAILED after {elapsed / 60:.1f} min (exit code: {return_code})")
         else:
             logger.info(f"Evaluation completed successfully in {elapsed / 60:.1f} min")
+
+        # If stdout parsing didn't find WER, read directly from the score file.
+        # fairseq2 stores scores as negative floats; WER = abs(value).
+        if wer_value is None and score_file is not None:
+            wer_value = _read_score_file(score_file)
+            if wer_value is not None:
+                logger.info(f"WER read from score file ({score_file.name}): {wer_value:.4f}%")
+
         logger.info("=" * 50)
         if wer_value is not None:
-            logger.info(f"  WER: {wer_value:.2f}%")
+            logger.info(f"  WER: {wer_value:.4f}%")
         else:
-            logger.warning("  WER: not found in output")
+            logger.warning("  WER: not found in output or score file")
         if cer_value is not None:
             logger.info(f"  CER: {cer_value:.2f}%")
         else:
