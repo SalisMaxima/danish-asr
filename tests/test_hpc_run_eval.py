@@ -37,6 +37,17 @@ def test_metric_parser_extracts_legacy_validation_metrics() -> None:
     assert metrics == {"val/wer": 0.42, "val/cer": 0.12, "val/loss": 2.1}
 
 
+def test_metric_parser_extracts_inline_evaluation_metrics() -> None:
+    parser = _MetricParser()
+
+    metrics, step = parser.parse_line(
+        "Evaluation Metrics - CTC Loss: 42.7155 | Unit Error Rate (UER): 11.3601 | Word Error Rate (WER): 30.1429 | Data Time: 1s | Compute Time: 68s"
+    )
+
+    assert step is None
+    assert metrics == {"eval/loss": 42.7155, "eval/wer": 30.1429}
+
+
 def test_select_eval_workspace_reuses_empty_base_dir(tmp_path: Path) -> None:
     workspace = _select_eval_workspace(tmp_path / "eval")
     assert workspace == tmp_path / "eval"
