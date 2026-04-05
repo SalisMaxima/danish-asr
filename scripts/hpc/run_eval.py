@@ -1,6 +1,6 @@
 """Step 4: Evaluation wrapper for omniASR on HPC.
 
-Runs the fairseq2 eval recipe on a trained checkpoint with full logging.
+Runs the omniASR eval recipe on a trained checkpoint with full logging.
 
 ``--checkpoint-dir`` is the eval *output workspace* — fairseq2 writes eval artifacts
 there. It is NOT the trained checkpoint location. The checkpoint to evaluate is
@@ -314,7 +314,7 @@ def main() -> None:
         help="Eval output workspace (fairseq2 writes artifacts here; checkpoint is set via model.path in config)",
     )
     arg_parser.add_argument(
-        "--config", type=Path, required=True, help="fairseq2 eval config file (should set model.path)"
+        "--config", type=Path, required=True, help="omniASR eval config file (should set model.path)"
     )
     arg_parser.add_argument("--extra-args", type=str, default="", help="Additional args passed to fairseq2 eval recipe")
     arg_parser.add_argument("--wandb-project", type=str, default="danish-asr", help="W&B project name")
@@ -365,7 +365,7 @@ def main() -> None:
     cmd = [
         sys.executable,
         "-m",
-        "workflows.recipes.wav2vec2.asr.eval.recipe",
+        "workflows.recipes.wav2vec2.asr.eval",
         str(eval_workspace),
         "--config-file",
         str(args.config),
