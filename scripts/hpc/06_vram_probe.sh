@@ -5,7 +5,7 @@
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -W 1:00
+#BSUB -W 4:00
 #BSUB -B
 #BSUB -N
 #BSUB -u s204696@dtu.dk
@@ -34,9 +34,11 @@ setup_omniasr
 # --- Config ---
 CONFIG="${PROBE_CONFIG:?ERROR: Set PROBE_CONFIG to a vram-probe yaml, e.g. configs/fairseq2/vram-probe-1b.yaml}"
 
-# Extract model size and batch info from config filename for output dir naming
+# Use a unique output dir per run to prevent fairseq2 checkpoint resume.
+# VRAM probes must always start fresh — resuming would skip the memory-heavy
+# model init and first forward pass, defeating the purpose.
 CONFIG_BASENAME="$(basename "$CONFIG" .yaml)"
-RUN_DIR="/work3/$USER/outputs/vram_probe_${CONFIG_BASENAME}"
+RUN_DIR="/work3/$USER/outputs/vram_probe_${CONFIG_BASENAME}_$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$RUN_DIR"
 
 echo "=== VRAM Probe ==="
@@ -47,5 +49,4 @@ echo "=================="
 python scripts/hpc/run_training.py \
     --config "$CONFIG" \
     --output-dir "$RUN_DIR" \
-    --wandb-tags "vram-probe,${CONFIG_BASENAME}" \
-    --wandb-resume allow
+    --wandb-tags "vram-probe,${CONFIG_BASENAME}"

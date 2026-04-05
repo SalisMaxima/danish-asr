@@ -16,7 +16,7 @@ The 300M model trains comfortably at `max_num_elements=3,840,000` using ~20-25 G
 
 ## Method
 
-Run 50-step smoke tests with decreasing batch sizes until training succeeds or all options are exhausted. Each probe takes minutes to complete (or OOMs immediately).
+Run 500-step smoke tests (matching the existing smoke test config) with decreasing batch sizes until training succeeds or all options are exhausted. 500 steps is the minimum needed for one validation pass (CTC blank phase lasts ~100-500 steps). OOM typically happens within the first few steps; a successful run takes ~1-2 hours on A100.
 
 All configs use E6 best-practice settings: `shuffle_window=1000`, `bf16`, `lr=5e-5`.
 
@@ -68,7 +68,7 @@ PROBE_CONFIG=configs/fairseq2/vram-probe-3b-tiny.yaml bsub < scripts/hpc/06_vram
 |---------|---------|
 | `CUDA out of memory` in stderr | GPU VRAM exceeded — try smaller config |
 | `TERM_MEMLIMIT` from LSF | Host RAM exceeded — increase `-R "rusage[mem=...]"` |
-| Job completes 50 steps | Config fits — this is the answer |
+| Job completes 500 steps + validation | Config fits — this is the answer |
 
 ## Results Table
 
