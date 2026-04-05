@@ -35,6 +35,6 @@ tokenizer:
 gang:
   timeout: 86400
 
-trainer:
-  mixed_precision:
-    dtype: "torch.bfloat16"
+evaluator:
+  amp: true
+  amp_dtype: "torch.bfloat16"
