@@ -12,8 +12,11 @@
 #BSUB -o /work3/s204696/logs/lsf/eval_e6_%J.out
 #BSUB -e /work3/s204696/logs/lsf/eval_e6_%J.err
 #
-# Evaluate the E6 checkpoint (bumbling-dawn-28, 50k steps, lr=5e-5, shuffle_window=1000)
+# Evaluate the E6 checkpoint (bumbling-dawn-28, 50k steps, lr=5e-5, train_shuffle_window=1000)
 # on the held-out CoRal-v3 TEST split (read_aloud + conversation combined).
+#
+# Per-subset evaluation (read_aloud / conversation) is not yet configured for E6.
+# See scripts/hpc/11_eval_e2.sh for the pattern when needed.
 #
 # Usage:
 #   bsub < scripts/hpc/16_eval_e6.sh
@@ -24,6 +27,8 @@ set -euo pipefail
 source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 setup_omniasr
 
+# Fresh output dir for eval — keeps eval workspace separate from training workspace.
+# The recipe silently no-ops when run against a completed training workspace.
 EVAL_OUT_DIR="${EVAL_OUT_DIR:-/work3/$USER/outputs/omniasr_e6_eval}"
 if ! mkdir -p "$EVAL_OUT_DIR" 2>/dev/null; then
     echo "ERROR: Cannot create eval workspace: $EVAL_OUT_DIR" >&2
@@ -35,10 +40,10 @@ if ! touch "$EVAL_OUT_DIR/.write_test" 2>/dev/null; then
     echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
     exit 1
 fi
-rm -f "$EVAL_OUT_DIR/.write_test" || true
+rm -f "$EVAL_OUT_DIR/.write_test" 2>/dev/null || true
 
 CONFIG="${EVAL_CONFIG:-configs/fairseq2/ctc-eval-e6.yaml}"
-CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e6"
+CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e6"  # training workspace, existence check only
 
 if [ ! -d "$CHECKPOINT_DIR" ]; then
     echo "ERROR: Expected training workspace not found: $CHECKPOINT_DIR" >&2

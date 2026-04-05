@@ -1,4 +1,6 @@
-# Evaluation config for E6 checkpoint (bumbling-dawn-28, 50k steps, lr=5e-5, shuffle1000).
+# Evaluation config for E6 checkpoint (bumbling-dawn-28, 50k steps, lr=5e-5, train_shuffle1000).
+# "train_shuffle1000" refers to the training run's shuffle window (batch/example_shuffle_window=1000);
+# the eval config itself always uses shuffle_window=1 for determinism.
 # Evaluates on the held-out TEST split of the full CoRal-v3 mixture
 # (read_aloud + conversation combined).
 #

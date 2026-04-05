@@ -7,7 +7,6 @@ from invoke import Context, task
 from loguru import logger
 
 WINDOWS = os.name == "nt"
-PROJECT_NAME = "danish_asr"
 
 
 def check_docker_available(ctx: Context) -> bool:
@@ -15,7 +14,11 @@ def check_docker_available(ctx: Context) -> bool:
     try:
         result = ctx.run("docker info", hide=True, warn=True, pty=not WINDOWS)
         return result.ok
-    except Exception:
+    except FileNotFoundError:
+        logger.error("Docker binary not found — is Docker installed and on PATH?")
+        return False
+    except Exception as exc:
+        logger.error(f"Docker availability check failed: {exc}")
         return False
 
 
@@ -23,8 +26,8 @@ def check_docker_available(ctx: Context) -> bool:
 def build(ctx: Context, progress: str = "plain") -> None:
     """Build docker images (CPU versions)."""
     if not check_docker_available(ctx):
-        logger.error("ERROR: Docker is not running.")
-        return
+        logger.error("Docker is not running or not accessible. Check: docker info")
+        raise SystemExit(1)
     ctx.run(
         f"docker build -t train:latest . -f dockerfiles/train.dockerfile --progress={progress}",
         echo=True,
@@ -39,8 +42,8 @@ def build(ctx: Context, progress: str = "plain") -> None:
 def build_cuda(ctx: Context, progress: str = "plain") -> None:
     """Build CUDA-enabled training docker image."""
     if not check_docker_available(ctx):
-        logger.error("ERROR: Docker is not running.")
-        return
+        logger.error("Docker is not running or not accessible. Check: docker info")
+        raise SystemExit(1)
     ctx.run(
         f"docker build -t train-cuda:latest . -f dockerfiles/train_cuda.dockerfile --progress={progress}",
         echo=True,
@@ -50,15 +53,17 @@ def build_cuda(ctx: Context, progress: str = "plain") -> None:
 
 @task
 def train(ctx: Context, entity: str = "", cuda: bool = True, args: str = "") -> None:
-    """Run training in Docker container."""
+    """Run Wav2Vec2/Whisper baseline training in Docker (not the omniasr fairseq2 pipeline)."""
     if not check_docker_available(ctx):
-        logger.error("ERROR: Docker is not running.")
-        return
+        logger.error("Docker is not running or not accessible. Check: docker info")
+        raise SystemExit(1)
     cwd = Path.cwd()
     image = "train-cuda:latest" if cuda else "train:latest"
     gpu_flag = "--gpus all" if cuda else ""
     train_args = f"wandb.entity={entity} {args}".strip() if entity else args
     wandb_api_key = os.environ.get("WANDB_API_KEY", "")
+    if not wandb_api_key:
+        logger.warning("WANDB_API_KEY is not set — training metrics will not be uploaded to W&B.")
     ctx.run(
         f"docker run --rm {gpu_flag} --shm-size=2g "
         f"-v {cwd}/data:/app/data -v {cwd}/models:/app/models "
@@ -72,17 +77,18 @@ def train(ctx: Context, entity: str = "", cuda: bool = True, args: str = "") -> 
 def api(ctx: Context, port: int = 8000) -> None:
     """Run API in Docker container."""
     if not check_docker_available(ctx):
-        logger.error("ERROR: Docker is not running.")
-        return
-    ctx.run(f"docker run -p {port}:8000 -v $(pwd)/models:/app/models api:latest", echo=True, pty=not WINDOWS)
+        logger.error("Docker is not running or not accessible. Check: docker info")
+        raise SystemExit(1)
+    cwd = Path.cwd()
+    ctx.run(f"docker run -p {port}:8000 -v {cwd}/models:/app/models api:latest", echo=True, pty=not WINDOWS)
 
 
 @task
 def clean(ctx: Context, all: bool = False) -> None:
     """Clean up Docker images and containers."""
     if not check_docker_available(ctx):
-        logger.error("ERROR: Docker is not running.")
-        return
+        logger.error("Docker is not running or not accessible. Check: docker info")
+        raise SystemExit(1)
     print("Removing stopped containers...")
     ctx.run("docker container prune -f", echo=True, pty=not WINDOWS)
     if all:

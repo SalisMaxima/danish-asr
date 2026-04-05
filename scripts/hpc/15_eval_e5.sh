@@ -15,6 +15,9 @@
 # Evaluate the E5 checkpoint (rose-dream-26, 40k steps, lr=3e-5, freeze 2k) on the
 # held-out CoRal-v3 TEST split (read_aloud + conversation combined).
 #
+# Per-subset evaluation (read_aloud / conversation) is not yet configured for E5.
+# See scripts/hpc/11_eval_e2.sh for the pattern when needed.
+#
 # Usage:
 #   bsub < scripts/hpc/15_eval_e5.sh
 
@@ -24,6 +27,8 @@ set -euo pipefail
 source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 setup_omniasr
 
+# Fresh output dir for eval — keeps eval workspace separate from training workspace.
+# The recipe silently no-ops when run against a completed training workspace.
 EVAL_OUT_DIR="${EVAL_OUT_DIR:-/work3/$USER/outputs/omniasr_e5_eval}"
 if ! mkdir -p "$EVAL_OUT_DIR" 2>/dev/null; then
     echo "ERROR: Cannot create eval workspace: $EVAL_OUT_DIR" >&2
@@ -35,10 +40,10 @@ if ! touch "$EVAL_OUT_DIR/.write_test" 2>/dev/null; then
     echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
     exit 1
 fi
-rm -f "$EVAL_OUT_DIR/.write_test" || true
+rm -f "$EVAL_OUT_DIR/.write_test" 2>/dev/null || true
 
 CONFIG="${EVAL_CONFIG:-configs/fairseq2/ctc-eval-e5.yaml}"
-CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e5"
+CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e5"  # training workspace, existence check only
 
 if [ ! -d "$CHECKPOINT_DIR" ]; then
     echo "ERROR: Expected training workspace not found: $CHECKPOINT_DIR" >&2
