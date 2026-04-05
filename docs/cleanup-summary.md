@@ -13,7 +13,7 @@ This repository was initialized from a classification-focused project template. 
 
 A large amount of template scaffolding — API endpoints, Docker infrastructure, monitoring, evaluation stubs, classification loss functions, deployment tasks — was never implemented and remained as dead code. Additionally, the 16+ HPC shell scripts contained significant duplicated boilerplate (environment variables, directory creation, project activation).
 
-This cleanup removes ~27 dead files (~900+ lines), drops 16 unused dependencies, extracts shared HPC environment setup into a single sourced file, and fixes inconsistent script permissions.
+This cleanup removes ~27 dead files (~900+ lines), drops 15 unused dependencies, extracts shared HPC environment setup into a single sourced file, and fixes inconsistent script permissions.
 
 ---
 
@@ -81,7 +81,7 @@ Three tracked zero-byte files at the repo root (likely accidental shell pastes):
 
 ### 8. Dependency Cleanup
 
-**16 unused packages removed from `pyproject.toml`:**
+**15 unused packages removed from `pyproject.toml`:**
 
 From `[project.dependencies]` (14 packages):
 
@@ -102,13 +102,12 @@ From `[project.dependencies]` (14 packages):
 | `scipy` | Zero imports anywhere in codebase |
 | `bitsandbytes` | Zero imports anywhere in codebase |
 
-From `[dependency-groups] dev` (3 packages):
+From `[dependency-groups] dev` (2 packages):
 
 | Package | Reason |
 |---------|--------|
 | `locust` | Load testing tool, never referenced |
 | `tensorboard` | W&B is used for experiment tracking |
-| `zensical` | Docs build tool, not actively used |
 
 **Dead entry points removed from `[project.scripts]`:**
 - `evaluate = "danish_asr.evaluate:evaluate_model"` (pointed to deleted stub)

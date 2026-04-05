@@ -70,7 +70,7 @@ def check_prerequisites(checkpoint_dir: Path, config: Path) -> None:
                 logger.info(f"Checkpoint verified: {model_path}")
             else:
                 logger.warning(
-                    f"model.path not set in {config} — fairseq2 will attempt auto-selection from the eval workspace"
+                    f"model.path not set in {config} — fairseq2 will attempt to resolve the checkpoint itself and may fail"
                 )
     except yaml.YAMLError as e:
         logger.warning(f"Config is not valid YAML ({e}) — skipping model.path check; fairseq2 will validate on launch")
@@ -94,7 +94,7 @@ def main() -> None:
         required=True,
         help="Eval output workspace (fairseq2 writes artifacts here; checkpoint is set via model.path in config)",
     )
-    parser.add_argument("--config", type=Path, required=True, help="fairseq2 eval config file (must set model.path)")
+    parser.add_argument("--config", type=Path, required=True, help="fairseq2 eval config file (should set model.path)")
     parser.add_argument("--extra-args", type=str, default="", help="Additional args passed to fairseq2 eval recipe")
     parser.add_argument("--wandb-project", type=str, default="danish-asr", help="W&B project name")
     parser.add_argument(
