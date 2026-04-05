@@ -53,6 +53,7 @@ from scripts.hpc.common import (
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines
 _NUMERIC_PATTERN = r"([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)"
 _HEADER_PATTERN = re.compile(r"(Train(?:ing)?|Validation) Metrics \(step (\d+)\)", re.IGNORECASE)
+_EVAL_HEADER_PATTERN = re.compile(r"\bEvaluation Metrics\b", re.IGNORECASE)
 _LOSS_PATTERN = re.compile(rf"\bLoss:\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
 _WER_PATTERN = re.compile(rf"\(WER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
 _CER_PATTERN = re.compile(rf"\(CER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
@@ -77,6 +78,9 @@ class _MetricParser:
         inline_metrics, inline_step = self._parse_legacy_metrics_line(line)
         if inline_metrics and inline_step is not None:
             return inline_metrics, inline_step
+
+        if _EVAL_HEADER_PATTERN.search(line):
+            return self._parse_inline_metrics(line, "eval"), None
 
         header = _HEADER_PATTERN.search(line)
         if header:
@@ -135,18 +139,27 @@ class _MetricParser:
 
         prefix = _LEGACY_CONTEXT_TO_PREFIX[context_match.group(1).lower()]
         step = int(step_match.group(1))
-        metrics: dict[str, float] = {}
-
-        if loss := _LEGACY_LOSS_PATTERN.search(line):
-            metrics[f"{prefix}/loss"] = float(loss.group(1))
-        if wer := _LEGACY_WER_PATTERN.search(line):
-            metrics[f"{prefix}/wer"] = float(wer.group(1))
-        if cer := _LEGACY_CER_PATTERN.search(line):
-            metrics[f"{prefix}/cer"] = float(cer.group(1))
+        metrics = self._parse_inline_metrics(line, prefix, legacy=True)
 
         if metrics:
             return metrics, step
         return {}, None
+
+    def _parse_inline_metrics(self, line: str, prefix: str, *, legacy: bool = False) -> dict[str, float]:
+        metrics: dict[str, float] = {}
+
+        loss_pattern = _LEGACY_LOSS_PATTERN if legacy else _LOSS_PATTERN
+        wer_pattern = _LEGACY_WER_PATTERN if legacy else _WER_PATTERN
+        cer_pattern = _LEGACY_CER_PATTERN if legacy else _CER_PATTERN
+
+        if loss := loss_pattern.search(line):
+            metrics[f"{prefix}/loss"] = float(loss.group(1))
+        if wer := wer_pattern.search(line):
+            metrics[f"{prefix}/wer"] = float(wer.group(1))
+        if cer := cer_pattern.search(line):
+            metrics[f"{prefix}/cer"] = float(cer.group(1))
+
+        return metrics
 
 
 def _select_eval_workspace(base_dir: Path) -> Path:
@@ -416,8 +429,12 @@ def main() -> None:
             parsed_metrics, _step = metric_parser.parse_line(line)
             if "val/wer" in parsed_metrics:
                 wer_value = parsed_metrics["val/wer"]
+            if "eval/wer" in parsed_metrics:
+                wer_value = parsed_metrics["eval/wer"]
             if "val/cer" in parsed_metrics:
                 cer_value = parsed_metrics["val/cer"]
+            if "eval/cer" in parsed_metrics:
+                cer_value = parsed_metrics["eval/cer"]
 
             now = time.time()
             if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
@@ -430,8 +447,12 @@ def main() -> None:
         final_metrics, _step = metric_parser.finalize()
         if "val/wer" in final_metrics:
             wer_value = final_metrics["val/wer"]
+        if "eval/wer" in final_metrics:
+            wer_value = final_metrics["eval/wer"]
         if "val/cer" in final_metrics:
             cer_value = final_metrics["val/cer"]
+        if "eval/cer" in final_metrics:
+            cer_value = final_metrics["eval/cer"]
 
         if return_code != 0:
             logger.error(f"Evaluation FAILED after {elapsed / 60:.1f} min (exit code: {return_code})")
@@ -452,6 +473,8 @@ def main() -> None:
             logger.warning("  WER: not found in output or score file")
         if cer_value is not None:
             logger.info(f"  CER: {cer_value:.2f}%")
+        elif wer_value is not None:
+            logger.info("  CER: not reported by recipe")
         else:
             logger.warning("  CER: not found in output")
         if return_code == 0 and wer_value is None and cer_value is None:
