@@ -36,6 +36,7 @@ import shlex
 import subprocess
 import sys
 import time
+from itertools import islice
 from pathlib import Path
 
 import yaml
@@ -162,17 +163,26 @@ def _select_eval_workspace(base_dir: Path) -> Path:
     if not has_non_probe_files:
         return base_dir
 
-    run_dir = base_dir / f"run_{time.strftime('%Y%m%d_%H%M%S')}"
-    run_dir.mkdir(parents=True, exist_ok=False)
-    logger.warning(f"Eval base directory already populated; using fresh child workspace: {run_dir}")
-    return run_dir
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    counter = 0
+    while True:
+        suffix = "" if counter == 0 else f"_{counter}"
+        run_dir = base_dir / f"run_{timestamp}_{time.time_ns()}{suffix}"
+        try:
+            run_dir.mkdir(parents=True, exist_ok=False)
+        except FileExistsError:
+            counter += 1
+            continue
+
+        logger.warning(f"Eval base directory already populated; using fresh child workspace: {run_dir}")
+        return run_dir
 
 
 def _log_workspace_snapshot(workspace: Path, score_file: Path | None) -> None:
     """Log a compact snapshot of likely eval artifacts when metrics are missing."""
     candidates: list[Path] = []
     if workspace.exists():
-        candidates.extend(sorted(workspace.rglob("*"), key=lambda p: str(p))[:20])
+        candidates.extend(islice(workspace.rglob("*"), 20))
     if score_file is not None:
         candidates.append(score_file)
         candidates.append(score_file.with_suffix(".val.bak"))
@@ -320,7 +330,7 @@ def main() -> None:
     log_gpu_info()
 
     eval_workspace = _select_eval_workspace(args.checkpoint_dir)
-    model_path = check_prerequisites(args.checkpoint_dir, args.config)
+    model_path = check_prerequisites(eval_workspace, args.config)
     logger.info(f"Eval workspace:        {eval_workspace}")
     logger.info(f"Config:                {args.config}")
 

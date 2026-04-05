@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from scripts.hpc.run_eval import _MetricParser, _select_eval_workspace
+from scripts.hpc.run_eval import (
+    _backup_score_file,
+    _get_score_file,
+    _MetricParser,
+    _read_score_file,
+    _select_eval_workspace,
+)
 
 
 def test_metric_parser_extracts_multiline_validation_metrics() -> None:
@@ -48,3 +54,37 @@ def test_select_eval_workspace_creates_fresh_child_when_base_populated(tmp_path:
     assert workspace.name.startswith("run_")
     assert workspace.exists()
     assert workspace != base
+
+
+def test_get_score_file_returns_checkpoint_scores_path(tmp_path: Path) -> None:
+    model_path = tmp_path / "ws_1.abc" / "checkpoints" / "step_53000"
+    assert _get_score_file(model_path) == tmp_path / "ws_1.abc" / "checkpoints" / "scores" / "step_53000.txt"
+
+
+def test_backup_score_file_uses_numbered_suffix_when_default_backup_exists(tmp_path: Path) -> None:
+    score_file = tmp_path / "step_53000.txt"
+    score_file.write_text("-59.88\n")
+    (tmp_path / "step_53000.val.bak").write_text("-61.00\n")
+
+    backup = _backup_score_file(score_file)
+
+    assert backup == tmp_path / "step_53000.val.1.bak"
+    assert backup.read_text() == "-59.88\n"
+    assert not score_file.exists()
+
+
+def test_read_score_file_returns_absolute_value_for_valid_score(tmp_path: Path) -> None:
+    score_file = tmp_path / "step_53000.txt"
+    score_file.write_text("-59.88\n")
+
+    assert _read_score_file(score_file) == 59.88
+
+
+def test_read_score_file_returns_none_for_invalid_or_empty_content(tmp_path: Path) -> None:
+    invalid = tmp_path / "invalid.txt"
+    invalid.write_text("not-a-number\n")
+    empty = tmp_path / "empty.txt"
+    empty.write_text("")
+
+    assert _read_score_file(invalid) is None
+    assert _read_score_file(empty) is None
