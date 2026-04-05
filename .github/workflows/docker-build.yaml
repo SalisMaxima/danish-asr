@@ -1,9 +1,7 @@
 name: Docker build
 
 on:
-  pull_request:
-    branches: ["main", "master"]
-    paths: ["dockerfiles/**", "pyproject.toml", "uv.lock"]
+  workflow_dispatch:
 
 jobs:
   docker-build:

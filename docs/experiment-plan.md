@@ -10,15 +10,25 @@ observed at step ~10k with val/WER ~47–49% and curves still clearly descending
 
 ## Current Baseline
 
-| Run | Steps | LR | Scheduler | grad_accum | Encoder freeze | Final WER | Status |
-|-----|-------|----|-----------|------------|----------------|-----------|--------|
-| effortless-wildflower-13 | 5k | 1e-5 | none | 4 | 0 | ~49% | stopped early |
-| warm-frost-17 | 20k | 1e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | ~47.5% | completed |
-| autumn-dawn (E2) | 30k | 3e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | **38.6%** | completed ✓ |
+| Run | Steps | LR | Scheduler | grad_accum | Encoder freeze | Shuffle window | Final WER | Status |
+|-----|-------|----|-----------|------------|----------------|----------------|-----------|--------|
+| effortless-wildflower-13 | 5k | 1e-5 | none | 4 | 0 | 1 | ~49% | stopped early |
+| warm-frost-17 | 20k | 1e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | 1 | ~47.5% | completed |
+| autumn-dawn (E2) | 30k | 3e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | 1 | **38.6%** | completed ✓ |
+| wobbly-pond (E3) | 30k | 5e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | 1 | **35.8%** | completed ✓ |
+| rose-dream (E5) | 40k | 3e-5 | tri_stage (10% warmup → cosine) | 4 | 2k | 1 | **37.2%** | completed ✓ |
+| bumbling-dawn (E6) | 50k | 5e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | **1000** | **32.7%** | completed ✓ |
+| true-firefly (E7) | 53.9k | 5e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | 1 | **32.6%** | crashed @ 53900 |
 
 **E2 result (2026-04-02):** val/WER 38.6%, UER 15.2% at step 30k. No divergence — lr=3e-5 is safe.
-Curves still descending at termination (loss, UER, WER all declining). Runtime: 5h on A100.
-Decision: proceed with E5 (E2 settings + encoder freeze + 40k steps).
+
+**E3 result (2026-04-03):** val/WER 35.8%, UER 14.1% at step 30k. lr=5e-5 beats lr=3e-5 by 2.8pp.
+
+**E5 result (2026-04-03):** val/WER 37.2%, UER 14.6% at step 40k. Freeze + more steps did NOT beat E3 — encoder freeze likely hurt with lr=3e-5.
+
+**E6 result (2026-04-04):** val/WER **32.7%**, UER 12.9% at step 50k. **Key finding:** fixing shuffle_window (1→1000) dropped WER by 3pp vs E3 at same lr=5e-5. The no-shuffle setting in E2/E3/E5 caused overfitting — train/val loss gap was ~21 units; with proper shuffle it closes. Runtime: 7.7h.
+
+**E7 result (2026-04-04):** val/WER **32.6%**, UER 12.9% at step 53900 (crashed). E7 resumed E3 (no shuffle fix) and matched E6 — suggesting more steps compensate partly for no shuffle, but the shuffle fix is cleaner. Best checkpoint at step ~53000 in `/work3/s204696/outputs/omniasr_e3/`.
 
 ---
 
@@ -95,11 +105,12 @@ regime:
 
 ---
 
-### E3 — Upstream Meta LR (5e-5), 30k steps
+### E3 — Upstream Meta LR (5e-5), 30k steps ✓ DONE (wobbly-pond-25, 2026-04-03)
 
-**Hypothesis:** 5e-5 (upstream default) converges faster than E2's 3e-5 with identical other settings.
-Config: `configs/fairseq2/ctc-finetune-hpc-e3.yaml` (max_num_elements matches E2 for clean comparison).
-Script: `scripts/hpc/05_train_e3.sh` (walltime 14h, conservative).
+**Result:** val/WER **35.8%**, UER 14.1% at step 30k. lr=5e-5 beats lr=3e-5 (E2: 38.6%) by 2.8pp.
+Config: `configs/fairseq2/ctc-finetune-hpc-e3.yaml`
+Checkpoint: `/work3/s204696/outputs/omniasr_e3/ws_1.88015460/checkpoints/step_30000`
+Eval: `bsub < scripts/hpc/12_eval_e3.sh`
 
 ```yaml
 optimizer:
@@ -109,9 +120,6 @@ optimizer:
 regime:
   num_steps: 30_000
 ```
-
-**Watch for:** Divergence in first 3k steps. Compare final WER directly against E2 (38.6%).
-**Expected outcome:** Faster convergence; possibly lower WER floor. If it diverges, E2's 3e-5 is the ceiling.
 
 ---
 
@@ -131,12 +139,12 @@ trainer:
 
 ---
 
-### E5 — Combined best settings (final run) → QUEUED
+### E5 — Combined best settings ✓ DONE (rose-dream-26, 2026-04-03)
 
-E2 validated lr=3e-5 (no divergence, WER 38.6%, curves still descending).
-E5 combines: lr=3e-5 + freeze_encoder 2k steps + 40k steps for more headroom.
+**Result:** val/WER **37.2%**, UER 14.6% at step 40k. **Worse than E3 (35.8%)** — encoder freeze at lr=3e-5 hurt rather than helped.
 Config: `configs/fairseq2/ctc-finetune-hpc-e5.yaml`
-Script: `scripts/hpc/10_train_e5.sh` (walltime 8h — based on E2's 5h/30k rate)
+Checkpoint: `/work3/s204696/outputs/omniasr_e5/ws_1.f3ca97e3/checkpoints/step_40000`
+Eval: `bsub < scripts/hpc/15_eval_e5.sh`
 
 ```yaml
 optimizer:
@@ -150,21 +158,69 @@ regime:
   num_steps: 40_000
 ```
 
-This is the run to report in the final evaluation.
+---
+
+### E6 — Fix shuffle windows + lr=5e-5, 50k steps ✓ DONE (bumbling-dawn-28, 2026-04-04)
+
+**Hypothesis:** shuffle_window=1 (used in all prior experiments) means examples are never shuffled
+within a batch window — effectively in-order training. Fixing to 1000 should improve generalisation.
+
+**Result:** val/WER **32.7%**, UER 12.9% at step 50k. Biggest improvement yet — 3pp better than E3.
+Config: `configs/fairseq2/ctc-finetune-hpc-e6.yaml`
+Checkpoint: `/work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000`
+Eval: `bsub < scripts/hpc/16_eval_e6.sh`
+Runtime: 7.72h on A100.
+
+```yaml
+optimizer:
+  config:
+    lr: 5e-5
+
+dataset:
+  asr_task_config:
+    batch_shuffle_window: 1000
+    example_shuffle_window: 1000
+
+regime:
+  num_steps: 50_000
+```
+
+---
+
+### E7 — Resume E3 to 55k steps ✗ CRASHED (true-firefly-27, 2026-04-04)
+
+**Hypothesis:** E3 was still converging at 30k. Resume with more steps.
+
+**Result:** val/WER **32.6%**, UER 12.9% at step 53900 (crashed ~2k before target).
+Matched E6 despite no shuffle fix — more steps compensate partially.
+Config: `configs/fairseq2/ctc-finetune-hpc-e7.yaml`
+Output dir: `/work3/s204696/outputs/omniasr_e3/` (shared with E3, different workspace hash)
+Best checkpoint: `ls /work3/s204696/outputs/omniasr_e3/` to find E7 workspace, then step_53000
+Eval: update `ctc-eval-e7.yaml` with correct workspace hash, then `bsub < scripts/hpc/17_eval_e7.sh`
+
+```yaml
+optimizer:
+  config:
+    lr: 5e-5
+
+regime:
+  num_steps: 55_000   # resumed from E3's step_30000
+```
 
 ---
 
 ## Decision Tree
 
 ```
-warm-frost-17 finishes ✓ WER ~47.5% → ran E2 in parallel
+warm-frost-17 (WER 47.5%) → E2 lr=3e-5 30k (WER 38.6%) ✓
     │
-    └─ WER > 30% → ran E2 (lr=3e-5, 30k) ✓
-                       │
-                       └─ E2 WER 38.6%, no divergence, curves descending
-                              │
-                              ├─ Submit E5 (lr=3e-5 + freeze + 40k) ← NEXT
-                              └─ Submit E3 (lr=5e-5, 30k) for LR upper bound
+    ├─ E3 lr=5e-5 30k (WER 35.8%) ✓ — lr=5e-5 is better
+    ├─ E5 lr=3e-5 freeze 40k (WER 37.2%) ✓ — freeze didn't help with lr=3e-5
+    ├─ E6 lr=5e-5 shuffle1000 50k (WER 32.7%) ✓ — BEST: shuffle fix is key
+    └─ E7 resume E3 →55k (WER 32.6% @ 53.9k, crashed) — matches E6 via more steps
+
+Key finding: shuffle_window=1000 (E6) = biggest single improvement (3pp over E3).
+Next: test evals on held-out test split for all 5 models.
 ```
 
 ---
@@ -202,13 +258,12 @@ Report both CER (primary metric for CoRal-v3 comparisons) and WER.
 Actual timing from E2: **5h for 30k steps** on A100. Disk: **7.4 GB per 30k run** with pruning
 (`keep_last_n_checkpoints: 2` + `keep_best_n_checkpoints: 1`).
 
-| Experiment | Steps | Est. A100 hours | Est. disk | Status |
-|------------|-------|-----------------|-----------|--------|
+| Experiment | Steps | A100 hours | Disk | Status |
+|------------|-------|------------|------|--------|
 | E0 (warm-frost-17) | 20k | ~3.3h | — | ✓ done |
-| E2 (autumn-dawn) | 30k | **5h actual** | **7.4 GB actual** | ✓ done |
-| E3 (lr=5e-5) | 30k | ~5h | ~7.4 GB | pending |
-| E5 (combined) | 40k | ~7h | ~10 GB | pending |
-| E2 eval | — | <1h | negligible | pending |
-| **Remaining** | | **~13h** | **~18 GB** | |
-
-Scratch headroom: 112 GB free — safe to queue E3, E5, and eval simultaneously.
+| E2 (autumn-dawn) | 30k | 5.0h actual | 7.4 GB | ✓ done |
+| E3 (wobbly-pond) | 30k | 4.65h actual | ~7 GB | ✓ done |
+| E5 (rose-dream) | 40k | 6.46h actual | ~10 GB | ✓ done |
+| E6 (bumbling-dawn) | 50k | 7.72h actual | ~12 GB | ✓ done |
+| E7 (true-firefly) | 53.9k | ~10h (crashed) | ~13 GB | crashed |
+| E2–E7 evals (×5) | — | <1h each | negligible | pending |
