@@ -50,6 +50,140 @@ from scripts.hpc.common import (
 )
 
 _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines
+_NUMERIC_PATTERN = r"([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)"
+_HEADER_PATTERN = re.compile(r"(Train(?:ing)?|Validation) Metrics \(step (\d+)\)", re.IGNORECASE)
+_LOSS_PATTERN = re.compile(rf"\bLoss:\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_WER_PATTERN = re.compile(rf"\(WER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_CER_PATTERN = re.compile(rf"\(CER\):\s*{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_CONTEXT_PATTERN = re.compile(r"\|\s*(train|valid|validation)\s*\|", re.IGNORECASE)
+_LEGACY_STEP_PATTERN = re.compile(r"\bstep[:\s]+(\d+)", re.IGNORECASE)
+_LEGACY_LOSS_PATTERN = re.compile(rf"\bloss[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_WER_PATTERN = re.compile(rf"\bwer[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_CER_PATTERN = re.compile(rf"\bcer[:\s]+{_NUMERIC_PATTERN}%?", re.IGNORECASE)
+_LEGACY_CONTEXT_TO_PREFIX = {"train": "train", "valid": "val", "validation": "val"}
+
+
+class _MetricParser:
+    """Parse fairseq2 metric blocks from stdout."""
+
+    def __init__(self) -> None:
+        self._step: int | None = None
+        self._context: str | None = None
+        self._metrics: dict[str, float] = {}
+        self._loss_on_next_line = False
+
+    def parse_line(self, line: str) -> tuple[dict[str, float], int | None]:
+        inline_metrics, inline_step = self._parse_legacy_metrics_line(line)
+        if inline_metrics and inline_step is not None:
+            return inline_metrics, inline_step
+
+        header = _HEADER_PATTERN.search(line)
+        if header:
+            flushed = self._flush()
+            ctx = header.group(1).lower()
+            self._context = "train" if ctx in ("training", "train") else "val"
+            self._step = int(header.group(2))
+            self._metrics = {}
+            self._loss_on_next_line = line.rstrip().endswith("Loss:")
+            return flushed
+
+        found_metric = False
+        if self._step is not None:
+            prefix = self._context or "train"
+
+            if self._loss_on_next_line:
+                leading = re.match(r"\s*([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)", line)
+                if leading:
+                    self._metrics[f"{prefix}/loss"] = float(leading.group(1))
+                    found_metric = True
+                self._loss_on_next_line = False
+
+            if loss := _LOSS_PATTERN.search(line):
+                self._metrics[f"{prefix}/loss"] = float(loss.group(1))
+                found_metric = True
+            if wer := _WER_PATTERN.search(line):
+                self._metrics[f"{prefix}/wer"] = float(wer.group(1))
+                found_metric = True
+            if cer := _CER_PATTERN.search(line):
+                self._metrics[f"{prefix}/cer"] = float(cer.group(1))
+                found_metric = True
+
+        if self._step is not None and self._metrics and (not line.strip() or not found_metric):
+            return self._flush()
+
+        return {}, None
+
+    def finalize(self) -> tuple[dict[str, float], int | None]:
+        return self._flush()
+
+    def _flush(self) -> tuple[dict[str, float], int | None]:
+        if self._metrics and self._step is not None:
+            result = (dict(self._metrics), self._step)
+            self._metrics = {}
+            self._step = None
+            self._context = None
+            self._loss_on_next_line = False
+            return result
+        return {}, None
+
+    def _parse_legacy_metrics_line(self, line: str) -> tuple[dict[str, float], int | None]:
+        context_match = _LEGACY_CONTEXT_PATTERN.search(line)
+        step_match = _LEGACY_STEP_PATTERN.search(line)
+        if not context_match or not step_match:
+            return {}, None
+
+        prefix = _LEGACY_CONTEXT_TO_PREFIX[context_match.group(1).lower()]
+        step = int(step_match.group(1))
+        metrics: dict[str, float] = {}
+
+        if loss := _LEGACY_LOSS_PATTERN.search(line):
+            metrics[f"{prefix}/loss"] = float(loss.group(1))
+        if wer := _LEGACY_WER_PATTERN.search(line):
+            metrics[f"{prefix}/wer"] = float(wer.group(1))
+        if cer := _LEGACY_CER_PATTERN.search(line):
+            metrics[f"{prefix}/cer"] = float(cer.group(1))
+
+        if metrics:
+            return metrics, step
+        return {}, None
+
+
+def _select_eval_workspace(base_dir: Path) -> Path:
+    """Reuse an empty directory, otherwise create a timestamped child workspace.
+
+    fairseq2 may treat a populated output directory as an already-completed run and
+    exit almost immediately. The HPC scripts use stable base directories such as
+    ``/work3/$USER/outputs/omniasr_e7_eval``, so on rerun we create a fresh child
+    directory instead of reusing the old populated one.
+    """
+    base_dir.mkdir(parents=True, exist_ok=True)
+
+    has_non_probe_files = any(child.name != ".write_test" for child in base_dir.iterdir())
+    if not has_non_probe_files:
+        return base_dir
+
+    run_dir = base_dir / f"run_{time.strftime('%Y%m%d_%H%M%S')}"
+    run_dir.mkdir(parents=True, exist_ok=False)
+    logger.warning(f"Eval base directory already populated; using fresh child workspace: {run_dir}")
+    return run_dir
+
+
+def _log_workspace_snapshot(workspace: Path, score_file: Path | None) -> None:
+    """Log a compact snapshot of likely eval artifacts when metrics are missing."""
+    candidates: list[Path] = []
+    if workspace.exists():
+        candidates.extend(sorted(workspace.rglob("*"), key=lambda p: str(p))[:20])
+    if score_file is not None:
+        candidates.append(score_file)
+        candidates.append(score_file.with_suffix(".val.bak"))
+
+    seen: set[Path] = set()
+    for path in candidates:
+        if path in seen or not path.exists():
+            continue
+        seen.add(path)
+        kind = "dir" if path.is_dir() else "file"
+        logger.info(f"Artifact snapshot [{kind}]: {path}")
 
 
 def check_prerequisites(checkpoint_dir: Path, config: Path) -> Path | None:
@@ -162,29 +296,32 @@ def _read_score_file(score_file: Path) -> float | None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="omniASR evaluation wrapper")
-    parser.add_argument(
+    arg_parser = argparse.ArgumentParser(description="omniASR evaluation wrapper")
+    arg_parser.add_argument(
         "--checkpoint-dir",
         type=Path,
         required=True,
         help="Eval output workspace (fairseq2 writes artifacts here; checkpoint is set via model.path in config)",
     )
-    parser.add_argument("--config", type=Path, required=True, help="fairseq2 eval config file (should set model.path)")
-    parser.add_argument("--extra-args", type=str, default="", help="Additional args passed to fairseq2 eval recipe")
-    parser.add_argument("--wandb-project", type=str, default="danish-asr", help="W&B project name")
-    parser.add_argument(
+    arg_parser.add_argument(
+        "--config", type=Path, required=True, help="fairseq2 eval config file (should set model.path)"
+    )
+    arg_parser.add_argument("--extra-args", type=str, default="", help="Additional args passed to fairseq2 eval recipe")
+    arg_parser.add_argument("--wandb-project", type=str, default="danish-asr", help="W&B project name")
+    arg_parser.add_argument(
         "--wandb-run-id", type=str, default="", help="W&B run ID to resume (links eval to training run)"
     )
-    parser.add_argument("--wandb-tags", type=str, default="", help="Comma-separated W&B tags for this eval run")
-    args = parser.parse_args()
+    arg_parser.add_argument("--wandb-tags", type=str, default="", help="Comma-separated W&B tags for this eval run")
+    args = arg_parser.parse_args()
 
     setup_logging("run_eval")
     setup_hpc_environment()
     log_system_info()
     log_gpu_info()
 
+    eval_workspace = _select_eval_workspace(args.checkpoint_dir)
     model_path = check_prerequisites(args.checkpoint_dir, args.config)
-    logger.info(f"Eval workspace:        {args.checkpoint_dir}")
+    logger.info(f"Eval workspace:        {eval_workspace}")
     logger.info(f"Config:                {args.config}")
 
     # Rename any existing score file so the recipe runs fresh on the configured split
@@ -206,7 +343,7 @@ def main() -> None:
             resume="allow" if args.wandb_run_id else None,
             job_type="eval",
             tags=["eval", "hpc"] + extra_tags,
-            config={"checkpoint_dir": str(args.checkpoint_dir), "config_file": str(args.config)},
+            config={"checkpoint_dir": str(eval_workspace), "config_file": str(args.config)},
         )
         logger.info(f"W&B run initialised: {wandb_run.url}")
     except ImportError:
@@ -219,7 +356,7 @@ def main() -> None:
         sys.executable,
         "-m",
         "workflows.recipes.wav2vec2.asr.eval.recipe",
-        str(args.checkpoint_dir),
+        str(eval_workspace),
         "--config-file",
         str(args.config),
     ]
@@ -231,10 +368,9 @@ def main() -> None:
     try:
         # Run evaluation
         start_time = time.time()
-        wer_pattern = re.compile(r"\(WER\):\s*([\d.]+)")
-        cer_pattern = re.compile(r"\(CER\):\s*([\d.]+)")
         wer_value = None
         cer_value = None
+        metric_parser = _MetricParser()
 
         try:
             process = subprocess.Popen(
@@ -250,18 +386,19 @@ def main() -> None:
             raise RuntimeError("Failed to launch eval subprocess") from e
         logger.info(f"Eval subprocess started (PID={process.pid})")
 
+        if process.stdout is None:
+            raise RuntimeError("Eval subprocess did not expose stdout for log streaming")
+
         last_heartbeat = time.time()
         for line_count, line in enumerate(process.stdout, 1):
             line = line.rstrip()
             logger.info(f"[fairseq2] {line}")
 
-            # Try to parse WER/CER from output
-            wer_match = wer_pattern.search(line)
-            if wer_match:
-                wer_value = float(wer_match.group(1))
-            cer_match = cer_pattern.search(line)
-            if cer_match:
-                cer_value = float(cer_match.group(1))
+            parsed_metrics, _step = metric_parser.parse_line(line)
+            if "val/wer" in parsed_metrics:
+                wer_value = parsed_metrics["val/wer"]
+            if "val/cer" in parsed_metrics:
+                cer_value = parsed_metrics["val/cer"]
 
             now = time.time()
             if now - last_heartbeat >= _HEARTBEAT_INTERVAL:
@@ -271,6 +408,11 @@ def main() -> None:
 
         return_code = process.wait()
         elapsed = time.time() - start_time
+        final_metrics, _step = metric_parser.finalize()
+        if "val/wer" in final_metrics:
+            wer_value = final_metrics["val/wer"]
+        if "val/cer" in final_metrics:
+            cer_value = final_metrics["val/cer"]
 
         if return_code != 0:
             logger.error(f"Evaluation FAILED after {elapsed / 60:.1f} min (exit code: {return_code})")
@@ -297,19 +439,20 @@ def main() -> None:
             logger.warning(
                 "Subprocess exited 0 but no WER or CER found — recipe may have completed without computing metrics; verify output manually"
             )
+            _log_workspace_snapshot(eval_workspace, score_file)
         logger.info("=" * 50)
 
         if wandb_run is not None:
             try:
                 import wandb
 
-                metrics: dict[str, float] = {}
+                wandb_metrics: dict[str, float] = {}
                 if wer_value is not None:
-                    metrics["test/wer"] = wer_value
+                    wandb_metrics["test/wer"] = wer_value
                 if cer_value is not None:
-                    metrics["test/cer"] = cer_value
-                if metrics:
-                    wandb.log(metrics)
+                    wandb_metrics["test/cer"] = cer_value
+                if wandb_metrics:
+                    wandb.log(wandb_metrics)
                 wandb.summary["exit_code"] = return_code
                 wandb.finish(exit_code=return_code)
             except Exception as e:
