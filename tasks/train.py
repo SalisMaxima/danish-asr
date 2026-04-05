@@ -130,17 +130,17 @@ def hpc_sweep(ctx: Context, sweep_id: str) -> None:
 
 
 @task
-def omniasr_eval(ctx: Context, checkpoint_dir: str, hardware: str = "local") -> None:
-    """Evaluate omniASR checkpoint."""
-    config = PROJECT_ROOT / "configs" / "fairseq2" / f"ctc-finetune-{hardware}.yaml"
-    if not config.exists():
-        logger.error(f"Config not found: {config}")
+def omniasr_eval(ctx: Context, checkpoint_dir: str, config: str = "") -> None:
+    """Evaluate omniASR checkpoint with an explicit eval config."""
+    config_path = Path(config) if config else PROJECT_ROOT / "configs" / "fairseq2" / "ctc-eval-e2.yaml"
+    if not config_path.exists():
+        logger.error(f"Config not found: {config_path}")
         return
 
     if not Path(checkpoint_dir).exists():
         logger.error(f"Checkpoint dir not found: {checkpoint_dir}")
         return
 
-    cmd = f"uv run python -m workflows.recipes.wav2vec2.asr.eval.recipe {checkpoint_dir} --config-file {config}"
-    logger.info(f"Evaluating omniASR: checkpoint={checkpoint_dir}")
+    cmd = f"uv run python -m workflows.recipes.wav2vec2.asr.eval {checkpoint_dir} --config-file {config_path}"
+    logger.info(f"Evaluating omniASR: checkpoint={checkpoint_dir}, config={config_path}")
     ctx.run(cmd, echo=True, pty=not WINDOWS)

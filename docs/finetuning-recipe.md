@@ -166,7 +166,7 @@ fairseq2 handles distributed training internally via `torch.distributed`.
 The recipe includes a built-in eval mode. After training:
 
 ```bash
-python -m workflows.recipes.wav2vec2.asr.eval.recipe $OUTPUT_DIR \
+python -m workflows.recipes.wav2vec2.asr.eval $OUTPUT_DIR \
     --config-file workflows/recipes/wav2vec2/asr/configs/ctc-finetune-danish.yaml
 ```
 

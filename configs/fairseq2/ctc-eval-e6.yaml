@@ -14,7 +14,6 @@ model:
 
 dataset:
   name: "coral_v3_danish"
-  train_split: "train"                  # required by recipe schema, ignored during eval
   valid_split: "test"                   # evaluate on held-out test split
   storage_mode: "MIXTURE_PARQUET"
   task_mode: "ASR"
