@@ -316,7 +316,12 @@ def main() -> None:
     arg_parser.add_argument(
         "--config", type=Path, required=True, help="omniASR eval config file (should set model.path)"
     )
-    arg_parser.add_argument("--extra-args", type=str, default="", help="Additional args passed to fairseq2 eval recipe")
+    arg_parser.add_argument(
+        "--extra-args",
+        type=str,
+        default="",
+        help="Additional args passed to workflows.recipes.wav2vec2.asr.eval",
+    )
     arg_parser.add_argument("--wandb-project", type=str, default="danish-asr", help="W&B project name")
     arg_parser.add_argument(
         "--wandb-run-id", type=str, default="", help="W&B run ID to resume (links eval to training run)"

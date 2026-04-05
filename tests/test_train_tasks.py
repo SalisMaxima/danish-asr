@@ -38,18 +38,18 @@ def test_omniasr_eval_builds_expected_command(tmp_path, monkeypatch):
     project_root = tmp_path
     config_dir = project_root / "configs" / "fairseq2"
     config_dir.mkdir(parents=True)
-    (config_dir / "ctc-finetune-hpc.yaml").write_text("model:\n  name: omniASR_CTC_300M_v2\n")
+    (config_dir / "ctc-eval-e2.yaml").write_text("model:\n  name: omniASR_CTC_300M_v2\n")
     checkpoint_dir = project_root / "outputs" / "checkpoint"
     checkpoint_dir.mkdir(parents=True)
 
     monkeypatch.setattr(train_tasks, "PROJECT_ROOT", project_root)
     ctx = _DummyContext()
 
-    train_tasks.omniasr_eval.body(ctx, checkpoint_dir=str(checkpoint_dir), hardware="hpc")
+    train_tasks.omniasr_eval.body(ctx, checkpoint_dir=str(checkpoint_dir))
 
     assert ctx.commands == [
         {
-            "command": f"uv run python -m workflows.recipes.wav2vec2.asr.eval.recipe {checkpoint_dir} --config-file {config_dir / 'ctc-finetune-hpc.yaml'}",
+            "command": f"uv run python -m workflows.recipes.wav2vec2.asr.eval {checkpoint_dir} --config-file {config_dir / 'ctc-eval-e2.yaml'}",
             "echo": True,
             "pty": not train_tasks.WINDOWS,
         }
