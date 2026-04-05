@@ -1,6 +1,6 @@
 #!/bin/bash
 # Common HPC environment setup — sourced by all job scripts.
-# Usage: source "$(dirname "$0")/env.sh"
+# Usage: source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 
 # --- Cache and scratch directories ---
 export HF_HOME=/work3/$USER/hf_cache
@@ -19,6 +19,11 @@ mkdir -p /work3/$USER/wandb/cache
 # --- Project ---
 PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
 cd "$PROJECT_DIR"
+if [ ! -f ".venv/bin/activate" ]; then
+    echo "ERROR: Python venv not found at $PROJECT_DIR/.venv" >&2
+    echo "ERROR: Run 'invoke core.setup-dev' from the project root." >&2
+    return 1 2>/dev/null || exit 1
+fi
 source .venv/bin/activate
 
 # --- Helper: validate omnilingual-asr repo ---

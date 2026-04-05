@@ -27,7 +27,7 @@
 set -euo pipefail
 
 # --- Environment ---
-source "$(dirname "$0")/env.sh"
+source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 setup_omniasr
 
 # Same dir as E3 — fairseq2 auto-resumes from existing step_30000 checkpoint.

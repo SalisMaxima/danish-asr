@@ -29,27 +29,49 @@
 set -euo pipefail
 
 # --- Environment ---
-source "$(dirname "$0")/env.sh"
+source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 setup_omniasr
 
-CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e2"
+# Fresh output dir for eval — keeps eval workspace separate from training workspace.
+# The recipe silently no-ops when run against a completed training workspace.
+EVAL_OUT_DIR="${EVAL_OUT_DIR:-/work3/$USER/outputs/omniasr_e2_eval}"
+# Catch /work3 quota exhaustion before burning GPU time.
+if ! mkdir -p "$EVAL_OUT_DIR" 2>/dev/null; then
+    echo "ERROR: Cannot create eval workspace: $EVAL_OUT_DIR" >&2
+    echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
+    exit 1
+fi
+if ! touch "$EVAL_OUT_DIR/.write_test" 2>/dev/null; then
+    echo "ERROR: Cannot write to eval workspace: $EVAL_OUT_DIR" >&2
+    echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
+    exit 1
+fi
+rm -f "$EVAL_OUT_DIR/.write_test" || true
+
 CONFIG="${EVAL_CONFIG:-configs/fairseq2/ctc-eval-e2.yaml}"
+CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e2"  # training workspace, existence check only
 
 if [ ! -d "$CHECKPOINT_DIR" ]; then
-    echo "ERROR: Checkpoint directory not found: $CHECKPOINT_DIR" >&2
+    echo "ERROR: Expected training workspace not found: $CHECKPOINT_DIR" >&2
+    echo "ERROR: The evaluated model checkpoint is configured via model.path in $CONFIG." >&2
     exit 1
 fi
 
 echo "=== Evaluating E2 checkpoint ==="
-echo "Checkpoint: $CHECKPOINT_DIR"
+echo "Training workspace (existence check only): $CHECKPOINT_DIR"
+echo "Checkpoint source: hardcoded via model.path in $CONFIG"
+echo "Eval workspace (--checkpoint-dir):         $EVAL_OUT_DIR"
 echo "Config:     $CONFIG"
 echo "Started:    $(date)"
 echo "Node:       $(hostname)"
 nvidia-smi
 
-python scripts/hpc/run_eval.py \
-    --checkpoint-dir "$CHECKPOINT_DIR" \
+if ! python scripts/hpc/run_eval.py \
+    --checkpoint-dir "$EVAL_OUT_DIR" \
     --config "$CONFIG" \
-    --wandb-tags "e2,30k,lr3e-5,test"
+    --wandb-tags "e2,30k,lr3e-5,test"; then
+    echo "ERROR: run_eval.py failed — see output above for details." >&2
+    exit 1
+fi
 
 echo "Finished: $(date)"

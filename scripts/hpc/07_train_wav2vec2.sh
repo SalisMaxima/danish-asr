@@ -24,7 +24,7 @@
 set -euo pipefail
 
 # --- Environment ---
-source "$(dirname "$0")/env.sh"
+source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 
 # Fixed run directory — reused across sequential jobs so checkpoint resume works.
 # Override with WAV2VEC2_RUN_DIR to use a different path.

@@ -19,7 +19,7 @@
 set -euo pipefail
 
 # --- Environment ---
-source "$(dirname "$0")/env.sh"
+source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 
 python -m scripts.hpc.train_whisper \
     --config configs/hf_baseline/whisper_smoke.yaml \
