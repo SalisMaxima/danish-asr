@@ -256,13 +256,17 @@ def check_prerequisites(checkpoint_dir: Path, config: Path) -> Path | None:
 def _get_score_file(model_path: Path) -> Path:
     """Return the fairseq2 score file path for a checkpoint directory.
 
-    fairseq2 writes checkpoint scores to:
-      {model_path.parent}/scores/{model_path.name}.txt
+    fairseq2 writes checkpoint scores under ``checkpoints/scores`` keyed by the
+    checkpoint step directory name. Eval configs may point either at:
 
-    e.g. for model_path = .../ws_1.abc/checkpoints/step_40000:
-      → .../ws_1.abc/checkpoints/scores/step_40000.txt
+    - ``.../checkpoints/step_40000``, or
+    - ``.../checkpoints/step_40000/model`` (required for custom model loading)
+
+    In both cases, the score file lives at:
+      ``.../checkpoints/scores/step_40000.txt``
     """
-    return model_path.parent / "scores" / f"{model_path.name}.txt"
+    checkpoint_dir = model_path.parent if model_path.name == "model" else model_path
+    return checkpoint_dir.parent / "scores" / f"{checkpoint_dir.name}.txt"
 
 
 def _backup_score_file(score_file: Path) -> Path | None:
