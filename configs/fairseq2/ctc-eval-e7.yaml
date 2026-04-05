@@ -20,6 +20,7 @@
 
 model:
   name: "omniASR_CTC_300M_v2"
+  family: "wav2vec2_asr"
   path: null  # set to resolved checkpoint path before submitting — see NOTE above
 
 dataset:

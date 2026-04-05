@@ -8,6 +8,7 @@
 
 model:
   name: "omniASR_CTC_300M_v2"
+  family: "wav2vec2_asr"
   path: /work3/s204696/outputs/omniasr_e3/ws_1.88015460/checkpoints/step_30000
 
 dataset:
