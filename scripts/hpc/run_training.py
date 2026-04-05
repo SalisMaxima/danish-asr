@@ -288,7 +288,7 @@ def check_prerequisites(config: Path) -> None:
                 "the Hive directory structure. This causes 'DataFrame columns are not unique' "
                 "warnings and data-loading errors."
             )
-            logger.error("Fix: python scripts/hpc/repair_parquet_schema.py")
+            logger.error("Fix: re-run scripts/hpc/02_convert_fairseq2.sh to regenerate clean Parquet files")
             sys.exit(1)
 
     try:

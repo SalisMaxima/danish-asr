@@ -27,31 +27,10 @@ if [ -z "${SWEEP_ID:-}" ]; then
 fi
 
 # --- Environment ---
-export HF_HOME=/work3/$USER/hf_cache
-export HF_DATASETS_CACHE=/work3/$USER/hf_cache/datasets
-export FAIRSEQ2_CACHE_DIR=/work3/$USER/fairseq2_cache
-export TMPDIR=/work3/$USER/tmp
-export WANDB_DIR=/work3/$USER/wandb
-export WANDB_DATA_DIR=/work3/$USER/wandb
-export WANDB_CACHE_DIR=/work3/$USER/wandb/cache
-mkdir -p "$TMPDIR"
-mkdir -p /work3/$USER/logs/lsf
-mkdir -p /work3/$USER/wandb/cache
-
-# The pip-installed omnilingual-asr package does not include the workflows/ recipe module
-OMNI_ASR_DIR="/work3/$USER/omnilingual-asr"
-if [ ! -d "$OMNI_ASR_DIR/workflows" ]; then
-    echo "ERROR: omnilingual-asr repo not found at $OMNI_ASR_DIR" >&2
-    echo "Clone it: git clone https://github.com/facebookresearch/omnilingual-asr.git $OMNI_ASR_DIR" >&2
-    exit 1
-fi
-PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
-
-# Project root needed for scripts.hpc.common imports; omnilingual-asr for workflows.recipes
-export PYTHONPATH="$PROJECT_DIR:$OMNI_ASR_DIR:${PYTHONPATH:-}"
-
-cd "$PROJECT_DIR"
-source .venv/bin/activate
+source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
+setup_omniasr
+# Project root also needed for scripts.hpc.common imports
+export PYTHONPATH="$PROJECT_DIR:${PYTHONPATH:-}"
 
 echo "=== Sweep agent starting ==="
 echo "SWEEP_ID: $SWEEP_ID"

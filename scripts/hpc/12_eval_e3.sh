@@ -29,38 +29,31 @@
 set -euo pipefail
 
 # --- Environment ---
-export HF_HOME=/work3/$USER/hf_cache
-export HF_DATASETS_CACHE=/work3/$USER/hf_cache/datasets
-export FAIRSEQ2_CACHE_DIR=/work3/$USER/fairseq2_cache
-export TMPDIR=/work3/$USER/tmp
-export WANDB_DIR=/work3/$USER/wandb
-export WANDB_DATA_DIR=/work3/$USER/wandb
-export WANDB_CACHE_DIR=/work3/$USER/wandb/cache
-mkdir -p "$TMPDIR"
-mkdir -p /work3/$USER/logs/lsf
-mkdir -p /work3/$USER/wandb/cache
-
-OMNI_ASR_DIR="/work3/$USER/omnilingual-asr"
-if [ ! -d "$OMNI_ASR_DIR/workflows" ]; then
-    echo "ERROR: omnilingual-asr repo not found at $OMNI_ASR_DIR" >&2
-    echo "Clone it: git clone https://github.com/facebookresearch/omnilingual-asr.git $OMNI_ASR_DIR" >&2
-    exit 1
-fi
-export PYTHONPATH="$OMNI_ASR_DIR:${PYTHONPATH:-}"
-
-PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
-cd "$PROJECT_DIR"
-source .venv/bin/activate
+source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
+setup_omniasr
 
 # Fresh output dir for eval — keeps eval workspace separate from training workspace.
 # The recipe silently no-ops when run against a completed training workspace.
 EVAL_OUT_DIR="${EVAL_OUT_DIR:-/work3/$USER/outputs/omniasr_e3_eval}"
-mkdir -p "$EVAL_OUT_DIR"
+# Catch /work3 quota exhaustion before burning GPU time.
+if ! mkdir -p "$EVAL_OUT_DIR" 2>/dev/null; then
+    echo "ERROR: Cannot create eval workspace: $EVAL_OUT_DIR" >&2
+    echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
+    exit 1
+fi
+if ! touch "$EVAL_OUT_DIR/.write_test" 2>/dev/null; then
+    echo "ERROR: Cannot write to eval workspace: $EVAL_OUT_DIR" >&2
+    echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
+    exit 1
+fi
+rm -f "$EVAL_OUT_DIR/.write_test" || true
+
 CONFIG="${EVAL_CONFIG:-configs/fairseq2/ctc-eval-e3.yaml}"
-CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e3"  # kept for existence check only
+CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e3"  # training workspace, existence check only
 
 if [ ! -d "$CHECKPOINT_DIR" ]; then
-    echo "ERROR: Checkpoint directory not found: $CHECKPOINT_DIR" >&2
+    echo "ERROR: Expected training workspace not found: $CHECKPOINT_DIR" >&2
+    echo "ERROR: The evaluated model checkpoint is configured via model.path in $CONFIG." >&2
     exit 1
 fi
 
@@ -73,9 +66,12 @@ echo "Started:    $(date)"
 echo "Node:       $(hostname)"
 nvidia-smi
 
-python scripts/hpc/run_eval.py \
+if ! python scripts/hpc/run_eval.py \
     --checkpoint-dir "$EVAL_OUT_DIR" \
     --config "$CONFIG" \
-    --wandb-tags "e3,30k,lr5e-5,test"
+    --wandb-tags "e3,30k,lr5e-5,test"; then
+    echo "ERROR: run_eval.py failed — see output above for details." >&2
+    exit 1
+fi
 
 echo "Finished: $(date)"

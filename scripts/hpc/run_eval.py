@@ -2,9 +2,14 @@
 
 Runs the fairseq2 eval recipe on a trained checkpoint with full logging.
 
+``--checkpoint-dir`` is the eval *output workspace* — fairseq2 writes eval artifacts
+there. It is NOT the trained checkpoint location. The checkpoint to evaluate is
+resolved from ``model.path`` in the config file.
+
 Usage:
-    python scripts/hpc/run_eval.py --checkpoint-dir /work3/$USER/outputs/omniasr_hpc_20260308
-    python scripts/hpc/run_eval.py --checkpoint-dir $CHECKPOINT_DIR --config configs/fairseq2/ctc-finetune-hpc.yaml
+    python scripts/hpc/run_eval.py \
+        --checkpoint-dir /work3/$USER/outputs/omniasr_e2_eval \
+        --config configs/fairseq2/ctc-eval-e2.yaml
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ import sys
 import time
 from pathlib import Path
 
+import yaml
 from loguru import logger
 
 from scripts.hpc.common import (
@@ -31,20 +37,43 @@ _HEARTBEAT_INTERVAL = 300  # seconds between heartbeat log lines
 
 
 def check_prerequisites(checkpoint_dir: Path, config: Path) -> None:
-    """Verify evaluation prerequisites."""
-    if not checkpoint_dir.exists():
-        logger.error(f"Checkpoint directory not found: {checkpoint_dir}")
-        sys.exit(1)
+    """Verify evaluation prerequisites.
 
-    checkpoints = list(checkpoint_dir.glob("**/*.pt"))
-    if not checkpoints:
-        logger.warning(
-            f"No .pt files found in {checkpoint_dir} — fairseq2 may still work with its own checkpoint format"
-        )
+    ``checkpoint_dir`` is the eval output workspace, not the checkpoint source.
+    The checkpoint to evaluate is resolved from ``model.path`` in the config.
+    """
+    if not checkpoint_dir.exists():
+        logger.error(f"Eval workspace directory not found: {checkpoint_dir}")
+        sys.exit(1)
 
     if not config.exists():
         logger.error(f"Config not found: {config}")
         sys.exit(1)
+
+    # Validate the checkpoint path set via model.path in the config.
+    try:
+        raw = config.read_text()
+    except OSError as e:
+        logger.error(f"Cannot read config file {config}: {e}")
+        sys.exit(1)
+
+    try:
+        cfg = yaml.safe_load(raw)
+        if isinstance(cfg, dict):
+            model_path_str = cfg.get("model", {}).get("path")
+            if model_path_str:
+                model_path = Path(model_path_str)
+                if not model_path.exists():
+                    logger.error(f"Checkpoint not found: {model_path}")
+                    logger.error(f"Path is configured via model.path in {config}")
+                    sys.exit(1)
+                logger.info(f"Checkpoint verified: {model_path}")
+            else:
+                logger.warning(
+                    f"model.path not set in {config} — fairseq2 will attempt to resolve the checkpoint itself and may fail"
+                )
+    except yaml.YAMLError as e:
+        logger.warning(f"Config is not valid YAML ({e}) — skipping model.path check; fairseq2 will validate on launch")
 
     try:
         import torch
@@ -58,11 +87,14 @@ def check_prerequisites(checkpoint_dir: Path, config: Path) -> None:
 
 
 def main() -> None:
-    default_config = PROJECT_DIR / "configs" / "fairseq2" / "ctc-finetune-hpc.yaml"
-
     parser = argparse.ArgumentParser(description="omniASR evaluation wrapper")
-    parser.add_argument("--checkpoint-dir", type=Path, required=True, help="Directory with trained checkpoint")
-    parser.add_argument("--config", type=Path, default=default_config, help="fairseq2 config file")
+    parser.add_argument(
+        "--checkpoint-dir",
+        type=Path,
+        required=True,
+        help="Eval output workspace (fairseq2 writes artifacts here; checkpoint is set via model.path in config)",
+    )
+    parser.add_argument("--config", type=Path, required=True, help="fairseq2 eval config file (should set model.path)")
     parser.add_argument("--extra-args", type=str, default="", help="Additional args passed to fairseq2 eval recipe")
     parser.add_argument("--wandb-project", type=str, default="danish-asr", help="W&B project name")
     parser.add_argument(
@@ -77,7 +109,8 @@ def main() -> None:
     log_gpu_info()
 
     check_prerequisites(args.checkpoint_dir, args.config)
-    logger.info(f"Evaluating checkpoint: {args.checkpoint_dir}")
+    logger.info(f"Eval workspace:        {args.checkpoint_dir}")
+    logger.info(f"Config:                {args.config}")
 
     # Initialise W&B
     wandb_run = None
@@ -170,6 +203,10 @@ def main() -> None:
             logger.info(f"  CER: {cer_value:.2f}%")
         else:
             logger.warning("  CER: not found in output")
+        if return_code == 0 and wer_value is None and cer_value is None:
+            logger.warning(
+                "Subprocess exited 0 but no WER or CER found — recipe may have completed without computing metrics; verify output manually"
+            )
         logger.info("=" * 50)
 
         if wandb_run is not None:
