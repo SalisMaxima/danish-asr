@@ -14,13 +14,14 @@
 #   2. E7 crashed at step 53900; fairseq2 saves every 1000 steps, so the last
 #      checkpoint before the crash is at step_53000.
 #   3. Set model.path to:
-#        /work3/s204696/outputs/omniasr_e3/ws_1.XXXXXXXX/checkpoints/step_53000
+#        /work3/s204696/outputs/omniasr_e3/ws_1.XXXXXXXX/checkpoints/step_53000/model
 #
 # (model.path hardcoded — fairseq2 does NOT auto-select from the eval workspace dir)
 
 model:
   name: "omniASR_CTC_300M_v2"
   family: "wav2vec2_asr"
+  arch: "300m_v2"
   path: null  # set to resolved checkpoint path before submitting — see NOTE above
 
 dataset:

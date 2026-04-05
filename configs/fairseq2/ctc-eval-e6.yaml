@@ -5,13 +5,14 @@
 # (read_aloud + conversation combined).
 #
 # Used by: scripts/hpc/16_eval_e6.sh
-# Checkpoint: /work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000
+# Checkpoint: /work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000/model
 # (model.path hardcoded — fairseq2 does NOT auto-select from the eval workspace dir)
 
 model:
   name: "omniASR_CTC_300M_v2"
   family: "wav2vec2_asr"
-  path: /work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000
+  arch: "300m_v2"
+  path: /work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000/model
 
 dataset:
   name: "coral_v3_danish"

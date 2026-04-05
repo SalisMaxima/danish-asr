@@ -61,6 +61,11 @@ def test_get_score_file_returns_checkpoint_scores_path(tmp_path: Path) -> None:
     assert _get_score_file(model_path) == tmp_path / "ws_1.abc" / "checkpoints" / "scores" / "step_53000.txt"
 
 
+def test_get_score_file_handles_model_subdirectory_path(tmp_path: Path) -> None:
+    model_path = tmp_path / "ws_1.abc" / "checkpoints" / "step_53000" / "model"
+    assert _get_score_file(model_path) == tmp_path / "ws_1.abc" / "checkpoints" / "scores" / "step_53000.txt"
+
+
 def test_backup_score_file_uses_numbered_suffix_when_default_backup_exists(tmp_path: Path) -> None:
     score_file = tmp_path / "step_53000.txt"
     score_file.write_text("-59.88\n")
