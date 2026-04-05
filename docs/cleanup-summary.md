@@ -137,7 +137,7 @@ Contains:
 
 **Updated all 16 job scripts** to replace their 10-20 line duplicated environment blocks with:
 ```bash
-source "$(dirname "$0")/env.sh"
+source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 setup_omniasr  # only in scripts that need omnilingual-asr
 ```
 

@@ -68,6 +68,10 @@ def check_prerequisites(checkpoint_dir: Path, config: Path) -> None:
                     logger.error(f"Path is configured via model.path in {config}")
                     sys.exit(1)
                 logger.info(f"Checkpoint verified: {model_path}")
+            else:
+                logger.warning(
+                    f"model.path not set in {config} — fairseq2 will attempt auto-selection from the eval workspace"
+                )
     except yaml.YAMLError as e:
         logger.warning(f"Config is not valid YAML ({e}) — skipping model.path check; fairseq2 will validate on launch")
 
@@ -105,7 +109,8 @@ def main() -> None:
     log_gpu_info()
 
     check_prerequisites(args.checkpoint_dir, args.config)
-    logger.info(f"Evaluating checkpoint: {args.checkpoint_dir}")
+    logger.info(f"Eval workspace:        {args.checkpoint_dir}")
+    logger.info(f"Config:                {args.config}")
 
     # Initialise W&B
     wandb_run = None
