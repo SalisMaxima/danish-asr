@@ -14,7 +14,7 @@
 #BSUB -e /work3/s204696/logs/lsf/vram_probe_3b_%J.err
 #
 # VRAM probe: omniASR_CTC_3B_v2 at conservative batch (max_num_elements=1.92M, grad_accum=8)
-# Target 80GB nodes: bsub -m "n-62-18-8 n-62-18-9 n-62-18-10 n-62-18-11 n-62-18-12" < scripts/hpc/06d_vram_probe_3b.sh
+# Target 80GB nodes: bsub -m "n-62-18-8 n-62-18-9 n-62-18-10 n-62-18-11 n-62-18-12" < scripts/hpc/legacy/06d_vram_probe_3b.sh
 
 set -euo pipefail
 
