@@ -13,7 +13,7 @@
 #BSUB -e /work3/s204696/logs/lsf/vram_probe_%J.err
 #
 # VRAM probe: test whether a given OmniASR CTC v2 model size fits on A100-40GB.
-# Runs only 50 training steps — enough to confirm fit or trigger OOM.
+# Runs only 500 training steps — enough to confirm fit or trigger OOM.
 #
 # Usage:
 #   # 1B with default batch size

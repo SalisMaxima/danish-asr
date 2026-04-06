@@ -1,4 +1,4 @@
-# VRAM probe: omniASR_CTC_3B_v2 on A100-40GB — minimal batch
+# VRAM probe: omniASR_CTC_3B_v2 on A100-80GB — minimal batch
 # Fallback if vram-probe-3b.yaml OOMs. Quartered max_num_elements.
 
 model:

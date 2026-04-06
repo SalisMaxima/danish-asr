@@ -1,4 +1,4 @@
-# VRAM probe: omniASR_CTC_3B_v2 on A100-40GB
+# VRAM probe: omniASR_CTC_3B_v2 on A100-80GB
 # Conservative start — halved max_num_elements since model alone is 12 GiB.
 
 model:
