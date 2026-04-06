@@ -1,4 +1,4 @@
-program: scripts/hpc/sweep_agent_wrapper.py
+program: scripts/hpc/legacy/sweep_agent_wrapper.py
 method: bayes
 name: omniasr-ctc-danish-sweep
 run_cap: 20

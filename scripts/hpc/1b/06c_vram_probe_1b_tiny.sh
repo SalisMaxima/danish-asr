@@ -19,7 +19,7 @@ set -euo pipefail
 source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 setup_omniasr
 
-CONFIG="configs/fairseq2/vram-probe-1b-tiny.yaml"
+CONFIG="configs/fairseq2/1b/vram-probe-1b-tiny.yaml"
 RUN_DIR="/work3/$USER/outputs/vram_probe_1b_tiny_$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$RUN_DIR"
 

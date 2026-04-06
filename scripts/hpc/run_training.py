@@ -288,7 +288,7 @@ def check_prerequisites(config: Path) -> None:
                 "the Hive directory structure. This causes 'DataFrame columns are not unique' "
                 "warnings and data-loading errors."
             )
-            logger.error("Fix: re-run scripts/hpc/02_convert_fairseq2.sh to regenerate clean Parquet files")
+            logger.error("Fix: re-run scripts/hpc/data/02_convert_fairseq2.sh to regenerate clean Parquet files")
             sys.exit(1)
 
     try:
@@ -397,7 +397,7 @@ def _log_metrics_to_wandb(metrics: dict[str, float], step: int | None, wandb_run
 
 
 def main() -> None:
-    default_config = PROJECT_DIR / "configs" / "fairseq2" / "ctc-finetune-hpc.yaml"
+    default_config = PROJECT_DIR / "configs" / "fairseq2" / "300m" / "ctc-finetune-hpc-20k.yaml"
 
     parser = argparse.ArgumentParser(description="omniASR training wrapper")
     parser.add_argument("--config", type=Path, default=default_config, help="fairseq2 config file")

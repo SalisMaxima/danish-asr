@@ -23,7 +23,7 @@
 #      under the same parent as E3 (omniasr_e3/). E7's workspace is distinct from
 #      E3's ws_1.88015460.
 #   2. E7 crashed at step 53900; last saved checkpoint is step_53000 (saves every 1k).
-#   3. Set model.path in configs/fairseq2/ctc-eval-e7.yaml to:
+#   3. Set model.path in configs/fairseq2/300m/ctc-eval-e7.yaml to:
 #        /work3/s204696/outputs/omniasr_e3/ws_1.XXXXXXXX/checkpoints/step_53000
 #
 # Usage:
@@ -48,7 +48,7 @@ if ! touch "$EVAL_OUT_DIR/.write_test" 2>/dev/null; then
 fi
 rm -f "$EVAL_OUT_DIR/.write_test" 2>/dev/null || true
 
-CONFIG="${EVAL_CONFIG:-configs/fairseq2/ctc-eval-e7.yaml}"
+CONFIG="${EVAL_CONFIG:-configs/fairseq2/300m/ctc-eval-e7.yaml}"
 
 # Guard: fail fast if model.path is still null (not yet resolved on HPC).
 if grep -q "path: null" "$CONFIG"; then

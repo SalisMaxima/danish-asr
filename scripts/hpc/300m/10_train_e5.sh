@@ -33,7 +33,7 @@ RUN_DIR="${RESUME_DIR:-/work3/$USER/outputs/omniasr_e5}"
 mkdir -p "$RUN_DIR"
 
 python scripts/hpc/run_training.py \
-    --config configs/fairseq2/ctc-finetune-hpc-e5.yaml \
+    --config configs/fairseq2/300m/ctc-finetune-hpc-e5.yaml \
     --output-dir "$RUN_DIR" \
     --wandb-tags "train,full,hpc,a100,e5,40k,lr3e-5,freeze2k" \
     --wandb-resume allow

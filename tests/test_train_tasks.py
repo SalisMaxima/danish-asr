@@ -15,7 +15,7 @@ class _DummyContext:
 
 def test_omniasr_builds_expected_command(tmp_path, monkeypatch):
     project_root = tmp_path
-    config_dir = project_root / "configs" / "fairseq2"
+    config_dir = project_root / "configs" / "fairseq2" / "300m"
     config_dir.mkdir(parents=True)
     (config_dir / "ctc-finetune-local.yaml").write_text("model:\n  name: omniASR_CTC_300M_v2\n")
 
@@ -34,9 +34,30 @@ def test_omniasr_builds_expected_command(tmp_path, monkeypatch):
     ]
 
 
+def test_omniasr_hpc_uses_legacy_config_for_backward_compatibility(tmp_path, monkeypatch):
+    project_root = tmp_path
+    legacy_dir = project_root / "configs" / "fairseq2" / "legacy"
+    legacy_dir.mkdir(parents=True)
+    (legacy_dir / "ctc-finetune-hpc.yaml").write_text("model:\n  name: omniASR_CTC_300M_v2\n")
+
+    monkeypatch.setattr(train_tasks, "PROJECT_ROOT", project_root)
+    ctx = _DummyContext()
+    output_dir = project_root / "outputs" / "run-hpc"
+
+    train_tasks.omniasr.body(ctx, hardware="hpc", output_dir=str(output_dir))
+
+    assert ctx.commands == [
+        {
+            "command": f"uv run python -m workflows.recipes.wav2vec2.asr {output_dir} --config-file {legacy_dir / 'ctc-finetune-hpc.yaml'}",
+            "echo": True,
+            "pty": not train_tasks.WINDOWS,
+        }
+    ]
+
+
 def test_omniasr_eval_builds_expected_command(tmp_path, monkeypatch):
     project_root = tmp_path
-    config_dir = project_root / "configs" / "fairseq2"
+    config_dir = project_root / "configs" / "fairseq2" / "300m"
     config_dir.mkdir(parents=True)
     (config_dir / "ctc-eval-e2.yaml").write_text("model:\n  name: omniASR_CTC_300M_v2\n")
     checkpoint_dir = project_root / "outputs" / "checkpoint"

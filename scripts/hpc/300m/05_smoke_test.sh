@@ -21,6 +21,6 @@ source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 setup_omniasr
 
 python scripts/hpc/run_training.py \
-    --config configs/fairseq2/ctc-finetune-smoke.yaml \
+    --config configs/fairseq2/300m/ctc-finetune-smoke.yaml \
     --wandb-resume never \
     --wandb-tags "smoke,validation,hpc,a100"

@@ -7,8 +7,8 @@ Invoked by ``wandb agent``.  Each call:
 4. Streams stdout, parses metrics, and logs them to W&B
 
 Usage (typically called by wandb agent, not directly):
-    python scripts/hpc/sweep_agent_wrapper.py
-    python scripts/hpc/sweep_agent_wrapper.py --base-config configs/fairseq2/ctc-finetune-hpc.yaml
+    python scripts/hpc/legacy/sweep_agent_wrapper.py
+    python scripts/hpc/legacy/sweep_agent_wrapper.py --base-config configs/fairseq2/legacy/ctc-finetune-hpc.yaml
 """
 
 from __future__ import annotations
@@ -131,7 +131,7 @@ def _upload_new_checkpoints(output_dir: Path, uploaded: set[Path], wandb_run: An
 
 
 def main() -> None:
-    default_config = PROJECT_DIR / "configs" / "fairseq2" / "ctc-finetune-hpc.yaml"
+    default_config = PROJECT_DIR / "configs" / "fairseq2" / "legacy" / "ctc-finetune-hpc.yaml"
 
     parser = argparse.ArgumentParser(description="W&B sweep agent wrapper for omniASR")
     parser.add_argument(

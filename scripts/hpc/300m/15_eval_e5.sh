@@ -42,7 +42,7 @@ if ! touch "$EVAL_OUT_DIR/.write_test" 2>/dev/null; then
 fi
 rm -f "$EVAL_OUT_DIR/.write_test" 2>/dev/null || true
 
-CONFIG="${EVAL_CONFIG:-configs/fairseq2/ctc-eval-e5.yaml}"
+CONFIG="${EVAL_CONFIG:-configs/fairseq2/300m/ctc-eval-e5.yaml}"
 CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e5"  # training workspace, existence check only
 
 if [ ! -d "$CHECKPOINT_DIR" ]; then

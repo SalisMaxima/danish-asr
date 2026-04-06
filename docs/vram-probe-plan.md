@@ -44,9 +44,9 @@ All configs use E6 best-practice settings: `shuffle_window=1000`, `bf16`, `lr=5e
 Submit all three — they can run on either 40GB or 80GB nodes:
 
 ```bash
-bsub < scripts/hpc/06a_vram_probe_1b.sh
-bsub < scripts/hpc/06b_vram_probe_1b_small.sh
-bsub < scripts/hpc/06c_vram_probe_1b_tiny.sh
+bsub < scripts/hpc/1b/06a_vram_probe_1b.sh
+bsub < scripts/hpc/1b/06b_vram_probe_1b_small.sh
+bsub < scripts/hpc/1b/06c_vram_probe_1b_tiny.sh
 ```
 
 Note which node each job lands on (`bjobs -l <jobid>`) to know if the result applies to 40GB or 80GB.
@@ -59,10 +59,10 @@ The 3B scripts include `#BSUB -R "select[gpu80gb]"` to target 80GB nodes:
 
 ```bash
 # 3B on 80GB node — conservative batch
-bsub < scripts/hpc/06d_vram_probe_3b.sh
+bsub < scripts/hpc/3b/06d_vram_probe_3b.sh
 
 # 3B on 80GB node — minimal batch (only if above OOMs)
-bsub < scripts/hpc/06e_vram_probe_3b_tiny.sh
+bsub < scripts/hpc/3b/06e_vram_probe_3b_tiny.sh
 ```
 
 ## How to Check Results

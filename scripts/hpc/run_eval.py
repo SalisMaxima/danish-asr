@@ -317,6 +317,49 @@ def _backup_score_file(score_file: Path) -> Path | None:
     return backup
 
 
+def _next_backup_path(score_file: Path, label: str) -> Path:
+    candidate = score_file.with_suffix(f".{label}.bak")
+    if not candidate.exists():
+        return candidate
+
+    counter = 1
+    while True:
+        numbered = score_file.with_suffix(f".{label}.{counter}.bak")
+        if not numbered.exists():
+            return numbered
+        counter += 1
+
+
+def _restore_score_file(score_file: Path, backup: Path | None) -> Path | None:
+    """Restore the original validation score and preserve the eval-produced score."""
+    if backup is None or not backup.exists():
+        return None
+
+    eval_backup: Path | None = None
+    if score_file.exists():
+        eval_backup = _next_backup_path(score_file, "test")
+        try:
+            score_file.rename(eval_backup)
+        except OSError as e:
+            logger.error(f"Failed to preserve eval score file {score_file} → {eval_backup}: {e}")
+            logger.error("Original validation score backup remains in place; restore manually if needed")
+            sys.exit(1)
+
+    try:
+        backup.rename(score_file)
+    except OSError as e:
+        logger.error(f"Failed to restore validation score file {backup} → {score_file}: {e}")
+        logger.error("Manual intervention required to restore the original validation score")
+        sys.exit(1)
+
+    if eval_backup is not None:
+        logger.info(f"Preserved eval score as {eval_backup.name} and restored original validation score")
+    else:
+        logger.info("Restored original validation score file")
+
+    return eval_backup
+
+
 def _read_score_file(score_file: Path) -> float | None:
     """Read WER from a fairseq2 score file.
 
@@ -373,7 +416,9 @@ def main() -> None:
     score_file: Path | None = None
     if model_path is not None:
         score_file = _get_score_file(model_path)
-        _backup_score_file(score_file)
+        original_score_backup = _backup_score_file(score_file)
+    else:
+        original_score_backup = None
 
     # Initialise W&B
     wandb_run = None
@@ -479,6 +524,9 @@ def main() -> None:
             wer_value = _read_score_file(score_file)
             if wer_value is not None:
                 logger.info(f"WER read from score file ({score_file.name}): {wer_value:.4f}%")
+
+        if score_file is not None and original_score_backup is not None:
+            _restore_score_file(score_file, original_score_backup)
 
         logger.info("=" * 50)
         if wer_value is not None:

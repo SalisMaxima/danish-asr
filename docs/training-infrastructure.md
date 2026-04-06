@@ -151,8 +151,8 @@ These are standalone YAMLs consumed directly by the fairseq2 recipe, not by Hydr
 
 | File | Target | max_audio_len | max_num_elements | grad_accum |
 |---|---|---|---|---|
-| `configs/fairseq2/ctc-finetune-local.yaml` | RTX 3080 12GB | 480,000 (30s) | 3,840,000 | 8 |
-| `configs/fairseq2/ctc-finetune-hpc.yaml` | A100 40/80GB | 960,000 (60s) | 3,840,000 | 4 |
+| `configs/fairseq2/300m/ctc-finetune-local.yaml` | RTX 3080 12GB | 480,000 (30s) | 3,840,000 | 8 |
+| `configs/fairseq2/legacy/ctc-finetune-hpc.yaml` | A100 40/80GB | 960,000 (60s) | 3,840,000 | 4 |
 
 Both use: `lr=1e-5`, `num_steps=5000`, validate/checkpoint every 500 steps, `bfloat16`.
 
