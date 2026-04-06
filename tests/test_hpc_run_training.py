@@ -7,7 +7,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from scripts.hpc.run_training import _DuplicateColWarningFilter, _MetricParser
+from scripts.hpc.run_training import (
+    _discover_checkpoint_models,
+    _DuplicateColWarningFilter,
+    _MetricParser,
+    _select_best_checkpoint_model,
+)
 
 # ---------------------------------------------------------------------------
 # _DuplicateColWarningFilter
@@ -269,3 +274,47 @@ def test_metric_parser_header_not_ending_with_loss_colon_does_not_treat_next_lin
     metrics, step = parser.parse_line("")
     assert step == 50
     assert metrics == {"train/loss": 1.111, "train/grad_norm": 0.5}
+
+
+def test_discover_checkpoint_models_prefers_model_files_sorted_by_step(tmp_path: Path) -> None:
+    ckpt_100 = tmp_path / "ws_1" / "checkpoints" / "step_100" / "model"
+    ckpt_500 = tmp_path / "ws_1" / "checkpoints" / "step_500" / "model"
+    ckpt_100.parent.mkdir(parents=True)
+    ckpt_500.parent.mkdir(parents=True)
+    ckpt_100.write_text("a")
+    ckpt_500.write_text("b")
+
+    checkpoints = _discover_checkpoint_models(tmp_path)
+
+    assert checkpoints == [ckpt_100, ckpt_500]
+
+
+def test_select_best_checkpoint_model_prefers_best_score_over_latest(tmp_path: Path) -> None:
+    checkpoints_dir = tmp_path / "ws_1" / "checkpoints"
+    scores_dir = checkpoints_dir / "scores"
+    step_100 = checkpoints_dir / "step_100" / "model"
+    step_500 = checkpoints_dir / "step_500" / "model"
+    step_100.parent.mkdir(parents=True)
+    step_500.parent.mkdir(parents=True)
+    scores_dir.mkdir(parents=True)
+    step_100.write_text("a")
+    step_500.write_text("b")
+    (scores_dir / "step_100.txt").write_text("-40.0\n")
+    (scores_dir / "step_500.txt").write_text("-42.0\n")
+
+    checkpoints = [step_100, step_500]
+
+    assert _select_best_checkpoint_model(tmp_path, checkpoints) == step_100
+
+
+def test_select_best_checkpoint_model_falls_back_to_latest_when_scores_missing(tmp_path: Path) -> None:
+    step_100 = tmp_path / "ws_1" / "checkpoints" / "step_100" / "model"
+    step_500 = tmp_path / "ws_1" / "checkpoints" / "step_500" / "model"
+    step_100.parent.mkdir(parents=True)
+    step_500.parent.mkdir(parents=True)
+    step_100.write_text("a")
+    step_500.write_text("b")
+
+    checkpoints = [step_100, step_500]
+
+    assert _select_best_checkpoint_model(tmp_path, checkpoints) == step_500

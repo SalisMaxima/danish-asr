@@ -396,6 +396,72 @@ def _log_metrics_to_wandb(metrics: dict[str, float], step: int | None, wandb_run
             logger.error(f"W&B logging has failed {_wandb_consecutive_failures} consecutive times")
 
 
+def _discover_checkpoint_models(output_dir: Path) -> list[Path]:
+    """Return checkpoint model files sorted by step number."""
+
+    def _ckpt_step(path: Path) -> int:
+        m = re.search(r"step_(\d+)", str(path))
+        return int(m.group(1)) if m else 0
+
+    model_files = [p for p in output_dir.glob("**/checkpoints/step_*/model") if p.is_file()]
+    if model_files:
+        return sorted(model_files, key=_ckpt_step)
+
+    # Fallback for alternate checkpoint layouts.
+    return sorted((p for p in output_dir.glob("**/*.pt") if p.is_file()), key=_ckpt_step)
+
+
+def _select_best_checkpoint_model(output_dir: Path, checkpoints: list[Path]) -> Path | None:
+    """Choose the best checkpoint by score, falling back to the latest checkpoint."""
+    scores_dir_candidates = list(output_dir.glob("**/checkpoints/scores"))
+    best_model: Path | None = None
+    best_score: float | None = None
+
+    for scores_dir in scores_dir_candidates:
+        for score_file in scores_dir.glob("step_*.txt"):
+            try:
+                raw_score = float(score_file.read_text().strip())
+            except (OSError, UnicodeError, ValueError):
+                continue
+
+            checkpoint_model = scores_dir.parent / score_file.stem / "model"
+            if not checkpoint_model.exists():
+                continue
+
+            # fairseq2 stores WER-like scores as negative numbers. Higher is better,
+            # so choose the maximum raw score (e.g. -32 beats -35).
+            if best_score is None or raw_score > best_score:
+                best_score = raw_score
+                best_model = checkpoint_model
+
+    if best_model is not None:
+        return best_model
+
+    return checkpoints[-1] if checkpoints else None
+
+
+def _upload_final_checkpoint_to_wandb(checkpoint_model: Path | None, wandb_run: Any) -> None:
+    """Upload a single final checkpoint model file to W&B."""
+    if wandb_run is None or checkpoint_model is None:
+        return
+
+    try:
+        import wandb
+
+        step_match = re.search(r"step_(\d+)", str(checkpoint_model))
+        checkpoint_step = int(step_match.group(1)) if step_match else None
+        artifact = wandb.Artifact(
+            name=f"{wandb_run.id}-checkpoint",
+            type="checkpoint",
+            metadata={"step": checkpoint_step, "path": str(checkpoint_model), "run_id": wandb_run.id},
+        )
+        artifact.add_file(str(checkpoint_model), name=checkpoint_model.name)
+        wandb_run.log_artifact(artifact)
+        logger.info(f"W&B uploaded final checkpoint artifact: {checkpoint_model}")
+    except Exception as e:
+        logger.warning(f"W&B final checkpoint upload failed: {type(e).__name__}: {e}")
+
+
 def main() -> None:
     default_config = PROJECT_DIR / "configs" / "fairseq2" / "300m" / "ctc-finetune-hpc-20k.yaml"
 
@@ -569,21 +635,17 @@ def main() -> None:
         else:
             logger.info(f"Training completed successfully in {elapsed / 3600:.1f}h")
 
-        # List checkpoints. Artifact uploads are disabled in this wrapper — wandb.log_artifact()
-        # caches a full copy of every .pt file in WANDB_CACHE_DIR before uploading (4 GB/ckpt),
-        # which reliably exhausts the 200 GB /work3 NVME quota. Checkpoints stay on HPC scratch.
-        def _ckpt_step(p: Path) -> int:
-            """Extract step number from checkpoint path (parent dir is step_N) for numeric sorting."""
-            m = re.search(r"step_(\d+)", str(p))
-            return int(m.group(1)) if m else 0
-
-        checkpoints = sorted(output_dir.glob("**/*.pt"), key=_ckpt_step)
+        checkpoints = _discover_checkpoint_models(output_dir)
         if checkpoints:
             logger.info(f"Checkpoints found ({len(checkpoints)}):")
             for ckpt in checkpoints:
                 logger.info(f"  {ckpt}")
         else:
             logger.warning("No checkpoint files found in output directory")
+
+        final_checkpoint = _select_best_checkpoint_model(output_dir, checkpoints)
+        if final_checkpoint is not None:
+            logger.info(f"Selected final checkpoint for W&B upload: {final_checkpoint}")
 
         if wandb_run is not None:
             try:
@@ -595,6 +657,9 @@ def main() -> None:
                 if checkpoints:
                     wandb_run.summary["checkpoint_dir"] = str(output_dir)
                     wandb_run.summary["latest_checkpoint"] = str(checkpoints[-1])
+                if final_checkpoint is not None:
+                    wandb_run.summary["uploaded_checkpoint"] = str(final_checkpoint)
+                _upload_final_checkpoint_to_wandb(final_checkpoint, wandb_run)
                 wandb.finish(exit_code=return_code)
             except Exception as e:
                 logger.warning(f"W&B finish failed: {type(e).__name__}: {e}")
