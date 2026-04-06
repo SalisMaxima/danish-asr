@@ -42,7 +42,7 @@ setup_omniasr
 RUN_DIR="${RESUME_DIR:-/work3/$USER/outputs/omniasr_20k}"
 mkdir -p "$RUN_DIR"
 
-CONFIG="${TRAIN_CONFIG:-configs/fairseq2/ctc-finetune-hpc-20k.yaml}"
+CONFIG="${TRAIN_CONFIG:-configs/fairseq2/300m/ctc-finetune-hpc-20k.yaml}"
 
 python scripts/hpc/run_training.py \
     --config "$CONFIG" \

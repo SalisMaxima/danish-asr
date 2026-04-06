@@ -83,9 +83,9 @@ lr_scheduler:
 ### E2 — Higher learning rate ✓ DONE (autumn-dawn, 2026-04-02)
 
 **Result:** val/WER **38.6%** at step 30k. No divergence. Curves still descending at termination.
-Runtime 5h on A100. Config: `configs/fairseq2/ctc-finetune-hpc-e2.yaml`.
+Runtime 5h on A100. Config: `configs/fairseq2/300m/ctc-finetune-hpc-e2.yaml`.
 Checkpoint: `/work3/s204696/outputs/omniasr_e2`
-Eval: `bsub < scripts/hpc/11_eval_e2.sh` (combined test), subset configs also available.
+Eval: `bsub < scripts/hpc/300m/11_eval_e2.sh` (combined test), subset configs also available.
 
 ```yaml
 optimizer:
@@ -108,9 +108,9 @@ regime:
 ### E3 — Upstream Meta LR (5e-5), 30k steps ✓ DONE (wobbly-pond-25, 2026-04-03)
 
 **Result:** val/WER **35.8%**, UER 14.1% at step 30k. lr=5e-5 beats lr=3e-5 (E2: 38.6%) by 2.8pp.
-Config: `configs/fairseq2/ctc-finetune-hpc-e3.yaml`
+Config: `configs/fairseq2/300m/ctc-finetune-hpc-e3.yaml`
 Checkpoint: `/work3/s204696/outputs/omniasr_e3/ws_1.88015460/checkpoints/step_30000/model`
-Eval: `bsub < scripts/hpc/12_eval_e3.sh`
+Eval: `bsub < scripts/hpc/300m/12_eval_e3.sh`
 
 ```yaml
 optimizer:
@@ -142,9 +142,9 @@ trainer:
 ### E5 — Combined best settings ✓ DONE (rose-dream-26, 2026-04-03)
 
 **Result:** val/WER **37.2%**, UER 14.6% at step 40k. **Worse than E3 (35.8%)** — encoder freeze at lr=3e-5 hurt rather than helped.
-Config: `configs/fairseq2/ctc-finetune-hpc-e5.yaml`
+Config: `configs/fairseq2/300m/ctc-finetune-hpc-e5.yaml`
 Checkpoint: `/work3/s204696/outputs/omniasr_e5/ws_1.f3ca97e3/checkpoints/step_40000/model`
-Eval: `bsub < scripts/hpc/15_eval_e5.sh`
+Eval: `bsub < scripts/hpc/300m/15_eval_e5.sh`
 
 ```yaml
 optimizer:
@@ -166,9 +166,9 @@ regime:
 within a batch window — effectively in-order training. Fixing to 1000 should improve generalisation.
 
 **Result:** val/WER **32.7%**, UER 12.9% at step 50k. Biggest improvement yet — 3pp better than E3.
-Config: `configs/fairseq2/ctc-finetune-hpc-e6.yaml`
+Config: `configs/fairseq2/300m/ctc-finetune-hpc-e6.yaml`
 Checkpoint: `/work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000/model`
-Eval: `bsub < scripts/hpc/16_eval_e6.sh`
+Eval: `bsub < scripts/hpc/300m/16_eval_e6.sh`
 Runtime: 7.72h on A100.
 
 ```yaml
@@ -193,10 +193,10 @@ regime:
 
 **Result:** val/WER **32.6%**, UER 12.9% at step 53900 (crashed ~2k before target).
 Matched E6 despite no shuffle fix — more steps compensate partially.
-Config: `configs/fairseq2/ctc-finetune-hpc-e7.yaml`
+Config: `configs/fairseq2/300m/ctc-finetune-hpc-e7.yaml`
 Output dir: `/work3/s204696/outputs/omniasr_e3/` (shared with E3, different workspace hash)
 Best checkpoint: `ls /work3/s204696/outputs/omniasr_e3/` to find E7 workspace, then `step_53000/model`
-Eval: update `ctc-eval-e7.yaml` with correct workspace hash, then `bsub < scripts/hpc/17_eval_e7.sh`
+Eval: update `ctc-eval-e7.yaml` with correct workspace hash, then `bsub < scripts/hpc/300m/17_eval_e7.sh`
 
 ```yaml
 optimizer:

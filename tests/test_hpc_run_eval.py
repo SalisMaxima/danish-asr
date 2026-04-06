@@ -5,6 +5,7 @@ from scripts.hpc.run_eval import (
     _get_score_file,
     _MetricParser,
     _read_score_file,
+    _restore_score_file,
     _select_eval_workspace,
 )
 
@@ -87,6 +88,22 @@ def test_backup_score_file_uses_numbered_suffix_when_default_backup_exists(tmp_p
     assert backup == tmp_path / "step_53000.val.1.bak"
     assert backup.read_text() == "-59.88\n"
     assert not score_file.exists()
+
+
+def test_restore_score_file_restores_validation_and_preserves_eval_score(tmp_path: Path) -> None:
+    score_file = tmp_path / "step_53000.txt"
+    score_file.write_text("-59.88\n")
+
+    backup = _backup_score_file(score_file)
+    assert backup is not None
+
+    score_file.write_text("-30.14\n")
+    eval_backup = _restore_score_file(score_file, backup)
+
+    assert eval_backup == tmp_path / "step_53000.test.bak"
+    assert eval_backup.read_text() == "-30.14\n"
+    assert score_file.read_text() == "-59.88\n"
+    assert not backup.exists()
 
 
 def test_read_score_file_returns_absolute_value_for_valid_score(tmp_path: Path) -> None:

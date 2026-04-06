@@ -18,6 +18,14 @@ PROJECT_NAME = "danish_asr"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
+def _resolve_omniasr_config(hardware: str) -> Path:
+    if hardware == "local":
+        return PROJECT_ROOT / "configs" / "fairseq2" / "300m" / "ctc-finetune-local.yaml"
+    if hardware == "hpc":
+        return PROJECT_ROOT / "configs" / "fairseq2" / "legacy" / "ctc-finetune-hpc.yaml"
+    return PROJECT_ROOT / "configs" / "fairseq2" / "300m" / f"ctc-finetune-{hardware}.yaml"
+
+
 @task
 def train(ctx: Context, entity: str = "", args: str = "") -> None:
     """Train model with wandb logging."""
@@ -62,10 +70,10 @@ def sweep_best(ctx: Context, sweep_id: str, metric: str = "val_acc", goal: str =
 @task
 def omniasr(ctx: Context, hardware: str = "local", output_dir: str = "", args: str = "") -> None:
     """Train omniASR_CTC_300M_v2 via fairseq2 recipe."""
-    config = PROJECT_ROOT / "configs" / "fairseq2" / f"ctc-finetune-{hardware}.yaml"
+    config = _resolve_omniasr_config(hardware)
     if not config.exists():
         logger.error(f"Config not found: {config}")
-        logger.error("Available: local, hpc")
+        logger.error("Available: local, hpc, or explicit 300m config suffixes like hpc-20k")
         return
 
     if not output_dir:
@@ -92,7 +100,7 @@ def hpc_smoke(ctx: Context) -> None:
         f"cd ~/danish_asr && git pull && "
         f"mkdir -p /work3/$USER/logs/lsf && "
         f"bsub -o /work3/$USER/logs/lsf/smoke_%J.out -e /work3/$USER/logs/lsf/smoke_%J.err "
-        f"< scripts/hpc/05_smoke_test.sh'",
+        f"< scripts/hpc/300m/05_smoke_test.sh'",
         pty=not WINDOWS,
     )
 
@@ -124,7 +132,7 @@ def hpc_sweep(ctx: Context, sweep_id: str) -> None:
         f"cd ~/danish_asr && git pull && "
         f"mkdir -p /work3/$USER/logs/lsf && "
         f"SWEEP_ID={sweep_id} "
-        f"bsub < scripts/hpc/06_sweep.sh'",
+        f"bsub < scripts/hpc/legacy/06_sweep.sh'",
         pty=not WINDOWS,
     )
 
@@ -132,7 +140,7 @@ def hpc_sweep(ctx: Context, sweep_id: str) -> None:
 @task
 def omniasr_eval(ctx: Context, checkpoint_dir: str, config: str = "") -> None:
     """Evaluate omniASR checkpoint with an explicit eval config."""
-    config_path = Path(config) if config else PROJECT_ROOT / "configs" / "fairseq2" / "ctc-eval-e2.yaml"
+    config_path = Path(config) if config else PROJECT_ROOT / "configs" / "fairseq2" / "300m" / "ctc-eval-e2.yaml"
     if not config_path.exists():
         logger.error(f"Config not found: {config_path}")
         return

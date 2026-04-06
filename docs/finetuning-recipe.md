@@ -198,13 +198,13 @@ fairseq2 auto-resumes when the output directory contains checkpoints. The traine
 
 ```bash
 # Fresh start:
-bsub < scripts/hpc/03_train.sh
+bsub < scripts/hpc/300m/03_train.sh
 
 # Auto-resume (resubmit same script — fixed output dir):
-bsub < scripts/hpc/03_train.sh
+bsub < scripts/hpc/300m/03_train.sh
 
 # Resume from a specific directory:
-RESUME_DIR=/work3/$USER/outputs/omniasr_hpc_20250315_143000 bsub < scripts/hpc/03_train.sh
+RESUME_DIR=/work3/$USER/outputs/omniasr_hpc_20250315_143000 bsub < scripts/hpc/300m/03_train.sh
 ```
 
 **Important:** If `step_nr >= num_steps` in config, training immediately stops. To extend a completed run, use a config with a higher `num_steps`.

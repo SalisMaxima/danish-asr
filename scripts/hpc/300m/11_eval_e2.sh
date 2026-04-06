@@ -1,5 +1,5 @@
 #!/bin/bash
-#BSUB -J danish_asr_eval_e6
+#BSUB -J danish_asr_eval_e2
 #BSUB -q gpua100
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
@@ -9,17 +9,22 @@
 #BSUB -B
 #BSUB -N
 #BSUB -u s204696@dtu.dk
-#BSUB -o /work3/s204696/logs/lsf/eval_e6_%J.out
-#BSUB -e /work3/s204696/logs/lsf/eval_e6_%J.err
+#BSUB -o /work3/s204696/logs/lsf/eval_e2_%J.out
+#BSUB -e /work3/s204696/logs/lsf/eval_e2_%J.err
 #
-# Evaluate the E6 checkpoint (bumbling-dawn-28, 50k steps, lr=5e-5, train_shuffle_window=1000)
-# on the held-out CoRal-v3 TEST split (read_aloud + conversation combined).
+# Evaluate the E2 checkpoint (autumn-dawn, 30k steps, lr=3e-5) on the
+# held-out CoRal-v3 TEST split (read_aloud + conversation combined).
 #
-# Per-subset evaluation (read_aloud / conversation) is not yet configured for E6.
-# See scripts/hpc/11_eval_e2.sh for the pattern when needed.
+# For per-subset evaluation, first generate subset TSVs on HPC:
+#   python scripts/hpc/make_subset_tsv.py --subset read_aloud \
+#       --output data/parquet/version=0/language_distribution_read_aloud.tsv
+#   python scripts/hpc/make_subset_tsv.py --subset conversation \
+#       --output data/parquet/version=0/language_distribution_conversation.tsv
+# Then resubmit with CONFIG overridden to ctc-eval-e2-read-aloud.yaml or
+# ctc-eval-e2-conversation.yaml.
 #
 # Usage:
-#   bsub < scripts/hpc/16_eval_e6.sh
+#   bsub < scripts/hpc/11_eval_e2.sh
 
 set -euo pipefail
 
@@ -29,7 +34,8 @@ setup_omniasr
 
 # Fresh output dir for eval — keeps eval workspace separate from training workspace.
 # The recipe silently no-ops when run against a completed training workspace.
-EVAL_OUT_DIR="${EVAL_OUT_DIR:-/work3/$USER/outputs/omniasr_e6_eval}"
+EVAL_OUT_DIR="${EVAL_OUT_DIR:-/work3/$USER/outputs/omniasr_e2_eval}"
+# Catch /work3 quota exhaustion before burning GPU time.
 if ! mkdir -p "$EVAL_OUT_DIR" 2>/dev/null; then
     echo "ERROR: Cannot create eval workspace: $EVAL_OUT_DIR" >&2
     echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
@@ -40,10 +46,10 @@ if ! touch "$EVAL_OUT_DIR/.write_test" 2>/dev/null; then
     echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
     exit 1
 fi
-rm -f "$EVAL_OUT_DIR/.write_test" 2>/dev/null || true
+rm -f "$EVAL_OUT_DIR/.write_test" || true
 
-CONFIG="${EVAL_CONFIG:-configs/fairseq2/ctc-eval-e6.yaml}"
-CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e6"  # training workspace, existence check only
+CONFIG="${EVAL_CONFIG:-configs/fairseq2/300m/ctc-eval-e2.yaml}"
+CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e2"  # training workspace, existence check only
 
 if [ ! -d "$CHECKPOINT_DIR" ]; then
     echo "ERROR: Expected training workspace not found: $CHECKPOINT_DIR" >&2
@@ -51,7 +57,7 @@ if [ ! -d "$CHECKPOINT_DIR" ]; then
     exit 1
 fi
 
-echo "=== Evaluating E6 checkpoint ==="
+echo "=== Evaluating E2 checkpoint ==="
 echo "Training workspace (existence check only): $CHECKPOINT_DIR"
 echo "Checkpoint source: hardcoded via model.path in $CONFIG"
 echo "Eval workspace (--checkpoint-dir):         $EVAL_OUT_DIR"
@@ -63,7 +69,7 @@ nvidia-smi
 if ! python scripts/hpc/run_eval.py \
     --checkpoint-dir "$EVAL_OUT_DIR" \
     --config "$CONFIG" \
-    --wandb-tags "e6,50k,lr5e-5,shuffle1000,test"; then
+    --wandb-tags "e2,30k,lr3e-5,test"; then
     echo "ERROR: run_eval.py failed — see output above for details." >&2
     exit 1
 fi

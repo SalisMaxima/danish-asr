@@ -29,10 +29,10 @@ Run smoke tests first to validate the pipeline (<15 min each):
 
 ```bash
 # Wav2Vec2 smoke (500 steps, ~10 min)
-bsub < scripts/hpc/09_smoke_wav2vec2.sh
+bsub < scripts/hpc/baseline/09_smoke_wav2vec2.sh
 
 # Whisper smoke (500 steps, ~15 min)
-bsub < scripts/hpc/10_smoke_whisper.sh
+bsub < scripts/hpc/baseline/10_smoke_whisper.sh
 ```
 
 Monitor with `bpeek -f <jobid>` or check W&B dashboard.
@@ -46,25 +46,25 @@ jobs share the same output directory and checkpoint resume works automatically.
 
 ```bash
 # First submission — starts fresh (no checkpoints yet)
-RESUME_CKPT=latest bsub < scripts/hpc/07_train_wav2vec2.sh
+RESUME_CKPT=latest bsub < scripts/hpc/baseline/07_train_wav2vec2.sh
 
 # Second submission — auto-resumes from the latest checkpoint-* in RUN_DIR
-RESUME_CKPT=latest bsub < scripts/hpc/07_train_wav2vec2.sh
+RESUME_CKPT=latest bsub < scripts/hpc/baseline/07_train_wav2vec2.sh
 
 # Third submission if needed
-RESUME_CKPT=latest bsub < scripts/hpc/07_train_wav2vec2.sh
+RESUME_CKPT=latest bsub < scripts/hpc/baseline/07_train_wav2vec2.sh
 ```
 
 To use a custom output directory:
 
 ```bash
-WAV2VEC2_RUN_DIR=/work3/$USER/outputs/my_run RESUME_CKPT=latest bsub < scripts/hpc/07_train_wav2vec2.sh
+WAV2VEC2_RUN_DIR=/work3/$USER/outputs/my_run RESUME_CKPT=latest bsub < scripts/hpc/baseline/07_train_wav2vec2.sh
 ```
 
 ### Whisper (~17h, fits in one 24h job)
 
 ```bash
-bsub < scripts/hpc/08_train_whisper.sh
+bsub < scripts/hpc/baseline/08_train_whisper.sh
 ```
 
 ## Resuming Training

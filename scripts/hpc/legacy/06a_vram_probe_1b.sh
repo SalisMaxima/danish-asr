@@ -1,5 +1,5 @@
 #!/bin/bash
-#BSUB -J vram_probe_1b_small
+#BSUB -J vram_probe_1b
 #BSUB -q gpua100
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
@@ -9,25 +9,25 @@
 #BSUB -B
 #BSUB -N
 #BSUB -u s204696@dtu.dk
-#BSUB -o /work3/s204696/logs/lsf/vram_probe_1b_small_%J.out
-#BSUB -e /work3/s204696/logs/lsf/vram_probe_1b_small_%J.err
+#BSUB -o /work3/s204696/logs/lsf/vram_probe_1b_%J.out
+#BSUB -e /work3/s204696/logs/lsf/vram_probe_1b_%J.err
 #
-# VRAM probe: omniASR_CTC_1B_v2 at halved batch (max_num_elements=1.92M, grad_accum=8)
+# VRAM probe: omniASR_CTC_1B_v2 at baseline batch (max_num_elements=3.84M, grad_accum=4)
 
 set -euo pipefail
 
 source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 setup_omniasr
 
-CONFIG="configs/fairseq2/vram-probe-1b-small.yaml"
-RUN_DIR="/work3/$USER/outputs/vram_probe_1b_small_$(date +%Y%m%d_%H%M%S)"
+CONFIG="configs/fairseq2/1b/vram-probe-1b.yaml"
+RUN_DIR="/work3/$USER/outputs/vram_probe_1b_$(date +%Y%m%d_%H%M%S)"
 mkdir -p "$RUN_DIR"
 
-echo "=== VRAM Probe: 1B small batch ==="
+echo "=== VRAM Probe: 1B baseline ==="
 echo "Config: $CONFIG"
 echo "Output: $RUN_DIR"
 
 python scripts/hpc/run_training.py \
     --config "$CONFIG" \
     --output-dir "$RUN_DIR" \
-    --wandb-tags "vram-probe,1b-small"
+    --wandb-tags "vram-probe,1b"

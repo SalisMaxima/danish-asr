@@ -31,6 +31,6 @@ fi
 
 python scripts/hpc/run_eval.py \
     --checkpoint-dir "$CHECKPOINT_DIR" \
-    --config configs/fairseq2/ctc-finetune-hpc.yaml
+    --config configs/fairseq2/legacy/ctc-finetune-hpc.yaml
 
 echo "Finished: $(date)"
