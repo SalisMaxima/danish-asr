@@ -45,7 +45,7 @@ regime:
   num_steps: 500
   validate_after_n_steps: 500  # CTC blank phase lasts ~100-500 steps (Meta recommends 500 for this model)
   validate_every_n_steps: 500
-  checkpoint_every_n_steps: 250
+  checkpoint_every_n_steps: 500
   keep_last_n_checkpoints: 2
   keep_best_n_checkpoints: 1
   publish_metrics_every_n_steps: 50

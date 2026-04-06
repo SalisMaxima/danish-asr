@@ -177,18 +177,20 @@ def _select_eval_workspace(base_dir: Path) -> Path:
         return base_dir
 
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    counter = 0
-    while True:
+    max_retries = 100
+    for counter in range(max_retries):
         suffix = "" if counter == 0 else f"_{counter}"
         run_dir = base_dir / f"run_{timestamp}_{time.time_ns()}{suffix}"
         try:
             run_dir.mkdir(parents=True, exist_ok=False)
         except FileExistsError:
-            counter += 1
             continue
 
         logger.warning(f"Eval base directory already populated; using fresh child workspace: {run_dir}")
         return run_dir
+
+    logger.error(f"Failed to create eval workspace after {max_retries} attempts under {base_dir}")
+    sys.exit(1)
 
 
 def _log_workspace_snapshot(workspace: Path, score_file: Path | None) -> None:
@@ -251,7 +253,9 @@ def check_prerequisites(checkpoint_dir: Path, config: Path) -> Path | None:
                     f"model.path not set in {config} — fairseq2 will attempt to resolve the checkpoint itself and may fail"
                 )
     except yaml.YAMLError as e:
-        logger.warning(f"Config is not valid YAML ({e}) — skipping model.path check; fairseq2 will validate on launch")
+        logger.error(f"Config is not valid YAML: {e}")
+        logger.error("Cannot verify model.path or perform score file backup — aborting")
+        sys.exit(1)
 
     try:
         import torch
@@ -300,7 +304,15 @@ def _backup_score_file(score_file: Path) -> Path | None:
                 break
             counter += 1
 
-    score_file.rename(backup)
+    try:
+        score_file.rename(backup)
+    except OSError as e:
+        logger.error(f"Failed to rename score file {score_file} → {backup}: {e}")
+        logger.error(
+            "The existing score file may cause fairseq2 to silently skip evaluation. "
+            f"Delete it manually: rm {score_file}"
+        )
+        sys.exit(1)
     logger.info(f"Renamed existing score file to {backup.name} — recipe will run fresh on the configured split")
     return backup
 
@@ -381,7 +393,9 @@ def main() -> None:
     except ImportError:
         logger.warning("wandb not installed — skipping W&B logging")
     except Exception as e:
-        logger.warning(f"W&B init failed ({type(e).__name__}: {e}) — continuing without it")
+        if isinstance(e, (MemoryError, RecursionError)):
+            raise
+        logger.error(f"W&B init failed ({type(e).__name__}: {e}) — eval will proceed WITHOUT experiment tracking")
 
     # Build command
     cmd = [
@@ -498,7 +512,9 @@ def main() -> None:
                 wandb.summary["exit_code"] = return_code
                 wandb.finish(exit_code=return_code)
             except Exception as e:
-                logger.warning(f"W&B finish failed: {type(e).__name__}: {e}")
+                logger.error(
+                    f"W&B finish/logging failed: {type(e).__name__}: {e} — eval metrics may not have been recorded in W&B"
+                )
 
     except Exception as e:
         logger.exception(f"Unhandled exception in eval wrapper: {e}")

@@ -1,4 +1,4 @@
-# VRAM probe: omniASR_CTC_3B_v2 on A100-40GB
+# VRAM probe: omniASR_CTC_3B_v2 on A100-80GB
 # Conservative start — halved max_num_elements since model alone is 12 GiB.
 
 model:
@@ -45,7 +45,7 @@ regime:
   num_steps: 500
   validate_after_n_steps: 500  # CTC blank phase lasts ~100-500 steps (Meta recommends 500 for this model)
   validate_every_n_steps: 500
-  checkpoint_every_n_steps: 250
+  checkpoint_every_n_steps: 500
   keep_last_n_checkpoints: 2
   keep_best_n_checkpoints: 1
   publish_metrics_every_n_steps: 50
