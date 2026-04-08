@@ -41,6 +41,8 @@ echo "Started:        $(date)"
 echo "Node:           $(hostname)"
 nvidia-smi
 
+had_failures=0
+
 split_tag() {
     case "$1" in
         *read-aloud*)   echo "read_aloud" ;;
@@ -66,6 +68,7 @@ for i in "${!CONFIGS[@]}"; do
         --config "$CONFIG" \
         --wandb-tags "$TAGS"; then
         echo "ERROR: Eval failed for $CONFIG" >&2
+        had_failures=1
     fi
 
     if [ -n "${EVAL_CONFIG:-}" ]; then break; fi
@@ -73,3 +76,8 @@ done
 
 echo ""
 echo "Finished: $(date)"
+
+if [ "$had_failures" -ne 0 ]; then
+    echo "One or more eval splits failed." >&2
+    exit 1
+fi

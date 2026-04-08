@@ -4,6 +4,9 @@ Run from project root (no GPU needed):
     python scripts/upload_checkpoints.py
 """
 
+from pathlib import Path
+from typing import cast
+
 import wandb
 
 ENTITY = "mathiashl-danmarks-tekniske-universitet-dtu"
@@ -66,9 +69,16 @@ CHECKPOINTS = [
 
 
 def main() -> None:
+    project_root = Path(__file__).resolve().parent.parent
+
     for ckpt in CHECKPOINTS:
+        local_path_str = cast(str, ckpt["local_path"])
+        local_path = project_root / local_path_str
         print(f"\n=== Uploading {ckpt['artifact_name']} ===")
-        print(f"    File: {ckpt['local_path']}")
+        print(f"    File: {local_path}")
+
+        if not local_path.is_file():
+            raise FileNotFoundError(f"Checkpoint file not found: {local_path}")
 
         run = wandb.init(
             entity=ENTITY,
@@ -83,7 +93,7 @@ def main() -> None:
             type="model",
             metadata=ckpt["metadata"],
         )
-        artifact.add_file(ckpt["local_path"], name=ckpt["artifact_filename"])
+        artifact.add_file(str(local_path), name=ckpt["artifact_filename"])
         run.log_artifact(artifact)
 
         print(f"    Artifact logged: {ckpt['artifact_name']}")

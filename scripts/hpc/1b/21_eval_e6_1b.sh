@@ -34,18 +34,13 @@ if ! mkdir -p "$EVAL_OUT_DIR" 2>/dev/null; then
     exit 1
 fi
 
-CHECKPOINT_DIR="/work3/$USER/outputs/omniasr_e6_1b"
-if [ ! -d "$CHECKPOINT_DIR" ]; then
-    echo "ERROR: Training workspace not found: $CHECKPOINT_DIR" >&2
-    exit 1
-fi
-
 echo "=== Phase 8B: 1B Finetuned E6-1B Evaluation ==="
-echo "Training workspace: $CHECKPOINT_DIR"
 echo "Eval workspace:     $EVAL_OUT_DIR"
 echo "Started:            $(date)"
 echo "Node:               $(hostname)"
 nvidia-smi
+
+had_failures=0
 
 split_tag() {
     case "$1" in
@@ -72,6 +67,7 @@ for i in "${!CONFIGS[@]}"; do
         --config "$CONFIG" \
         --wandb-tags "$TAGS"; then
         echo "ERROR: Eval failed for $CONFIG" >&2
+        had_failures=1
     fi
 
     if [ -n "${EVAL_CONFIG:-}" ]; then break; fi
@@ -79,3 +75,8 @@ done
 
 echo ""
 echo "Finished: $(date)"
+
+if [ "$had_failures" -ne 0 ]; then
+    echo "One or more eval splits failed." >&2
+    exit 1
+fi
