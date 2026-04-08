@@ -1,0 +1,41 @@
+# Evaluation of finetuned omniASR_CTC_1B_v2 (E6-1B, doctor-voyager-51, 50k steps) —
+# read_aloud subset only.
+#
+# PREREQUISITE: Subset TSV must exist on HPC:
+#   python scripts/hpc/make_subset_tsv.py --subset read_aloud
+#
+# Used by: scripts/hpc/1b/21_eval_e6_1b.sh
+# Checkpoint: /work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model
+
+model:
+  name: "omniASR_CTC_1B_v2"
+  path: /work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model
+
+dataset:
+  name: "coral_v3_danish"
+  valid_split: "test"
+  storage_mode: "MIXTURE_PARQUET"
+  task_mode: "ASR"
+  mixture_parquet_storage_config:
+    dataset_summary_path: "data/parquet/version=0/language_distribution_read_aloud.tsv"
+    beta_corpus: 0.5
+    beta_language: 0.5
+    fragment_loading:
+      cache: true
+  asr_task_config:
+    min_audio_len: 32_000
+    max_audio_len: 960_000
+    max_num_elements: 2_560_000
+    batch_shuffle_window: 1
+    normalize_audio: true
+    example_shuffle_window: 1
+
+tokenizer:
+  name: "omniASR_tokenizer_written_v2"
+
+gang:
+  timeout: 86400
+
+evaluator:
+  amp: true
+  amp_dtype: "torch.bfloat16"
