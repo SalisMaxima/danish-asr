@@ -278,10 +278,10 @@ Evaluate all 4 models on the held-out test split (combined, read_aloud, conversa
 
 | # | Model | Type | Checkpoint | Status |
 |---|-------|------|-----------|--------|
-| 1 | omniASR_CTC_300M_v2 | **base (zero-shot)** | (no model.path — use pretrained) | pending |
-| 2 | omniASR_CTC_1B_v2 | **base (zero-shot)** | (no model.path — use pretrained) | pending |
-| 3 | omniASR_CTC_300M_v2 | **finetuned (E6, 50k)** | `/work3/.../omniasr_e6/.../step_50000/model` | pending |
-| 4 | omniASR_CTC_1B_v2 | **finetuned (E6-1B, 50k)** | `/work3/.../omniasr_e6_1b/.../step_50000/model` | pending |
+| 1 | omniASR_CTC_300M_v2 | **base (zero-shot)** | (no model.path — use pretrained) | 🔄 running (job 28164239) |
+| 2 | omniASR_CTC_1B_v2 | **base (zero-shot)** | (no model.path — use pretrained) | 🔄 running (job 28164241) |
+| 3 | omniASR_CTC_300M_v2 | **finetuned (E6, 50k)** | `/work3/.../omniasr_e6/.../step_50000/model` | 🔄 running (job 28164240) |
+| 4 | omniASR_CTC_1B_v2 | **finetuned (E6-1B, 50k)** | `/work3/.../omniasr_e6_1b/.../step_50000/model` | 🔄 running (job 28164242) |
 
 Each model evaluated on 3 splits: combined test, read_aloud/test, conversation/test.
 That's **12 eval runs total** (4 models × 3 splits).
