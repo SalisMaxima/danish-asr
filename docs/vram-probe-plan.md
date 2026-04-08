@@ -59,10 +59,10 @@ The 3B scripts include `#BSUB -R "select[gpu80gb]"` to target 80GB nodes:
 
 ```bash
 # 3B on 80GB node — conservative batch
-bsub < scripts/hpc/legacy/06d_vram_probe_3b.sh
+bsub < scripts/hpc/3b/06d_vram_probe_3b.sh
 
 # 3B on 80GB node — minimal batch (only if above OOMs)
-bsub < scripts/hpc/legacy/06e_vram_probe_3b_tiny.sh
+bsub < scripts/hpc/3b/06e_vram_probe_3b_tiny.sh
 ```
 
 ## How to Check Results
