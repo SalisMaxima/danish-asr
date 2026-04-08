@@ -5,7 +5,7 @@
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -W 1:00
+#BSUB -W 2:00
 #BSUB -B
 #BSUB -N
 #BSUB -u s204696@dtu.dk
@@ -14,6 +14,7 @@
 #
 # Zero-shot evaluation of pretrained omniASR_CTC_300M_v2 on 3 test splits.
 # No checkpoint needed — model loaded from fairseq2 asset registry.
+# Walltime 2:00 covers 3 sequential splits (~30-40 min each).
 #
 # Usage:
 #   bsub < scripts/hpc/300m/20_eval_base.sh
@@ -40,26 +41,31 @@ echo "Started:        $(date)"
 echo "Node:           $(hostname)"
 nvidia-smi
 
+# Derive W&B split tag from the config filename suffix.
+split_tag() {
+    case "$1" in
+        *read-aloud*)   echo "read_aloud" ;;
+        *conversation*) echo "conversation" ;;
+        *)              echo "combined" ;;
+    esac
+}
+
 CONFIGS=(
     "configs/fairseq2/300m/ctc-eval-base.yaml"
     "configs/fairseq2/300m/ctc-eval-base-read-aloud.yaml"
     "configs/fairseq2/300m/ctc-eval-base-conversation.yaml"
 )
-TAGS=(
-    "base,300m,zero-shot,test,combined"
-    "base,300m,zero-shot,test,read_aloud"
-    "base,300m,zero-shot,test,conversation"
-)
 
 for i in "${!CONFIGS[@]}"; do
     CONFIG="${EVAL_CONFIG:-${CONFIGS[$i]}}"
+    TAGS="base,300m,zero-shot,test,$(split_tag "$CONFIG")"
     echo ""
     echo "--- Split $((i+1))/3: $CONFIG ---"
 
     if ! python scripts/hpc/run_eval.py \
         --checkpoint-dir "$EVAL_OUT_DIR" \
         --config "$CONFIG" \
-        --wandb-tags "${TAGS[$i]}"; then
+        --wandb-tags "$TAGS"; then
         echo "ERROR: Eval failed for $CONFIG" >&2
     fi
 

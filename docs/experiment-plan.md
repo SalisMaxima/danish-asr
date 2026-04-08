@@ -256,7 +256,21 @@ Download the finetuned checkpoints from HPC to local storage for archival and re
 | 300M E6 (finetuned) | `/work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000/model` | 50k | Best 300M run |
 | 1B E6 (finetuned) | `/work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model` | 50k | Best 1B run |
 
-**Action:** `scp` or `rsync` the model directories (just `model/` subdirectory, not optimizer/data_reader state) to local storage. Upload to W&B as artifacts for permanent archival.
+**Completed (2026-04-08):** Downloaded flat `.pt` files via SFTP (login node: `transfer.gbar.dtu.dk`), renamed them descriptively, and uploaded to W&B as artifacts via `scripts/upload_checkpoints.py`.
+
+```bash
+# Download (SFTP — flat file, not directory)
+sftp s204696@transfer.gbar.dtu.dk
+  lmkdir models/300m_e6_50k
+  lmkdir models/1b_e6_50k
+  get .../omniasr_e6/.../step_50000/model/pp_00/tp_00/sdp_00.pt models/300m_e6_50k/omniASR_CTC_300M_v2_e6_step50k.pt
+  get .../omniasr_e6_1b/.../step_50000/model/pp_00/tp_00/sdp_00.pt models/1b_e6_50k/omniASR_CTC_1B_v2_e6_step50k.pt
+
+# Upload to W&B (from local machine, ~1 Gbps)
+python scripts/upload_checkpoints.py
+```
+
+W&B artifacts: `omniASR-CTC-300M-v2-e6-50k:v0`, `omniASR-CTC-1B-v2-e6-50k:v0`
 
 ### 8B — Comprehensive evaluation matrix
 
