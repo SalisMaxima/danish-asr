@@ -20,7 +20,7 @@
 # for the override pattern if E5 subset configs are added later.
 #
 # Usage:
-#   bsub < scripts/hpc/15_eval_e5.sh
+#   bsub < scripts/hpc/300m/15_eval_e5.sh
 
 set -euo pipefail
 

@@ -21,7 +21,7 @@
 # Those configs use `valid_split: "<split>_<corpus>"`, so no subset TSV is needed.
 #
 # Usage:
-#   bsub < scripts/hpc/12_eval_e3.sh
+#   bsub < scripts/hpc/300m/12_eval_e3.sh
 
 set -euo pipefail
 

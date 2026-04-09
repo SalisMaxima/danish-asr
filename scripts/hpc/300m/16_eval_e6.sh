@@ -20,7 +20,7 @@
 # for the current subset-eval entry point.
 #
 # Usage:
-#   bsub < scripts/hpc/16_eval_e6.sh
+#   bsub < scripts/hpc/300m/16_eval_e6.sh
 
 set -euo pipefail
 

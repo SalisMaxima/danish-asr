@@ -2,7 +2,7 @@
 
 Deprecated: normal evaluation no longer needs subset-specific TSV files.
 The omniASR mixture parquet loader supports ``valid_split: "<split>_<corpus>"``
-directly, so configs such as ``test_coral_v3_read_aloud`` and
+directly, so valid_split values such as ``test_coral_v3_read_aloud`` and
 ``test_coral_v3_conversation`` are sufficient for subset eval.
 
 This script is kept only for debugging or one-off data inspection workflows.
