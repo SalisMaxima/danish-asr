@@ -9,6 +9,8 @@
 
 model:
   name: "omniASR_CTC_1B_v2"
+  family: "wav2vec2_asr"
+  arch: "1b_v2"
   path: /work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model
 
 dataset:
