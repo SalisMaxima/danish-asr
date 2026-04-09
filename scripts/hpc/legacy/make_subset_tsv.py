@@ -1,15 +1,17 @@
-"""Filter language_distribution_0.tsv to a single CoRal-v3 subset.
+"""Legacy helper to filter language_distribution_0.tsv to one CoRal-v3 subset.
 
-The fairseq2 MIXTURE_PARQUET loader uses the TSV to know which parquet
-fragments exist and how to sample from them. Per-subset evaluation requires
-a TSV that lists only the rows for that subset so the loader doesn't mix
-in the other corpus.
+Deprecated: normal evaluation no longer needs subset-specific TSV files.
+The omniASR mixture parquet loader supports ``valid_split: "<split>_<corpus>"``
+directly, so configs such as ``test_coral_v3_read_aloud`` and
+``test_coral_v3_conversation`` are sufficient for subset eval.
+
+This script is kept only for debugging or one-off data inspection workflows.
 
 Usage (run from project root on HPC):
-    python scripts/hpc/make_subset_tsv.py --subset read_aloud
-    python scripts/hpc/make_subset_tsv.py --subset conversation
-    python scripts/hpc/make_subset_tsv.py --subset read_aloud \\
-        --input  data/parquet/version=0/language_distribution_0.tsv \\
+    python scripts/hpc/legacy/make_subset_tsv.py --subset read_aloud
+    python scripts/hpc/legacy/make_subset_tsv.py --subset conversation
+    python scripts/hpc/legacy/make_subset_tsv.py --subset read_aloud \\
+        --input data/parquet/version=0/language_distribution_0.tsv \\
         --output data/parquet/version=0/language_distribution_read_aloud.tsv
 """
 
@@ -92,7 +94,7 @@ def main() -> None:
         output.unlink(missing_ok=True)
         sys.exit(1)
 
-    print(f"Wrote {kept} row(s) for corpus='{corpus}' → {output}")
+    print(f"Wrote {kept} row(s) for corpus='{corpus}' -> {output}")
 
 
 if __name__ == "__main__":

@@ -15,8 +15,9 @@
 # Evaluate the E6 checkpoint (bumbling-dawn-28, 50k steps, lr=5e-5, train_shuffle_window=1000)
 # on the held-out CoRal-v3 TEST split (read_aloud + conversation combined).
 #
-# Per-subset evaluation (read_aloud / conversation) is not yet configured for E6.
-# See scripts/hpc/11_eval_e2.sh for the pattern when needed.
+# Per-subset evaluation now uses corpus-filtered configs via
+# `valid_split: "<split>_<corpus>"`; see `scripts/hpc/300m/21_eval_e6_full.sh`
+# for the current subset-eval entry point.
 #
 # Usage:
 #   bsub < scripts/hpc/16_eval_e6.sh

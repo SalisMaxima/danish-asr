@@ -15,13 +15,10 @@
 # Evaluate the E2 checkpoint (autumn-dawn, 30k steps, lr=3e-5) on the
 # held-out CoRal-v3 TEST split (read_aloud + conversation combined).
 #
-# For per-subset evaluation, first generate subset TSVs on HPC:
-#   python scripts/hpc/make_subset_tsv.py --subset read_aloud \
-#       --output data/parquet/version=0/language_distribution_read_aloud.tsv
-#   python scripts/hpc/make_subset_tsv.py --subset conversation \
-#       --output data/parquet/version=0/language_distribution_conversation.tsv
-# Then resubmit with CONFIG overridden to ctc-eval-e2-read-aloud.yaml or
-# ctc-eval-e2-conversation.yaml.
+# For per-subset evaluation, resubmit with EVAL_CONFIG overridden to
+# `configs/fairseq2/300m/ctc-eval-e2-read-aloud.yaml` or
+# `configs/fairseq2/300m/ctc-eval-e2-conversation.yaml`.
+# Those configs use `valid_split: "<split>_<corpus>"`, so no subset TSV is needed.
 #
 # Usage:
 #   bsub < scripts/hpc/11_eval_e2.sh
