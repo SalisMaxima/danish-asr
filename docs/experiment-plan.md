@@ -272,32 +272,28 @@ python scripts/upload_checkpoints.py
 
 W&B artifacts: `omniASR-CTC-300M-v2-e6-50k:v0`, `omniASR-CTC-1B-v2-e6-50k:v0`
 
-### 8B — Comprehensive evaluation matrix
+### 8B — Comprehensive evaluation matrix ✓ DONE (2026-04-09)
 
-Evaluate all 4 models on the held-out test split (combined, read_aloud, conversation):
+Evaluated all 4 models × 3 splits = 12 eval runs. Jobs: 28164239–28164241 (300M base, 300M E6, 1B base), 28164242 failed (missing `family`/`arch` in 1B configs — fixed in branch `fix/1b-eval-missing-family-arch`), rerun succeeded.
 
-| # | Model | Type | Checkpoint | Status |
-|---|-------|------|-----------|--------|
-| 1 | omniASR_CTC_300M_v2 | **base (zero-shot)** | (no model.path — use pretrained) | 🔄 running (job 28164239) |
-| 2 | omniASR_CTC_1B_v2 | **base (zero-shot)** | (no model.path — use pretrained) | 🔄 running (job 28164241) |
-| 3 | omniASR_CTC_300M_v2 | **finetuned (E6, 50k)** | `/work3/.../omniasr_e6/.../step_50000/model` | 🔄 running (job 28164240) |
-| 4 | omniASR_CTC_1B_v2 | **finetuned (E6-1B, 50k)** | `/work3/.../omniasr_e6_1b/.../step_50000/model` | 🔄 running (job 28164242) |
+**Known issues discovered:**
+- `run_eval.py` originally missed wrapped WER/CER lines: fairseq2 can split `Word Error Rate` / `Character Error Rate` labels from the following `(WER): X` / `(CER): X` lines. Phase 8B WER values were extracted manually from Python logs; parser handling was fixed afterward in this PR.
+- Per-subset eval (read\_aloud / conversation) did not work: `dataset_summary_path` TSV controls training data mixing, not eval data filtering. All 3 split configs evaluated on the identical full combined test set. **Only combined WERs are valid.**
 
-Each model evaluated on 3 splits: combined test, read_aloud/test, conversation/test.
-That's **12 eval runs total** (4 models × 3 splits).
+**Phase 8B Results — Combined Test Split (2026-04-09):**
 
-**Expected result format:**
+| Model | Type | Test WER | Test UER | Val WER (dev) |
+|-------|------|----------|----------|---------------|
+| omniASR_CTC_300M_v2 | base (zero-shot) | **68.18%** | 28.67% | — |
+| omniASR_CTC_300M_v2 | finetuned E6 50k | **30.73%** | 11.54% | 32.74% |
+| omniASR_CTC_1B_v2 | base (zero-shot) | **55.39%** | 22.90% | — |
+| omniASR_CTC_1B_v2 | finetuned E6 50k | **23.43%** | 8.78% | 25.20% |
 
-| Model | Combined WER | Combined CER | Read-aloud WER | Read-aloud CER | Conversation WER | Conversation CER |
-|-------|-------------|-------------|---------------|----------------|-----------------|-----------------|
-| 300M base | — | — | — | — | — | — |
-| 1B base | — | — | — | — | — | — |
-| 300M finetuned | — | — | — | — | — | — |
-| 1B finetuned | — | — | — | — | — | — |
-| *whisper-large-v3 ZS* | *—* | *10.1%* | *—* | *—* | *—* | *27.5%* |
-| *roest-wav2vec2-315m-v3* | *—* | *5.9%* | *—* | *—* | *—* | *13.7%* |
-
-**Configs needed:** 12 eval YAML files (4 models × 3 splits) + corresponding BSUB scripts.
+Key findings:
+- Finetuning gain: 300M 68.18% → 30.73% (−37.5pp), 1B 55.39% → 23.43% (−31.96pp)
+- Scale gain: finetuned 300M 30.73% → finetuned 1B 23.43% (−7.3pp)
+- Val→test generalisation is good (300M: −2.0pp, 1B: −1.8pp on test vs dev)
+- Per-subset breakdown requires a different eval mechanism (subset TSVs don't filter eval data)
 
 ---
 

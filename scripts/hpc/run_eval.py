@@ -72,7 +72,9 @@ class _MetricParser:
         self._step: int | None = None
         self._context: str | None = None
         self._metrics: dict[str, float] = {}
+        self._eval_metrics: dict[str, float] = {}
         self._loss_on_next_line = False
+        self._in_eval_block = False
 
     def parse_line(self, line: str) -> tuple[dict[str, float], int | None]:
         inline_metrics, inline_step = self._parse_legacy_metrics_line(line)
@@ -80,7 +82,28 @@ class _MetricParser:
             return inline_metrics, inline_step
 
         if _EVAL_HEADER_PATTERN.search(line):
-            return self._parse_inline_metrics(line, "eval"), None
+            # fairseq2 wraps the Evaluation Metrics block across multiple lines.
+            # Parse whatever is on this line and keep parsing continuations until
+            # an empty line or a new log entry is seen.
+            self._in_eval_block = True
+            metrics = self._parse_inline_metrics(line, "eval")
+            self._eval_metrics.update(metrics)
+            if metrics:
+                return metrics, None
+            return {}, None
+
+        if self._in_eval_block:
+            # Continuation line of the eval metrics block — may contain (WER), (CER), etc.
+            # Stop the block on blank lines or lines that look like new log entries.
+            if not line.strip() or re.match(r"\d{4}-\d{2}-\d{2}", line.lstrip()):
+                self._in_eval_block = False
+                self._eval_metrics = {}
+            else:
+                metrics = self._parse_inline_metrics(line, "eval")
+                self._eval_metrics.update(metrics)
+                if metrics:
+                    return metrics, None
+            return {}, None
 
         header = _HEADER_PATTERN.search(line)
         if header:
