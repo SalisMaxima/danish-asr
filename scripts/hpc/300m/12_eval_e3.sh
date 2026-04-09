@@ -15,16 +15,13 @@
 # Evaluate the E3 checkpoint (wobbly-pond-25, 30k steps, lr=5e-5) on the
 # held-out CoRal-v3 TEST split (read_aloud + conversation combined).
 #
-# For per-subset evaluation, first generate subset TSVs on HPC:
-#   python scripts/hpc/make_subset_tsv.py --subset read_aloud \
-#       --output data/parquet/version=0/language_distribution_read_aloud.tsv
-#   python scripts/hpc/make_subset_tsv.py --subset conversation \
-#       --output data/parquet/version=0/language_distribution_conversation.tsv
-# Then resubmit with CONFIG overridden to ctc-eval-e3-read-aloud.yaml or
-# ctc-eval-e3-conversation.yaml.
+# For per-subset evaluation, resubmit with EVAL_CONFIG overridden to
+# `configs/fairseq2/300m/ctc-eval-e3-read-aloud.yaml` or
+# `configs/fairseq2/300m/ctc-eval-e3-conversation.yaml`.
+# Those configs use `valid_split: "<split>_<corpus>"`, so no subset TSV is needed.
 #
 # Usage:
-#   bsub < scripts/hpc/12_eval_e3.sh
+#   bsub < scripts/hpc/300m/12_eval_e3.sh
 
 set -euo pipefail
 

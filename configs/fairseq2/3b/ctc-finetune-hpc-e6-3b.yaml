@@ -54,6 +54,7 @@ regime:
   validate_after_n_steps: 500
   validate_every_n_steps: 1000
   checkpoint_every_n_steps: 1000
-  keep_last_n_checkpoints: 2
+  save_model_only: "all_but_last"
+  keep_last_n_checkpoints: 1
   keep_best_n_checkpoints: 1
   publish_metrics_every_n_steps: 100

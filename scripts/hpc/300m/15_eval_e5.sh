@@ -15,11 +15,12 @@
 # Evaluate the E5 checkpoint (rose-dream-26, 40k steps, lr=3e-5, freeze 2k) on the
 # held-out CoRal-v3 TEST split (read_aloud + conversation combined).
 #
-# Per-subset evaluation (read_aloud / conversation) is not yet configured for E5.
-# See scripts/hpc/11_eval_e2.sh for the pattern when needed.
+# Per-subset evaluation now uses corpus-filtered configs via
+# `valid_split: "<split>_<corpus>"`; see `scripts/hpc/300m/11_eval_e2.sh`
+# for the override pattern if E5 subset configs are added later.
 #
 # Usage:
-#   bsub < scripts/hpc/15_eval_e5.sh
+#   bsub < scripts/hpc/300m/15_eval_e5.sh
 
 set -euo pipefail
 
