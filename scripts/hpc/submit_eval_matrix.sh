@@ -1,9 +1,7 @@
 #!/bin/bash
 # Phase 8B: Submit all 12 evaluation runs (4 models x 3 splits).
 #
-# PREREQUISITE: Subset TSVs must exist. Run from project root on HPC:
-#   python scripts/hpc/make_subset_tsv.py --subset read_aloud
-#   python scripts/hpc/make_subset_tsv.py --subset conversation
+# No prerequisites — subset filtering uses fairseq2's "<split>_<corpus>" valid_split format.
 #
 # Usage:
 #   ./scripts/hpc/submit_eval_matrix.sh
@@ -15,16 +13,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
 DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
-
-# Verify subset TSVs exist
-for subset in read_aloud conversation; do
-    TSV="$PROJECT_DIR/data/parquet/version=0/language_distribution_${subset}.tsv"
-    if [ ! -f "$TSV" ]; then
-        echo "ERROR: Missing subset TSV: $TSV" >&2
-        echo "Run: python scripts/hpc/make_subset_tsv.py --subset $subset" >&2
-        exit 1
-    fi
-done
 
 mkdir -p "/work3/$USER/logs/lsf"
 
