@@ -72,6 +72,7 @@ class _MetricParser:
         self._step: int | None = None
         self._context: str | None = None
         self._metrics: dict[str, float] = {}
+        self._eval_metrics: dict[str, float] = {}
         self._loss_on_next_line = False
         self._in_eval_block = False
 
@@ -86,6 +87,7 @@ class _MetricParser:
             # an empty line or a new log entry is seen.
             self._in_eval_block = True
             metrics = self._parse_inline_metrics(line, "eval")
+            self._eval_metrics.update(metrics)
             if metrics:
                 return metrics, None
             return {}, None
@@ -95,10 +97,11 @@ class _MetricParser:
             # Stop the block on blank lines or lines that look like new log entries.
             if not line.strip() or re.match(r"\d{4}-\d{2}-\d{2}", line.lstrip()):
                 self._in_eval_block = False
+                self._eval_metrics = {}
             else:
                 metrics = self._parse_inline_metrics(line, "eval")
+                self._eval_metrics.update(metrics)
                 if metrics:
-                    self._in_eval_block = False
                     return metrics, None
             return {}, None
 

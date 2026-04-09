@@ -49,6 +49,34 @@ def test_metric_parser_extracts_inline_evaluation_metrics() -> None:
     assert metrics == {"eval/loss": 42.7155, "eval/wer": 30.1429}
 
 
+def test_metric_parser_extracts_wrapped_evaluation_metrics() -> None:
+    parser = _MetricParser()
+
+    metrics, step = parser.parse_line("Evaluation Metrics - CTC")
+    assert metrics == {}
+    assert step is None
+
+    metrics, step = parser.parse_line("Word Error Rate")
+    assert metrics == {}
+    assert step is None
+
+    metrics, step = parser.parse_line("(WER): 30.1429 | Data Time: 1s |")
+    assert metrics == {"eval/wer": 30.1429}
+    assert step is None
+
+    metrics, step = parser.parse_line("Character Error Rate")
+    assert metrics == {}
+    assert step is None
+
+    metrics, step = parser.parse_line("(CER): 12.3456 | Compute Time: 68s")
+    assert metrics == {"eval/cer": 12.3456}
+    assert step is None
+
+    metrics, step = parser.parse_line("")
+    assert step is None
+    assert metrics == {}
+
+
 def test_select_eval_workspace_reuses_empty_base_dir(tmp_path: Path) -> None:
     workspace = _select_eval_workspace(tmp_path / "eval")
     assert workspace == tmp_path / "eval"

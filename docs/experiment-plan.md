@@ -277,7 +277,7 @@ W&B artifacts: `omniASR-CTC-300M-v2-e6-50k:v0`, `omniASR-CTC-1B-v2-e6-50k:v0`
 Evaluated all 4 models × 3 splits = 12 eval runs. Jobs: 28164239–28164241 (300M base, 300M E6, 1B base), 28164242 failed (missing `family`/`arch` in 1B configs — fixed in branch `fix/1b-eval-missing-family-arch`), rerun succeeded.
 
 **Known issues discovered:**
-- `run_eval.py` metric parser missed WER: fairseq2 wraps `Word Error Rate` and `(WER): X` across two lines — parser only checked the header line. WER values extracted manually from Python logs. Bug tracked for fix.
+- `run_eval.py` originally missed wrapped WER/CER lines: fairseq2 can split `Word Error Rate` / `Character Error Rate` labels from the following `(WER): X` / `(CER): X` lines. Phase 8B WER values were extracted manually from Python logs; parser handling was fixed afterward in this PR.
 - Per-subset eval (read\_aloud / conversation) did not work: `dataset_summary_path` TSV controls training data mixing, not eval data filtering. All 3 split configs evaluated on the identical full combined test set. **Only combined WERs are valid.**
 
 **Phase 8B Results — Combined Test Split (2026-04-09):**
