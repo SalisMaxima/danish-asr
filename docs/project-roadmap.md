@@ -76,12 +76,12 @@ See [data-preparation.md](data-preparation.md) for full details.
 
 ## Scratch Space Management (MANDATORY for every training run)
 
-> **Gotcha:** `/work3` NVME pool (storagepool 6) has a **200 GB hard quota**. When hit, jobs exit
+> **Gotcha:** `/work3` NVME pool (storagepool 6) has a **350 GB hard quota**. When hit, jobs exit
 > silently with code 120 and leave no traceback. This has caused multiple lost training runs.
 
 **Before every job submission:**
 ```bash
-getquota_work3.sh          # storagepool 6 must be under 200 GB
+getquota_work3.sh          # storagepool 6 must be under 350 GB
 rm -rf /work3/$USER/outputs/<old_run>/   # remove runs you no longer need
 ```
 
@@ -99,7 +99,7 @@ regime:
 - Checkpoints: ~12 GB (3 × 4 GB max)
 - W&B cache: ~0 GB (no artifact uploads in `run_training.py`)
 - Caches/logs: ~2 GB
-- **Total: ~85 GB — well under the 200 GB limit**
+- **Total: ~85 GB — well under the 350 GB limit**
 
 ---
 

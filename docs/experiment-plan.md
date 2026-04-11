@@ -37,7 +37,7 @@ observed at step ~10k with val/WER ~47–49% and curves still clearly descending
 
 ## Pre-flight Checklist (run before every experiment)
 
-1. **Check scratch quota:** `getquota_work3.sh` — storagepool 6 must be under 200 GB hard limit
+1. **Check scratch quota:** `getquota_work3.sh` — storagepool 6 must be under 350 GB hard limit
 2. **Clean old outputs:** `rm -rf /work3/$USER/outputs/<old_run>/` (W&B cache no longer accumulates — checkpoint artifact uploads are disabled in `run_training.py`)
 3. **Verify config has checkpoint pruning:**
    ```yaml
@@ -45,11 +45,11 @@ observed at step ~10k with val/WER ~47–49% and curves still clearly descending
      keep_last_n_checkpoints: 2
      keep_best_n_checkpoints: 1
    ```
-   Without this, 30k steps × ~4 GB/checkpoint = 120 GB, which reliably hits the 200 GB quota and kills the job silently with exit code 120.
+   Without this, 30k steps × ~4 GB/checkpoint = 120 GB, which can hit the 350 GB quota and kills the job silently with exit code 120.
 
-**Current quota status (2026-04-03):** 87.35 / 200 GB used on storagepool 6 → 112 GB free.
+**Current quota status (2026-04-11):** quota upgraded to 350 GB (was 200 GB). Prior usage was ~87 GB.
 With pruning enabled, each 30k run uses ~7.4 GB (measured from E2). E3 + E5 + eval ≈ 25 GB total,
-leaving ~87 GB headroom. Safe to queue all three simultaneously.
+leaving ~238 GB headroom. Safe to queue all three simultaneously.
 
 ---
 

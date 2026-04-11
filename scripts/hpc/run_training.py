@@ -561,8 +561,8 @@ def main() -> None:
             if return_code == 120:
                 logger.error(
                     "Exit code 120: most likely /work3 NVME quota exhausted (storagepool 6, "
-                    "200 GB hard limit). Run getquota_work3.sh — if storagepool 6 is at or "
-                    "near 200 GB, that is the cause. Clean old checkpoint dirs and wandb/cache/. "
+                    "350 GB hard limit). Run getquota_work3.sh — if storagepool 6 is at or "
+                    "near 350 GB, that is the cause. Clean old checkpoint dirs and wandb/cache/. "
                     "If quota is fine, this is a CPython pipe-flush error at shutdown — "
                     "the real error should appear in the log above."
                 )
@@ -571,7 +571,7 @@ def main() -> None:
 
         # List checkpoints. Artifact uploads are disabled in this wrapper — wandb.log_artifact()
         # caches a full copy of every .pt file in WANDB_CACHE_DIR before uploading (4 GB/ckpt),
-        # which reliably exhausts the 200 GB /work3 NVME quota. Checkpoints stay on HPC scratch.
+        # which would consume large amounts of the 350 GB /work3 NVME quota. Checkpoints stay on HPC scratch.
         def _ckpt_step(p: Path) -> int:
             """Extract step number from checkpoint path (parent dir is step_N) for numeric sorting."""
             m = re.search(r"step_(\d+)", str(p))
