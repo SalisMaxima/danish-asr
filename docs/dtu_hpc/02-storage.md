@@ -36,9 +36,9 @@ Request a temporary increase: email support@cc.dtu.dk. Only granted for limited 
 
 ---
 
-## GOTCHA: /work3 NVME pool has a 200 GB hard quota
+## GOTCHA: /work3 NVME pool has a 350 GB hard quota
 
-`/work3` spans multiple storage pools. The **NVME pool (pool 6)** has a **200 GB hard limit**.
+`/work3` spans multiple storage pools. The **NVME pool (pool 6)** has a **350 GB hard limit**.
 When this is hit, all `write()` calls fail silently — training jobs exit with code 120 and leave
 no traceback, making the root cause invisible.
 
