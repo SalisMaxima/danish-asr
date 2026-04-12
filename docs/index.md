@@ -7,7 +7,7 @@ Fine-tuning Meta's Omnilingual ASR (`omniASR_CTC_300M_v2`) for Danish using CoRa
 | Document | Description |
 |---|---|
 | [Project Roadmap](project-roadmap.md) | End-to-end plan with phases, timelines, and resource budget |
-| [Evaluation Results](evaluation-results.md) | Central table of current 300M and 1B test results, with 3B eval pending |
+| [Evaluation Results](evaluation-results.md) | Central table of current 300M, 1B, and 3B test results |
 | [Omnilingual ASR Overview](omnilingual-asr-overview.md) | Model architecture, variants, installation, and inference |
 | [CoRal Dataset](coral-dataset.md) | Dataset splits, fields, demographics, and loading |
 | [Data Preparation](data-preparation.md) | Converting CoRal-v3 to the required Parquet format |
