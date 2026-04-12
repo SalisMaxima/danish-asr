@@ -31,7 +31,7 @@ dependencies = [
     # ASR-specific
     "torchaudio>=2.7.0",
     "transformers>=4.40.0",
-    "datasets==4.8.3",
+    "datasets==4.8.4",
     "soundfile>=0.12.0",
     "peft>=0.10.0",
     "jiwer>=3.0.0",
