@@ -5,6 +5,7 @@ theme:
   name: material
 nav:
   - Home: index.md
+  - Evaluation Results: evaluation-results.md
   - Project Roadmap: project-roadmap.md
   - Omnilingual ASR: omnilingual-asr-overview.md
   - Data Preparation: data-preparation.md
