@@ -19,10 +19,6 @@
 #
 # Usage:
 #   bsub < scripts/hpc/3b/20_eval_e6_3b.sh
-#
-# Single-config override:
-#   EVAL_CONFIG=configs/fairseq2/3b/ctc-eval-e6-3b.yaml \
-#       bsub < scripts/hpc/3b/20_eval_e6_3b.sh
 
 set -euo pipefail
 
@@ -36,7 +32,7 @@ if ! mkdir -p "$EVAL_OUT_DIR" 2>/dev/null; then
     exit 1
 fi
 
-CONFIG="${EVAL_CONFIG:-configs/fairseq2/3b/ctc-eval-e6-3b.yaml}"
+CONFIG="configs/fairseq2/3b/ctc-eval-e6-3b.yaml"
 TAGS="e6-3b,3b,30k,lr5e-5,shuffle1000,test,combined"
 
 echo "=== Phase 10C: 3B Finetuned E6-3B Evaluation ==="
