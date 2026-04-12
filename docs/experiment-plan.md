@@ -20,6 +20,7 @@ observed at step ~10k with val/WER ~47–49% and curves still clearly descending
 | bumbling-dawn (E6) | 50k | 5e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | **1000** | **32.7%** | completed ✓ |
 | true-firefly (E7) | 53.9k | 5e-5 | tri_stage (10% warmup → cosine) | 4 | 0 | 1 | **32.6%** | crashed @ 53900 |
 | **doctor-voyager (E6-1B)** | **50k** | **5e-5** | **tri_stage (10% warmup → cosine)** | **8** | **0** | **1000** | **25.2%** | **completed ✓** |
+| **usual-totem (E6-3B)** | **30k** | **5e-5** | **tri_stage (10% warmup → cosine)** | **16** | **0** | **1000** | **24.8%** | **completed ✓** |
 
 **E2 result (2026-04-02):** val/WER 38.6%, UER 15.2% at step 30k. No divergence — lr=3e-5 is safe.
 
@@ -32,6 +33,8 @@ observed at step ~10k with val/WER ~47–49% and curves still clearly descending
 **E7 result (2026-04-04):** val/WER **32.6%**, UER 12.9% at step 53900 (crashed). E7 resumed E3 (no shuffle fix) and matched E6 — suggesting more steps compensate partly for no shuffle, but the shuffle fix is cleaner. Best checkpoint at step ~53000 in `/work3/s204696/outputs/omniasr_e3/`.
 
 **E6-1B result (2026-04-08):** val/WER **25.2%**, UER 9.97% at step 50k. **7.5pp improvement over 300M E6** (32.7% → 25.2%). Same hyperparameters as 300M E6 (lr=5e-5, shuffle1000, 50k steps), but with `omniASR_CTC_1B_v2` model, `max_num_elements=1.92M` (vs 2.56M for 300M), and `grad_accum=8` (vs 4). Runtime: 38.2h on A100-40GB. Peak reserved device memory: 96%. Best WER 25.21% at step 49k (plateau — only 0.07pp oscillation to final step). Config: `configs/fairseq2/1b/ctc-finetune-hpc-e6-1b.yaml`. Checkpoint: `/work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model`. W&B: doctor-voyager-51.
+
+**E6-3B result (2026-04-12):** val/WER **24.782%**, UER **9.654%** at step **29k**; final step 30k was effectively unchanged at WER **24.789%**, UER **9.691%**. This is a **0.42pp dev WER improvement over 1B E6** (25.20% → 24.78%), but at substantially higher cost: **59.1h** on A100-80GB versus 38.2h for 1B. The 3B run therefore clears the "slightly better than 1B" bar, but **not yet** the predeclared ">1pp improvement to justify the overhead" bar. Batch shape came from the successful tiny 3B probe: `max_num_elements=960k`, `grad_accum=16`, shuffle windows 1000. Config: `configs/fairseq2/3b/ctc-finetune-hpc-e6-3b.yaml`. Output dir: `/work3/s204696/outputs/omniasr_e6_3b`. Latest checkpoint logged to W&B: `/work3/s204696/outputs/omniasr_e6_3b/ws_1.2172dba0/checkpoints/step_30000/model/pp_00/tp_00/sdp_00.pt`. W&B: usual-totem-74.
 
 ---
 
@@ -348,26 +351,31 @@ regime:
 
 ---
 
-## Phase 10: 3B Model Training
+## Phase 10: 3B Model Scaling
 
 **Prerequisites:**
-1. Phase 8 evals completed (need baseline numbers)
-2. 3B VRAM probe run successfully on A100-80GB
-3. `/work3` quota has headroom (~50 GB needed for 3B checkpoints)
+1. Phase 8 evals completed (done)
+2. 3B VRAM probe run successfully on A100-80GB (done)
+3. `/work3` quota has headroom for the 3B workspace (done for the 30k run)
 
-### 10A — 3B VRAM probe
+### 10A — 3B VRAM probe ✓ DONE
 
-The 3B probe configs exist but were **never run** (no W&B runs with tag "3b"):
-- `configs/fairseq2/3b/vram-probe-3b.yaml` — conservative: `max_num_elements=1.92M`, `grad_accum=8`
-- `configs/fairseq2/3b/vram-probe-3b-tiny.yaml` — fallback: `max_num_elements=960k`, `grad_accum=16`
-- Script: `scripts/hpc/3b/06d_vram_probe_3b.sh` (needs `select[gpu80gb]` — A100-80GB nodes)
+The conservative 3B batch shape was too ambitious, but the tiny 80GB-node probe shape was viable and became the training recipe:
+- `max_num_elements=960k`
+- `grad_accum=16`
+- queue constraint: `select[gpu80gb]`
 
-Submit with: `bsub < scripts/hpc/3b/06d_vram_probe_3b.sh`
-If OOM → fall back to: `bsub < scripts/hpc/3b/06e_vram_probe_3b_tiny.sh`
+Relevant files:
+- `configs/fairseq2/3b/vram-probe-3b.yaml`
+- `configs/fairseq2/3b/vram-probe-3b-tiny.yaml`
+- `scripts/hpc/3b/06d_vram_probe_3b.sh`
+- `scripts/hpc/3b/06e_vram_probe_3b_tiny.sh`
 
-### 10B — 3B full training (E6-3B)
+### 10B — 3B full training (E6-3B) ✓ DONE (usual-totem-74, 2026-04-12)
 
-Use the batch shape from the successful probe run. Expected config:
+**Result:** val/WER **24.782%** and UER **9.654%** at step **29k**; final step 30k ended at WER **24.789%** / UER **9.691%**. Runtime **59.1h** on A100-80GB. Compared with 1B E6 (25.20%), 3B gains only **0.42pp** on dev despite requiring an 80GB node and ~1.55× more wall-clock time. That makes this a real but modest gain, and it looks close to plateau by 30k.
+
+Config used:
 
 ```yaml
 model:
@@ -375,29 +383,41 @@ model:
 
 optimizer:
   config:
-    lr: 5e-5              # same as E6 — or lower if 3B is less stable
+    lr: 5e-5
 
 dataset:
   asr_task_config:
-    max_num_elements: TBD  # from probe result
+    max_num_elements: 960_000
     batch_shuffle_window: 1000
     example_shuffle_window: 1000
 
 trainer:
   grad_accumulation:
-    num_batches: TBD       # from probe result
+    num_batches: 16
   mixed_precision:
     dtype: "torch.bfloat16"
 
 regime:
-  num_steps: 50_000
-  # Queue: gpua100 with select[gpu80gb]
-  # Expected runtime: ~60-80h (2.5-3 days walltime → need -W 80:00 or two 40h submissions with resume)
+  num_steps: 30_000
 ```
 
-**Risk:** A100-80GB nodes are scarce on `gpua100`. Job may sit in PEND for days. Walltime max is 24h — will likely need multiple resume submissions.
+Files:
+- Config: `configs/fairseq2/3b/ctc-finetune-hpc-e6-3b.yaml`
+- Training script: `scripts/hpc/3b/14_train_e6_3b.sh`
+- Output dir: `/work3/s204696/outputs/omniasr_e6_3b`
+- Workspace with latest checkpoint: `/work3/s204696/outputs/omniasr_e6_3b/ws_1.2172dba0`
 
-**Stopping criterion:** If 3B WER ≤ 1B WER + 1%, the 3B overhead isn't justified. Report 1B as best.
+### 10C — Immediate next step: evaluate 3B on test, then decide on 50k resume
+
+**Decision gate:** Do **not** automatically spend another ~40h on 3B just because 30k finished. First run the finetuned 3B eval on the combined test split and compare it directly against the 1B finetuned result (**23.43% test WER**).
+
+What to do next:
+- Add or adapt a 3B eval config/script mirroring the 1B E6 eval flow, then run the combined test eval for the finished 30k 3B checkpoint/workspace.
+- If 3B test WER beats 1B by **>1pp**, resume to 50k using `configs/fairseq2/3b/ctc-finetune-hpc-e6-3b-50k.yaml` and `scripts/hpc/3b/15_train_e6_3b_50k_resume.sh`.
+- If 3B test WER is within **~1pp** of 1B, treat 1B as the best cost/performance model and skip the 50k 3B continuation.
+- If resumed to 50k, stop early unless dev WER improves by at least **0.5pp** over the first 10k extra steps.
+
+**Reasoning:** the current 3B dev gain over 1B is only **0.42pp**, and the curve is already nearly flat from 29k → 30k. That is encouraging, but not enough by itself to justify the extra GPU cost without a test-set win.
 
 ---
 
@@ -418,22 +438,26 @@ Key finding: shuffle_window=1000 (E6) = biggest single improvement (3pp over E3)
     — 7.5pp better than 300M E6. 38.2h on A100-40GB (96% VRAM).
     — Best WER 25.21% at step 49k, slight rise to 25.28% at 50k → near plateau.
 
-Next: comprehensive eval (base + finetuned, 300M + 1B), then LR extension, then 3B.
+3B scaling (E6-3B):
+    E6-3B (usual-totem-74) 30k lr=5e-5 shuffle1000 (WER 24.782%) ✓
+    — 0.42pp better than 1B E6 on dev, but 59.1h on A100-80GB.
+    — Best WER at step 29k; step 30k is flat (24.789%) → likely near plateau.
+
+Next: evaluate finetuned 3B on the combined test split, then only resume 3B to 50k if it beats 1B by a meaningful margin.
 ```
 
 ---
 
 ## Evaluation Protocol
 
-Each experiment run should be evaluated on **both subsets separately** to avoid the
-read-aloud/conversation mix masking per-subset progress:
+**Current working protocol:** evaluate on the **combined test split** and report both CER and WER.
 
-```bash
-invoke train.omniasr-eval --split read_aloud/test
-invoke train.omniasr-eval --split conversation/test
-```
+**Important:** the existing read-aloud / conversation split configs are currently misleading for fairseq2 evals. As discovered in Phase 8B, `dataset_summary_path` affects training-data mixing, not eval-set filtering, so the prior per-subset configs all ran on the same full test set.
 
-Report both CER (primary metric for CoRal-v3 comparisons) and WER.
+Until eval filtering is fixed, do this:
+- Run the combined test eval for each checkpoint/workspace.
+- Compare models on combined test WER/CER first.
+- Treat per-subset breakdown as a follow-up task requiring a different eval mechanism.
 
 ---
 
@@ -466,7 +490,8 @@ Actual timing from E2: **5h for 30k steps** on A100. Disk: **7.4 GB per 30k run*
 | E6 (bumbling-dawn) | 300M | 50k | 7.72h | ~12 GB | ✓ done |
 | E7 (true-firefly) | 300M | 53.9k | ~10h (crashed) | ~13 GB | crashed |
 | **E6-1B (doctor-voyager)** | **1B** | **50k** | **38.2h** | **~25 GB** | **✓ done** |
-| Phase 8 evals (×12) | mixed | — | <1h each | negligible | pending |
+| Phase 8 evals (×12) | mixed | — | <1h each | negligible | ✓ done |
 | Phase 9 extensions (×2) | 300M+1B | +20k each | ~5h + ~15h | ~10 GB each | planned |
-| Phase 10 3B probe | 3B | 500 | ~1h | ~5 GB | planned |
-| Phase 10 3B full | 3B | 50k | ~60-80h (est.) | ~50 GB | planned |
+| Phase 10 3B probe | 3B | small probe | ~1h | ~5 GB | ✓ done |
+| **E6-3B (usual-totem)** | **3B** | **30k** | **59.1h** | **TBD / check quota logs** | **✓ done** |
+| Phase 10C 3B resume | 3B | +20k | ~40h | incremental | conditional |
