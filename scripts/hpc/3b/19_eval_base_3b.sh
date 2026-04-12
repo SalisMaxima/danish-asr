@@ -1,5 +1,5 @@
 #!/bin/bash
-#BSUB -J danish_asr_eval_e6_3b
+#BSUB -J danish_asr_eval_base_3b
 #BSUB -q gpua100
 #BSUB -n 4
 #BSUB -R "rusage[mem=16GB]"
@@ -10,36 +10,36 @@
 #BSUB -B
 #BSUB -N
 #BSUB -u s204696@dtu.dk
-#BSUB -o /work3/s204696/logs/lsf/eval_e6_3b_%J.out
-#BSUB -e /work3/s204696/logs/lsf/eval_e6_3b_%J.err
+#BSUB -o /work3/s204696/logs/lsf/eval_base_3b_%J.out
+#BSUB -e /work3/s204696/logs/lsf/eval_base_3b_%J.err
 #
-# Evaluate finetuned omniASR_CTC_3B_v2 (E6-3B, 30k steps) on 3 test splits.
-# Subset filtering uses fairseq2's built-in "<split>_<corpus>" valid_split format,
-# matching the proven 300M / 1B eval flow.
+# Zero-shot evaluation of pretrained omniASR_CTC_3B_v2 on 3 test splits.
+# No checkpoint needed — model loaded from fairseq2 asset registry.
+# Walltime 4:00 covers 3 sequential splits on A100-80GB.
 #
 # Usage:
-#   bsub < scripts/hpc/3b/20_eval_e6_3b.sh
+#   bsub < scripts/hpc/3b/19_eval_base_3b.sh
 #
 # Single-split override:
-#   EVAL_CONFIG=configs/fairseq2/3b/ctc-eval-e6-3b-read-aloud.yaml \
-#       bsub < scripts/hpc/3b/20_eval_e6_3b.sh
+#   EVAL_CONFIG=configs/fairseq2/3b/ctc-eval-base-3b-read-aloud.yaml \
+#       bsub < scripts/hpc/3b/19_eval_base_3b.sh
 
 set -euo pipefail
 
 source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 setup_omniasr
 
-EVAL_OUT_DIR="${EVAL_OUT_DIR:-/work3/$USER/outputs/omniasr_e6_3b_eval}"
+EVAL_OUT_DIR="${EVAL_OUT_DIR:-/work3/$USER/outputs/omniasr_base_3b_eval}"
 if ! mkdir -p "$EVAL_OUT_DIR" 2>/dev/null; then
     echo "ERROR: Cannot create eval workspace: $EVAL_OUT_DIR" >&2
     echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
     exit 1
 fi
 
-echo "=== Phase 10C: 3B Finetuned E6-3B Evaluation ==="
-echo "Eval workspace:     $EVAL_OUT_DIR"
-echo "Started:            $(date)"
-echo "Node:               $(hostname)"
+echo "=== Phase 10C: 3B Base (Zero-Shot) Evaluation ==="
+echo "Eval workspace: $EVAL_OUT_DIR"
+echo "Started:        $(date)"
+echo "Node:           $(hostname)"
 nvidia-smi
 
 had_failures=0
@@ -53,14 +53,14 @@ split_tag() {
 }
 
 CONFIGS=(
-    "configs/fairseq2/3b/ctc-eval-e6-3b.yaml"
-    "configs/fairseq2/3b/ctc-eval-e6-3b-read-aloud.yaml"
-    "configs/fairseq2/3b/ctc-eval-e6-3b-conversation.yaml"
+    "configs/fairseq2/3b/ctc-eval-base-3b.yaml"
+    "configs/fairseq2/3b/ctc-eval-base-3b-read-aloud.yaml"
+    "configs/fairseq2/3b/ctc-eval-base-3b-conversation.yaml"
 )
 
 for i in "${!CONFIGS[@]}"; do
     CONFIG="${EVAL_CONFIG:-${CONFIGS[$i]}}"
-    TAGS="e6-3b,3b,30k,lr5e-5,shuffle1000,test,$(split_tag "$CONFIG")"
+    TAGS="base,3b,zero-shot,test,$(split_tag "$CONFIG")"
     echo ""
     echo "--- Split $((i+1))/3: $CONFIG ---"
 
