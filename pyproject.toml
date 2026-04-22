@@ -48,7 +48,7 @@ omni = [
 ]
 dev = [
     "coverage>=7.13.5",
-    "invoke>=2.2.0",
+    "invoke>=3.0.3",
     "zensical>=0.0.32,<0.1.0",
     "pre-commit>=4.0.0",
     "pytest>=9.0.3",
