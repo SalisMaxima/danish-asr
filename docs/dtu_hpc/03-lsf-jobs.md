@@ -102,19 +102,23 @@ Default when omitted: `1024MB` per core.
 
 ## Queues and limits
 
-### GPU queues (all have 24h max walltime)
+### GPU queues
 
-| Queue | GPU | Nodes | GPUs/node | VRAM |
-|-------|-----|-------|-----------|------|
-| `gpua100` | A100 PCIe | 4 | 2 | 40 GB |
-| `gpua100` | A100 PCIe | 6 | 2 | 80 GB |
-| `gpul40s` | L40s PCIe | 6 | 2 | 48 GB |
-| `gpuv100` | V100 PCIe | 6 | 2 | 16 GB |
-| `gpuv100` | V100 PCIe | 8 | 2 | 32 GB |
-| `gpuv100` | V100 NVLink SXM2 | 3 | 4 | 32 GB |
-| `gpua10` | A10 PCIe | 1 | 2 | 24 GB |
-| `gpua40` | A40 NVLink | 1 | 2 | 48 GB |
-| `gpuamd` | AMD Radeon Instinct MI50 | 1 | 2 | 16 GB |
+Default walltime is still 15 minutes if `-W` is omitted. The `gpua100` queue
+allows up to 72 hours; keep other GPU queues at 24 hours unless you verify a
+different limit directly with `bqueues -l <queue>`.
+
+| Queue | GPU | Nodes | GPUs/node | VRAM | Max walltime |
+|-------|-----|-------|-----------|------|--------------|
+| `gpua100` | A100 PCIe | 4 | 2 | 40 GB | 72h |
+| `gpua100` | A100 PCIe | 6 | 2 | 80 GB | 72h |
+| `gpul40s` | L40s PCIe | 6 | 2 | 48 GB | 24h |
+| `gpuv100` | V100 PCIe | 6 | 2 | 16 GB | 24h |
+| `gpuv100` | V100 PCIe | 8 | 2 | 32 GB | 24h |
+| `gpuv100` | V100 NVLink SXM2 | 3 | 4 | 32 GB | 24h |
+| `gpua10` | A10 PCIe | 1 | 2 | 24 GB | 24h |
+| `gpua40` | A40 NVLink | 1 | 2 | 48 GB | 24h |
+| `gpuamd` | AMD Radeon Instinct MI50 | 1 | 2 | 16 GB | 24h |
 
 Retired (do not use): `gputitanxpascal`, `gpuk80`, `gpuk40`
 

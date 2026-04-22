@@ -101,16 +101,18 @@ Account expiry = immediate data loss. `/work3` is not backed up. Export importan
 
 ## GPU Queues
 
-All GPU queues: 24h max walltime. Default walltime if omitted: **15 minutes**.
+Default walltime if omitted: **15 minutes**. Verified via `bqueues -l gpua100`,
+the `gpua100` queue allows up to 72 hours. Keep other GPU queues at 24 hours
+unless you verify a different limit directly.
 
-| Queue | GPU | Nodes | GPUs/node | VRAM |
-|-------|-----|-------|-----------|------|
-| `gpua100` | A100 PCIe | 4+6 | 2 | 40 GB / 80 GB |
-| `gpul40s` | L40s PCIe | 6 | 2 | 48 GB |
-| `gpuv100` | V100 PCIe | 6+8 | 2 | 16 GB / 32 GB |
-| `gpuv100` | V100 NVLink SXM2 | 3 | 4 | 32 GB |
-| `gpua10` | A10 PCIe | 1 | 2 | 24 GB |
-| `gpua40` | A40 NVLink | 1 | 2 | 48 GB |
+| Queue | GPU | Nodes | GPUs/node | VRAM | Max walltime |
+|-------|-----|-------|-----------|------|--------------|
+| `gpua100` | A100 PCIe | 4+6 | 2 | 40 GB / 80 GB | 72h |
+| `gpul40s` | L40s PCIe | 6 | 2 | 48 GB | 24h |
+| `gpuv100` | V100 PCIe | 6+8 | 2 | 16 GB / 32 GB | 24h |
+| `gpuv100` | V100 NVLink SXM2 | 3 | 4 | 32 GB | 24h |
+| `gpua10` | A10 PCIe | 1 | 2 | 24 GB | 24h |
+| `gpua40` | A40 NVLink | 1 | 2 | 48 GB | 24h |
 
 CPU queue `hpc`: 72h max, 100 cores/job.
 

@@ -8,15 +8,14 @@
 #BSUB -W 24:00
 #BSUB -B
 #BSUB -N
-#BSUB -u s204696@dtu.dk
-#BSUB -o /work3/s204696/logs/lsf/llm_300m_e1_%J.out
-#BSUB -e /work3/s204696/logs/lsf/llm_300m_e1_%J.err
+#BSUB -o /work3/%U/logs/lsf/llm_300m_e1_%J.out
+#BSUB -e /work3/%U/logs/lsf/llm_300m_e1_%J.err
 #
 # E1 full finetune: omniASR_LLM_300M_v2 on CoRal-v3 Danish, 20k steps.
 # A100-40GB is sufficient for LLM_300M_v2 at max_audio_len=240k (15s).
 #
-# Timing estimate: LLM decoder is ~30x slower per step than CTC (~96x RTF
-# vs ~1x). Expect 18-22h for 20k steps. 24h walltime includes buffer.
+# Timing estimate: LLM training is substantially slower per step than CTC.
+# Expect roughly 18-22h for 20k steps on A100-40GB. 24h walltime includes buffer.
 #
 # Pre-requisites (run from login node before submitting):
 #   invoke assets.pull-llm --size 300m

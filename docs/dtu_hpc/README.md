@@ -28,7 +28,7 @@ voltash                              # shared interactive V100 (16 GB)
 
 | Queue | GPU | VRAM | Max walltime |
 |-------|-----|------|-------------|
-| `gpua100` | A100 PCIe | 40 GB / 80 GB | 24h |
+| `gpua100` | A100 PCIe | 40 GB / 80 GB | 72h |
 | `gpul40s` | L40s PCIe | 48 GB | 24h |
 | `gpuv100` | V100 | 16 GB / 32 GB | 24h |
 

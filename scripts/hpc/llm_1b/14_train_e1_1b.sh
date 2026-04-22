@@ -9,9 +9,8 @@
 #BSUB -W 40:00
 #BSUB -B
 #BSUB -N
-#BSUB -u s204696@dtu.dk
-#BSUB -o /work3/s204696/logs/lsf/llm_1b_e1_%J.out
-#BSUB -e /work3/s204696/logs/lsf/llm_1b_e1_%J.err
+#BSUB -o /work3/%U/logs/lsf/llm_1b_e1_%J.out
+#BSUB -e /work3/%U/logs/lsf/llm_1b_e1_%J.err
 #
 # E1 full finetune: omniASR_LLM_1B_v2 on CoRal-v3 Danish, 20k steps.
 # Requires A100-80GB (2.3B total params + AdamW optimizer states + decoder

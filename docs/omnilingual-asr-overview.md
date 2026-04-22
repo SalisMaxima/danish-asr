@@ -107,11 +107,13 @@ For the CTC track: **ctc-finetune** — we start from the released checkpoint wi
 | **Finetune LLM checkpoint (1B)** | `configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b.yaml` | `omniASR_LLM_1B_v2` | A100-80GB, 20k steps |
 
 LLM V2 models use `omniASR_tokenizer_written_v2` (same as CTC V2) and the same
-Parquet corpus. Pre-pull checkpoints before submitting: `invoke assets.pull-llm --size 300m`.
+Parquet corpus. On DTU HPC, clone upstream once at `/work3/$USER/omnilingual-asr`
+so `setup_omniasr` can expose the training recipe modules. Pre-pull checkpoints
+before submitting: `invoke assets.pull-llm --size 300m`.
 
 ## Key Limitations
 
-- CTC models: max 40s audio (960,000 samples at 16kHz)
+- CTC models: max 60s audio (960,000 samples at 16kHz)
 - LLM models: decoder activation memory scales O(seq²); use `max_audio_len: 240_000` (15s) not 960k
 - No LoRA/PEFT support — fairseq2 does full fine-tuning
 - `Unlimited` variants do not support finetuning recipes
