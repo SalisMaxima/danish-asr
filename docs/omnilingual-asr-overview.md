@@ -90,18 +90,29 @@ print(transcriptions)
 
 ## Finetuning Strategy Options
 
-Two approaches for CTC finetuning:
+### CTC models
 
 | Strategy | Config | Starting point | Use case |
 |---|---|---|---|
 | **Finetune CTC checkpoint** | `ctc-finetune.yaml` | `omniASR_CTC_300M` | Continue from released model (recommended) |
 | **Train CTC from encoder** | `ctc-from-encoder.yaml` | `omniASR_W2V_300M` | New CTC head on pretrained encoder |
 
-For our project: **ctc-finetune** — we start from the released `omniASR_CTC_300M` checkpoint, which already has a trained CTC head.
+For the CTC track: **ctc-finetune** — we start from the released checkpoint with a trained CTC head.
+
+### LLM V2 models (active track)
+
+| Strategy | Config | Starting point | Use case |
+|---|---|---|---|
+| **Finetune LLM checkpoint (300M)** | `configs/fairseq2/llm_300m/llm-finetune-hpc-e1.yaml` | `omniASR_LLM_300M_v2` | A100-40GB, 20k steps |
+| **Finetune LLM checkpoint (1B)** | `configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b.yaml` | `omniASR_LLM_1B_v2` | A100-80GB, 20k steps |
+
+LLM V2 models use `omniASR_tokenizer_written_v2` (same as CTC V2) and the same
+Parquet corpus. Pre-pull checkpoints before submitting: `invoke assets.pull-llm --size 300m`.
 
 ## Key Limitations
 
 - CTC models: max 40s audio (960,000 samples at 16kHz)
+- LLM models: decoder activation memory scales O(seq²); use `max_audio_len: 240_000` (15s) not 960k
 - No LoRA/PEFT support — fairseq2 does full fine-tuning
 - `Unlimited` variants do not support finetuning recipes
 - Requires Parquet-format data (see [data-preparation.md](data-preparation.md))

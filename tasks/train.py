@@ -23,6 +23,12 @@ def _resolve_omniasr_config(hardware: str) -> Path:
         return PROJECT_ROOT / "configs" / "fairseq2" / "300m" / "ctc-finetune-local.yaml"
     if hardware == "hpc":
         return PROJECT_ROOT / "configs" / "fairseq2" / "legacy" / "ctc-finetune-hpc.yaml"
+    if hardware.startswith("llm-300m"):
+        suffix = hardware.removeprefix("llm-300m-")
+        return PROJECT_ROOT / "configs" / "fairseq2" / "llm_300m" / f"llm-finetune-{suffix}.yaml"
+    if hardware.startswith("llm-1b"):
+        suffix = hardware.removeprefix("llm-1b-")
+        return PROJECT_ROOT / "configs" / "fairseq2" / "llm_1b" / f"llm-finetune-{suffix}.yaml"
     return PROJECT_ROOT / "configs" / "fairseq2" / "300m" / f"ctc-finetune-{hardware}.yaml"
 
 
