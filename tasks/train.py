@@ -45,7 +45,9 @@ def _run_with_omni_workflows(ctx: Context, cmd: str) -> None:
 
 
 def _available_llm_hardware(prefix: str, config_dir: Path) -> list[str]:
-    return sorted(f"{prefix}-{path.stem.removeprefix('llm-finetune-')}" for path in config_dir.glob("llm-finetune-*.yaml"))
+    return sorted(
+        f"{prefix}-{path.stem.removeprefix('llm-finetune-')}" for path in config_dir.glob("llm-finetune-*.yaml")
+    )
 
 
 def _resolve_omniasr_config(hardware: str) -> Path:
