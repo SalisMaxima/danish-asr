@@ -10,5 +10,5 @@ nav:
   - Omnilingual ASR: omnilingual-asr-overview.md
   - Data Preparation: data-preparation.md
   - Finetuning Recipe: finetuning-recipe.md
-  - DTU HPC Setup: dtu-hpc-setup.md
+  - DTU HPC Setup: dtu_hpc/README.md
   - CoRal Dataset: coral-dataset.md

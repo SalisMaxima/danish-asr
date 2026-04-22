@@ -1,0 +1,13 @@
+name: danish_lm_v1
+
+source:
+  dataset_root: data/parquet/version=0
+  split: train
+  language: dan_Latn
+  corpora:
+    - coral_v3_read_aloud
+    - coral_v3_conversation
+
+output:
+  corpus_text_path: data/lm/processed/danish_lm_v1.txt
+  stats_path: data/lm/processed/danish_lm_v1.stats.json

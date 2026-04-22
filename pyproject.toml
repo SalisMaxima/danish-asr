@@ -35,10 +35,8 @@ dependencies = [
     "soundfile>=0.12.0",
     "peft>=0.10.0",
     "jiwer>=3.0.0",
+    "pyctcdecode>=0.5.0",
     "accelerate>=0.28.0",
-    # DVC
-    "dvc>=3.0.0",
-    "dvc-gs>=3.0.0",
 ]
 
 [dependency-groups]
@@ -147,3 +145,4 @@ danish_asr = "danish_asr:setup_fairseq2_extension"
 [project.scripts]
 train = "danish_asr.train:train"
 sweep-train = "danish_asr.sweep_train:main"
+wandb-storage-audit = "danish_asr.wandb_storage:main"
