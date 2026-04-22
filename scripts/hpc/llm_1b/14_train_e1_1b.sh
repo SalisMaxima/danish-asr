@@ -37,5 +37,6 @@ mkdir -p "$RUN_DIR"
 python scripts/hpc/run_training.py \
     --config configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b.yaml \
     --output-dir "$RUN_DIR" \
+    --wandb-project danish-asr-llm-v2 \
     --wandb-tags "train,full,hpc,a100,80gb,llm_1b_v2,e1,20k,lr5e-5,shuffle1000" \
     --wandb-resume allow

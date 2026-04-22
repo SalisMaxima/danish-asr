@@ -28,5 +28,6 @@ setup_omniasr
 
 python scripts/hpc/run_training.py \
     --config configs/fairseq2/llm_1b/llm-finetune-smoke.yaml \
+    --wandb-project danish-asr-llm-v2 \
     --wandb-resume never \
     --wandb-tags "smoke,hpc,a100,80gb,llm_1b_v2,50steps"
