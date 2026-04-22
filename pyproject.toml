@@ -1,5 +1,5 @@
 [build-system]
-requires = ["uv_build>=0.9.22,<0.11.0"]
+requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
 
 [project]
@@ -31,7 +31,7 @@ dependencies = [
     # ASR-specific
     "torchaudio>=2.7.0",
     "transformers>=4.40.0",
-    "datasets==4.8.3",
+    "datasets==4.8.4",
     "soundfile>=0.12.0",
     "peft>=0.10.0",
     "jiwer>=3.0.0",
@@ -45,18 +45,18 @@ omni = [
     "pyarrow>=14.0.0",
 ]
 dev = [
-    "coverage>=7.6.0",
-    "invoke>=2.2.0",
-    "zensical>=0.0.23,<0.1.0",
+    "coverage>=7.13.5",
+    "invoke>=3.0.3",
+    "zensical>=0.0.32,<0.1.0",
     "pre-commit>=4.0.0",
-    "pytest>=8.0.0",
+    "pytest>=9.0.3",
     "pytest-cov>=4.1.0",
-    "ruff>=0.8.0",
+    "ruff>=0.15.10",
     "mkdocstrings-python>=1.12.0",
-    "mypy>=1.19.1",
+    "mypy>=1.20.1",
     "pip-audit>=2.10.0",
     "bandit>=1.9.3",
-    "types-pyyaml>=6.0.12.20250915",
+    "types-pyyaml>=6.0.12.20260408",
 ]
 
 [tool.uv.sources]

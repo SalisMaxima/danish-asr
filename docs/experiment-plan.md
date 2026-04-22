@@ -52,7 +52,7 @@ observed at step ~10k with val/WER ~47–49% and curves still clearly descending
 
 **Current quota status (2026-04-11):** quota upgraded to 350 GB (was 200 GB). Prior usage was ~87 GB.
 With pruning enabled, each 30k run uses ~7.4 GB (measured from E2). E3 + E5 + eval ≈ 25 GB total,
-leaving ~87 GB headroom. Safe to queue all three simultaneously.
+leaving ~238 GB headroom. Safe to queue all three simultaneously.
 
 ---
 

@@ -33,6 +33,7 @@ train = load_module_from_file("train", tasks_dir / "train.py")
 quality = load_module_from_file("quality", tasks_dir / "quality.py")
 docs = load_module_from_file("docs", tasks_dir / "docs.py")
 utils = load_module_from_file("utils", tasks_dir / "utils.py")
+assets = load_module_from_file("assets", tasks_dir / "assets.py")
 
 namespace = Collection()
 
@@ -42,3 +43,4 @@ namespace.add_collection(Collection.from_module(train), name="train")
 namespace.add_collection(Collection.from_module(quality), name="quality")
 namespace.add_collection(Collection.from_module(docs), name="docs")
 namespace.add_collection(Collection.from_module(utils), name="utils")
+namespace.add_collection(Collection.from_module(assets), name="assets")
