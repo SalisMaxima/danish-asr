@@ -58,7 +58,7 @@ dev = [
     "mypy>=1.19.1",
     "pip-audit>=2.10.0",
     "bandit>=1.9.3",
-    "types-pyyaml>=6.0.12.20250915",
+    "types-pyyaml>=6.0.12.20260408",
 ]
 
 [tool.uv.sources]
