@@ -8,6 +8,7 @@ Guide for fine-tuning `omniASR_CTC_300M` on CoRal-v3 Danish data using the omnil
 2. `omnilingual-asr` package installed
 3. fairseq2 asset card created for dataset
 4. `language_distribution_0.tsv` stats file generated
+5. On DTU HPC: clone upstream once at `/work3/$USER/omnilingual-asr` so `setup_omniasr` can expose the `workflows` recipe modules
 
 ## Training Command
 
@@ -130,6 +131,42 @@ regime:
 | `num_steps` | 20,000 | 5,000 | 20,000 | Matches upstream for full convergence |
 | `validate_every_n_steps` | 1,000 | 500 | 1,000 | More frequent on shorter runs |
 | `checkpoint_every_n_steps` | 1,000 | 500 | 1,000 | More frequent on shorter runs |
+
+## LLM V2 Finetuning (active track)
+
+The LLM V2 class (`omniASR_LLM_300M_v2`, `omniASR_LLM_1B_v2`) uses the same
+`python -m workflows.recipes.wav2vec2.asr` entrypoint and the same Parquet
+corpus as CTC, but the autoregressive Llama decoder introduces key differences:
+
+| Aspect | CTC V2 | LLM V2 |
+|---|---|---|
+| Loss | CTC alignment | Cross-entropy (teacher-forced causal LM) |
+| `max_audio_len` | 960,000 (60s) | **240,000 (15s)** — decoder activations scale O(seq²) |
+| Inference speed | Faster non-autoregressive decoding | Slower autoregressive decoding; benchmark on target hardware |
+| A100-40GB viable | Yes (all sizes) | 300M_v2 only; 1B_v2 needs 80GB |
+| Checkpoint size | ~1.3 GiB (300M) | **6.1 GiB (300M_v2), 8.5 GiB (1B_v2)** |
+
+### Pre-pull checkpoints before training
+
+Fairseq2 auto-downloads on first use, but LLM checkpoints are 6–8.5 GiB.
+Pre-pull on the login node to avoid burning compute-node GPU time on downloads:
+
+```bash
+# Login node only (not inside a bsub job)
+source scripts/hpc/env.sh   # sets FAIRSEQ2_CACHE_DIR → /work3/$USER/fairseq2_cache
+# If the active env lacks omnilingual_asr, the invoke task falls back to:
+#   source scripts/hpc/env.sh && setup_omniasr
+invoke assets.pull-llm --size 300m   # or --size 1b
+```
+
+### LLM V2 configs and HPC scripts
+
+| Size | Config | HPC smoke | HPC full run |
+|---|---|---|---|
+| 300M_v2 | `configs/fairseq2/llm_300m/llm-finetune-hpc-e1.yaml` | `scripts/hpc/llm_300m/05_smoke_test.sh` | `scripts/hpc/llm_300m/14_train_e1.sh` |
+| 1B_v2 | `configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b.yaml` | `scripts/hpc/llm_1b/05_smoke_test.sh` | `scripts/hpc/llm_1b/14_train_e1_1b.sh` |
+
+If OOM on 300M_v2 smoke: reduce `max_num_elements` from 2,560,000 to 1,920,000.
 
 ## Multi-GPU Training (DTU HPC)
 

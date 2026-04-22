@@ -34,6 +34,7 @@ quality = load_module_from_file("quality", tasks_dir / "quality.py")
 dvc_tasks = load_module_from_file("dvc_tasks", tasks_dir / "dvc_tasks.py")
 docs = load_module_from_file("docs", tasks_dir / "docs.py")
 utils = load_module_from_file("utils", tasks_dir / "utils.py")
+assets = load_module_from_file("assets", tasks_dir / "assets.py")
 
 namespace = Collection()
 
@@ -44,3 +45,4 @@ namespace.add_collection(Collection.from_module(quality), name="quality")
 namespace.add_collection(Collection.from_module(dvc_tasks), name="dvc")
 namespace.add_collection(Collection.from_module(docs), name="docs")
 namespace.add_collection(Collection.from_module(utils), name="utils")
+namespace.add_collection(Collection.from_module(assets), name="assets")
