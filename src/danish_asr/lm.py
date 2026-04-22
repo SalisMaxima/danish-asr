@@ -8,7 +8,7 @@ import unicodedata
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import torch
 
@@ -22,14 +22,37 @@ except ImportError:  # pragma: no cover - optional dependency in tests/CI
     pq = None  # type: ignore[assignment]
     _PYARROW_AVAILABLE = False
 
-from fairseq2.assets import get_asset_store
-from fairseq2.data.tokenizers import Tokenizer
-from fairseq2.data.tokenizers.char import load_char_tokenizer
-from fairseq2.data.tokenizers.hub import load_tokenizer
-from fairseq2.data.tokenizers.sentencepiece import load_sentencepiece_model
-from fairseq2.models.wav2vec2.asr import Wav2Vec2AsrModel, get_wav2vec2_asr_model_hub
+try:
+    from fairseq2.assets import get_asset_store
+    from fairseq2.data.tokenizers.char import load_char_tokenizer
+    from fairseq2.data.tokenizers.hub import load_tokenizer
+    from fairseq2.data.tokenizers.sentencepiece import load_sentencepiece_model
+    from fairseq2.models.wav2vec2.asr import get_wav2vec2_asr_model_hub
+
+    _FAIRSEQ2_AVAILABLE = True
+except ImportError:  # pragma: no cover - optional dependency in tests/CI
+    get_asset_store = None  # type: ignore[assignment]
+    load_char_tokenizer = None  # type: ignore[assignment]
+    load_tokenizer = None  # type: ignore[assignment]
+    load_sentencepiece_model = None  # type: ignore[assignment]
+    get_wav2vec2_asr_model_hub = None  # type: ignore[assignment]
+    _FAIRSEQ2_AVAILABLE = False
+
+try:
+    from omnilingual_asr.models.inference.pipeline import ASRInferencePipeline
+
+    _OMNIASR_AVAILABLE = True
+except ImportError:  # pragma: no cover - optional dependency in tests/CI
+    ASRInferencePipeline = None  # type: ignore[assignment]
+    _OMNIASR_AVAILABLE = False
+
+if TYPE_CHECKING:
+    from fairseq2.data.tokenizers import Tokenizer
+    from fairseq2.models.wav2vec2.asr import Wav2Vec2AsrModel
+else:
+    Tokenizer = Any
+    Wav2Vec2AsrModel = Any
 from loguru import logger
-from omnilingual_asr.models.inference.pipeline import ASRInferencePipeline
 
 LM_VERSION = "danish_lm_v1"
 DEFAULT_CORPORA = ("coral_v3_read_aloud", "coral_v3_conversation")
@@ -74,6 +97,18 @@ class DecodeResult:
 def _require_pyarrow() -> None:
     if not _PYARROW_AVAILABLE:
         msg = "pyarrow is required for parquet-backed LM corpus and decoding scripts. Install the 'omni' dependency group."
+        raise ImportError(msg)
+
+
+def _require_fairseq2() -> None:
+    if not _FAIRSEQ2_AVAILABLE:
+        msg = "fairseq2 is required for tokenizer/model-backed LM helpers. Install the project dependencies that include fairseq2."
+        raise ImportError(msg)
+
+
+def _require_omniasr() -> None:
+    if not _OMNIASR_AVAILABLE:
+        msg = "omnilingual_asr is required for OmniASR inference pipeline helpers. Install the 'omni' dependency group."
         raise ImportError(msg)
 
 
@@ -220,6 +255,8 @@ def load_yaml_config(path: str | Path) -> dict[str, Any]:
 
 def _get_cached_tokenizer_path(tokenizer_name: str) -> Path | None:
     """Find a cached tokenizer model file using the asset card basename."""
+    _require_fairseq2()
+
     store = get_asset_store()
     card = store.retrieve_card(tokenizer_name)
     tokenizer_uri = card.field("tokenizer").as_uri()
@@ -247,6 +284,7 @@ def load_omniasr_tokenizer(
     tokenizer_model_path: str | Path | None = None,
 ) -> tuple[Tokenizer, Path]:
     """Load the OmniASR tokenizer, preferring an explicit or cached local model file."""
+    _require_fairseq2()
     configure_project_cache_environment()
 
     if tokenizer_model_path is not None:
@@ -271,6 +309,7 @@ def load_omniasr_tokenizer(
 
 def build_pyctcdecode_labels(tokenizer_model_path: Path) -> tuple[list[str], set[str]]:
     """Build pyctcdecode labels in the exact OmniASR logit order."""
+    _require_fairseq2()
     model = load_sentencepiece_model(tokenizer_model_path)
     labels: list[str] = []
     removable_tokens: set[str] = set()
@@ -307,6 +346,7 @@ def load_custom_omniasr_ctc_model(
     dtype: torch.dtype,
 ) -> Wav2Vec2AsrModel:
     """Load a custom OmniASR CTC checkpoint using fairseq2's registered family."""
+    _require_fairseq2()
     configure_project_cache_environment()
 
     hub = get_wav2vec2_asr_model_hub()
@@ -330,6 +370,7 @@ def make_inference_pipeline(
     dtype: torch.dtype,
 ) -> tuple[ASRInferencePipeline, Path]:
     """Create an OmniASR inference pipeline for CTC decoding."""
+    _require_omniasr()
     model = load_custom_omniasr_ctc_model(checkpoint_path, model_arch=model_arch, device=device, dtype=dtype)
     tokenizer, resolved_tokenizer_path = load_omniasr_tokenizer(
         tokenizer_name,
