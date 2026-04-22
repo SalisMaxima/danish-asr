@@ -15,7 +15,7 @@ treated as provisional until eval filtering is fully verified.
 | `omniASR_CTC_300M_v2` | finetuned E6 | 50k | **30.73%** | `balmy-vortex-87` | lr=`5e-5`, shuffle=`1000` |
 | `omniASR_CTC_1B_v2` | base (zero-shot) | — | **55.39%** | `true-sound-81` | pretrained model, no finetuning |
 | `omniASR_CTC_1B_v2` | finetuned E6-1B | 50k | **23.43%** | `deep-fire-90` | lr=`5e-5`, shuffle=`1000` |
-| `omniASR_CTC_3B_v2` | base (zero-shot) | — | **52.87%** | `distinctive-glade-94` | pretrained model, no finetuning |
+| `omniASR_CTC_3B_v2` | base (zero-shot) | — | **52.87%** | `v7yi0pk2` | pretrained model, no finetuning; rerun on DTU HPC on 2026-04-22 |
 | `omniASR_CTC_3B_v2` | finetuned E6-3B | 30k | **23.06%** | `lunar-rain-93` | lr=`5e-5`, shuffle=`1000`; beats `1B E6-1B 50k` by `0.38pp` |
 
 ## Split-Tagged Results
@@ -33,8 +33,8 @@ final benchmark evidence until split-aware eval filtering is confirmed.
 | `omniASR_CTC_1B_v2` | base (zero-shot) | `conversation` | **56.42%** | `charmed-rain-83` |
 | `omniASR_CTC_1B_v2` | finetuned E6-1B | `read_aloud` | **20.98%** | `upbeat-tree-91` |
 | `omniASR_CTC_1B_v2` | finetuned E6-1B | `conversation` | **26.49%** | `silvery-durian-92` |
-| `omniASR_CTC_3B_v2` | base (zero-shot) | `read_aloud` | **52.22%** | `legendary-monkey-95` |
-| `omniASR_CTC_3B_v2` | base (zero-shot) | `conversation` | **53.68%** | `jumping-leaf-96` |
+| `omniASR_CTC_3B_v2` | base (zero-shot) | `read_aloud` | **52.22%** | `fo35rc6b` |
+| `omniASR_CTC_3B_v2` | base (zero-shot) | `conversation` | **53.68%** | `0uuxyj7k` |
 | `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | **20.16%** | `lilac-pine-98` |
 | `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | **26.69%** | `toasty-terrain-99` |
 

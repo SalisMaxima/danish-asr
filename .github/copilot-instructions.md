@@ -75,7 +75,7 @@ invoke utils.check-gpu      # GPU availability
 
 ## HPC Quick Reference
 
-Target cluster: DTU HPC (LSF scheduler). Full reference: `docs/dtu-hpc-reference.md`.
+Target cluster: DTU HPC (LSF scheduler). Full reference: `docs/dtu_hpc/README.md`.
 
 ### HPC Job Script Standard
 
@@ -181,5 +181,5 @@ Detailed guides in `docs/`:
 - `docs/omnilingual-asr-overview.md` — model details, installation
 - `docs/data-preparation.md` — CoRal-v3 → Parquet conversion
 - `docs/finetuning-recipe.md` — configs, hyperparameters
-- `docs/dtu-hpc-reference.md` — **complete HPC reference** (access, storage, LSF, environment, monitoring)
+- `docs/dtu_hpc/` — **complete HPC reference** (access, storage, LSF, environment, monitoring)
 - `docs/coral-dataset.md` — splits, fields, demographics

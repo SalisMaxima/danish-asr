@@ -153,7 +153,7 @@ grad_accumulation:
 
 **2x A100 (via LSF):**
 ```bash
-# Submit multi-GPU job — see dtu-hpc-setup.md for full script
+# Submit multi-GPU job — see dtu_hpc/03-lsf-jobs.md for full script
 #BSUB -n 8
 #BSUB -gpu "num=2:mode=exclusive_process"
 #BSUB -q gpua100

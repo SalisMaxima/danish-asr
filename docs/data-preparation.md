@@ -234,4 +234,4 @@ python -m workflows.dataprep.dataloader_example \
 ## Processing Time Estimate
 
 - ~710h of audio at ~1-2x realtime processing: **8-15 hours** on a single machine
-- Consider using Ray for parallel processing on DTU HPC (see [dtu-hpc-setup.md](dtu-hpc-setup.md))
+- Consider using Ray for parallel processing on DTU HPC (see [dtu_hpc/README.md](dtu_hpc/README.md))

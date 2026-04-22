@@ -146,7 +146,7 @@ danish_asr/
 - [CoRal Dataset](docs/coral-dataset.md) — splits, fields, demographics, collection methodology
 - [Data Preparation](docs/data-preparation.md) — CoRal-v3 to Parquet conversion
 - [Finetuning Recipe](docs/finetuning-recipe.md) — configs, hyperparameters
-- [DTU HPC Setup](docs/dtu-hpc-setup.md) — GPU queues, LSF job scripts
+- [DTU HPC Setup](docs/dtu_hpc/README.md) — GPU queues, LSF job scripts
 
 ## Citation
 
