@@ -102,7 +102,10 @@ def _require_pyarrow() -> None:
 
 def _require_fairseq2() -> None:
     if not _FAIRSEQ2_AVAILABLE:
-        msg = "fairseq2 is required for tokenizer/model-backed LM helpers. Install the project dependencies that include fairseq2."
+        msg = (
+            "fairseq2 is required for tokenizer/model-backed LM helpers. "
+            "Install the 'omni' dependency group with `uv sync --group omni`."
+        )
         raise ImportError(msg)
 
 
