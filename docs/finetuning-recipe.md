@@ -164,7 +164,7 @@ invoke assets.pull-llm --size 300m   # or --size 1b
 | Size | Config | HPC smoke | HPC full run |
 |---|---|---|---|
 | 300M_v2 | `configs/fairseq2/llm_300m/llm-finetune-hpc-e1.yaml` | `scripts/hpc/llm_300m/05_smoke_test.sh` | `scripts/hpc/llm_300m/14_train_e1.sh` |
-| 1B_v2 | `configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b.yaml` | `scripts/hpc/llm_1b/05_smoke_test.sh` | `scripts/hpc/llm_1b/14_train_e1_1b.sh` |
+| 1B_v2 | `configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b-15k.yaml` | `scripts/hpc/llm_1b/05_smoke_test.sh` | `scripts/hpc/llm_1b/14_train_e1_1b.sh` |
 
 If OOM on 300M_v2 smoke: reduce `max_num_elements` from 2,560,000 to 1,920,000.
 
