@@ -104,7 +104,7 @@ For the CTC track: **ctc-finetune** — we start from the released checkpoint wi
 | Strategy | Config | Starting point | Use case |
 |---|---|---|---|
 | **Finetune LLM checkpoint (300M)** | `configs/fairseq2/llm_300m/llm-finetune-hpc-e1.yaml` | `omniASR_LLM_300M_v2` | A100-40GB, 20k steps |
-| **Finetune LLM checkpoint (1B)** | `configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b.yaml` | `omniASR_LLM_1B_v2` | A100-80GB, 20k steps |
+| **Finetune LLM checkpoint (1B)** | `configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b-15k.yaml` | `omniASR_LLM_1B_v2` | A100-80GB, 15k steps |
 
 LLM V2 models use `omniASR_tokenizer_written_v2` (same as CTC V2) and the same
 Parquet corpus. On DTU HPC, clone upstream once at `/work3/$USER/omnilingual-asr`
