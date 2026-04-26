@@ -20,7 +20,7 @@ dataset:
   asr_task_config:
     min_audio_len: 32_000
     max_audio_len: 240_000
-    max_num_elements: 1_920_000
+    max_num_elements: 960_000
     batch_shuffle_window: 1
     normalize_audio: true
     example_shuffle_window: 1
@@ -37,7 +37,7 @@ trainer:
   mixed_precision:
     dtype: "torch.bfloat16"
   grad_accumulation:
-    num_batches: 16
+    num_batches: 32
 
 regime:
   num_steps: 50
