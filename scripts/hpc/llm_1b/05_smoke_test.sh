@@ -9,8 +9,8 @@
 #BSUB -W 2:00
 #BSUB -B
 #BSUB -N
-#BSUB -o /work3/%U/logs/lsf/llm_1b_smoke_%J.out
-#BSUB -e /work3/%U/logs/lsf/llm_1b_smoke_%J.err
+#BSUB -o /work3/s204696/logs/lsf/llm_1b_smoke_%J.out
+#BSUB -e /work3/s204696/logs/lsf/llm_1b_smoke_%J.err
 #
 # 50-step smoke test for omniASR_LLM_1B_v2 (2.3B effective params).
 # Requires A100-80GB: decoder activations + optimizer states exceed 40GB.

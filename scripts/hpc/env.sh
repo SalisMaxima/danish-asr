@@ -10,6 +10,7 @@ export TMPDIR=/work3/$USER/tmp
 export WANDB_DIR=/work3/$USER/wandb
 export WANDB_DATA_DIR=/work3/$USER/wandb
 export WANDB_CACHE_DIR=/work3/$USER/wandb/cache
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
 mkdir -p "$TMPDIR"
 mkdir -p /work3/$USER/logs/lsf
