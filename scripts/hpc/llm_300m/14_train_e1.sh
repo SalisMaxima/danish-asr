@@ -8,8 +8,8 @@
 #BSUB -W 24:00
 #BSUB -B
 #BSUB -N
-#BSUB -o /work3/%U/logs/lsf/llm_300m_e1_%J.out
-#BSUB -e /work3/%U/logs/lsf/llm_300m_e1_%J.err
+#BSUB -o /work3/s204696/logs/lsf/llm_300m_e1_%J.out
+#BSUB -e /work3/s204696/logs/lsf/llm_300m_e1_%J.err
 #
 # E1 full finetune: omniASR_LLM_300M_v2 on CoRal-v3 Danish, 20k steps.
 # A100-40GB is sufficient for LLM_300M_v2 at max_audio_len=240k (15s).
