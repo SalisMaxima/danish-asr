@@ -55,3 +55,6 @@ feedback/
 graphify-out/.graphify_*
 graphify-out/cache/
 graphify-out/graph.json
+graphify-out/graph.html
+graphify-out/manifest.json
+graphify-out/cost.json

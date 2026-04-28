@@ -6,11 +6,13 @@ The graph is meant to help Codex answer codebase and architecture questions with
 
 ## Main Outputs
 
-- `graphify-out/graph.json` - raw graph data for queries and traversal.
-- `graphify-out/GRAPH_REPORT.md` - readable report with god nodes, communities, surprising connections, and suggested questions.
-- `graphify-out/graph.html` - interactive graph that can be opened in a browser.
+Only `GRAPH_REPORT.md` is committed to the repo. The other artifacts are generated locally by `graphify update .` and are gitignored:
 
-The temporary `.graphify_*` files in `graphify-out/` are working artifacts from graph construction. They are useful for debugging a run, but the three files above are the important persistent outputs.
+- `graphify-out/GRAPH_REPORT.md` (committed) — readable report with god nodes, communities, surprising connections, and suggested questions.
+- `graphify-out/graph.json` (local, gitignored) — raw graph data backing the `graphify query/path/explain` commands.
+- `graphify-out/graph.html` (local, gitignored) — interactive graph that can be opened in a browser.
+
+On a fresh checkout, run `graphify update .` once to generate `graph.json` and `graph.html` before using the query commands. The temporary `.graphify_*`, `manifest.json`, and `cost.json` files in `graphify-out/` are working artifacts from graph construction; they are useful for debugging a run but are not committed.
 
 ## How Codex Should Use It
 
