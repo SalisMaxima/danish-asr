@@ -1,8 +1,8 @@
 # E1 LLM V2 training: omniASR_LLM_300M_v2 on CoRal-v3 Danish.
 # LLM decoder activation memory scales O(seq²), so max_audio_len is capped at
 # 240k (15s) rather than the CTC standard of 960k (60s).
-# Targets a single A100-40GB with a conservative microbatch and
-# grad_accumulation=16 to preserve the effective batch size.
+# Targets a single A100-40GB with a reduced microbatch after observed OOMs;
+# grad_accumulation=24 keeps the effective batch size close to the original.
 
 model:
   name: "omniASR_LLM_300M_v2"
@@ -22,7 +22,7 @@ dataset:
   asr_task_config:
     min_audio_len: 32_000
     max_audio_len: 240_000
-    max_num_elements: 960_000
+    max_num_elements: 640_000
     batch_shuffle_window: 1000
     normalize_audio: true
     example_shuffle_window: 1000
@@ -49,7 +49,7 @@ trainer:
   mixed_precision:
     dtype: "torch.bfloat16"
   grad_accumulation:
-    num_batches: 16
+    num_batches: 24
 
 regime:
   num_steps: 20_000
