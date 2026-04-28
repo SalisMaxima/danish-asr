@@ -53,6 +53,6 @@ That update is AST-only for code changes and should not require LLM/API cost. If
 This repo includes:
 
 - `AGENTS.md`, which tells Codex how to use graphify.
-- `.codex/hooks.json`, which reminds Codex that `graphify-out/graph.json` exists before shell/tool use.
+- `.codex/hooks.json`, which reminds Codex to read `graphify-out/GRAPH_REPORT.md` before shell/tool use, and to run `graphify update .` if the local `graph.json` is missing.
 
 After adding or changing these files, reload the Codex session in VS Code so the local instructions are picked up.
