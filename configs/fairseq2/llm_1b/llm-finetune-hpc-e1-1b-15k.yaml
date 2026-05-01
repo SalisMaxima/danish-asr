@@ -1,9 +1,9 @@
 # E1 LLM V2 training: omniASR_LLM_1B_v2 on CoRal-v3 Danish.
 # Effective params: 2.3B (1B encoder + 1.3B Llama decoder).
 # Requires A100-80GB (see HPC script: select[gpu80gb]).
-# LLM decoder activations are the dominant memory cost. Keep the microbatch at
-# the same 960K element budget as the 300M LLM track and use accumulation to
-# recover the effective batch size.
+# LLM decoder activations are the dominant memory cost. Microbatch reduced to
+# 720K (from 960K) after OOM on A100-80GB mid-training; grad_accum raised to
+# 43 to preserve ~same effective batch size.
 # Target run: 15k steps with a 65h walltime budget on A100-80GB.
 
 model:
@@ -24,7 +24,7 @@ dataset:
   asr_task_config:
     min_audio_len: 32_000
     max_audio_len: 240_000
-    max_num_elements: 960_000
+    max_num_elements: 720_000
     batch_shuffle_window: 1000
     normalize_audio: true
     example_shuffle_window: 1000
@@ -51,7 +51,7 @@ trainer:
   mixed_precision:
     dtype: "torch.bfloat16"
   grad_accumulation:
-    num_batches: 32
+    num_batches: 43
 
 regime:
   num_steps: 15_000
