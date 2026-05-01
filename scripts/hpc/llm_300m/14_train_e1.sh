@@ -5,7 +5,7 @@
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -W 24:00
+#BSUB -W 48:00
 #BSUB -B
 #BSUB -N
 #BSUB -o /work3/s204696/logs/lsf/llm_300m_e1_%J.out
@@ -14,8 +14,8 @@
 # E1 full finetune: omniASR_LLM_300M_v2 on CoRal-v3 Danish, 20k steps.
 # A100-40GB is sufficient for LLM_300M_v2 at max_audio_len=240k (15s).
 #
-# Timing estimate: LLM training is substantially slower per step than CTC.
-# Expect roughly 18-22h for 20k steps on A100-40GB. 24h walltime includes buffer.
+# Timing estimate: the first full run reached ~11.4k/20k steps in 24h on A100-40GB.
+# Request 48h so resumed/full runs have enough room for validation and checkpoints.
 #
 # Pre-requisites (run from login node before submitting):
 #   invoke assets.pull-llm --size 300m
