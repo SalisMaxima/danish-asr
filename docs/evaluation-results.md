@@ -18,6 +18,57 @@ treated as provisional until eval filtering is fully verified.
 | `omniASR_CTC_3B_v2` | base (zero-shot) | — | **52.87%** | `v7yi0pk2` | pretrained model, no finetuning; rerun on DTU HPC on 2026-04-22 |
 | `omniASR_CTC_3B_v2` | finetuned E6-3B | 30k | **23.06%** | `lunar-rain-93` | lr=`5e-5`, shuffle=`1000`; beats `1B E6-1B 50k` by `0.38pp` |
 
+## CoRal-Style CER Benchmark
+
+This table is the direct comparison target against Alexandra Institute's public
+Røst v3 model cards. The official metric for this table is `cer_coral`, computed
+with the CoRal-style benchmark harness in `scripts/hpc/benchmark_coral_style.py`:
+raw `CoRal-project/coral-v3` test audio, `read_aloud` and `conversation`
+evaluated separately, `0.5s < duration < 10.0s`, Alexandra-compatible text
+normalisation, and bounded aggregate CER/WER.
+
+Published anchors are copied from the Røst v3 model cards. The omniASR rows are
+intentionally marked `pending` until the local harness is run on DTU HPC; do not
+compare the WER-only table above to these CER numbers directly.
+
+| Model | Source | Params | Decoder | Read-aloud CER | Conversation CER | Notes |
+|---|---|---:|---|---:|---:|---|
+| `CoRal-project/roest-v3-whisper-1.5b` | published model card | 1.54B | Whisper seq2seq | **4.5%** | **11.6%** | Røst v3 Whisper, trained on CoRal-v3 read-aloud + conversation |
+| `CoRal-project/roest-v3-wav2vec2-315m` | published model card | 315M | CTC | **5.9%** | **13.7%** | Best published Røst v3 CTC-sized reference |
+| `openai/whisper-large-v3` | published Røst model card rerun | 1.54B | Whisper seq2seq | **10.1%** | **27.5%** | Zero-shot baseline in the Røst v3 table |
+| `omniASR_CTC_300M_v2` E6 | local CoRal-style harness | 325M | greedy CTC | pending | pending | `/work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000/model` |
+| `omniASR_CTC_1B_v2` E6 | local CoRal-style harness | 1B | greedy CTC | pending | pending | `/work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model` |
+| `omniASR_CTC_3B_v2` E6 | local CoRal-style harness | 3B | greedy CTC | pending | pending | `/work3/s204696/outputs/omniasr_e6_3b/ws_1.2172dba0/checkpoints/step_30000/model` |
+
+Run the full matrix with:
+
+```bash
+bash scripts/hpc/benchmark_coral_style_matrix.sh
+```
+
+For a quick smoke run:
+
+```bash
+MAX_SAMPLES=5 bash scripts/hpc/benchmark_coral_style_matrix.sh
+```
+
+Each run writes `predictions.txt`, `references.txt`, `records.jsonl`,
+`scores.json`, and `by_group.csv` under
+`/work3/$USER/outputs/coral_style_benchmark/<model>/<subset>/`.
+
+### Lessons from Alexandra's Setup
+
+- Keep this CER-first CoRal-style table separate from the existing WER-first
+  fairseq2 eval table; the evaluation filters and text normalisation differ.
+- Use the `0.5-10s` benchmark before making claims against Røst, because the
+  existing fairseq2 configs evaluate much longer utterances.
+- Audit the effective read-aloud/conversation sampling ratio in the fairseq2
+  mixture; Alexandra trains on both subsets and interleaves them explicitly.
+- Add a future augmentation ablation inspired by Alexandra's pipeline: peak
+  normalisation, gain, background noise, coloured noise, and random filters.
+- Treat KenLM/beam decoding as a separate improvement experiment. The direct
+  comparison rows above should stay greedy CTC unless explicitly labelled.
+
 ## Split-Tagged Results
 
 These runs are useful for directional analysis, but they should not yet be treated as
