@@ -357,13 +357,13 @@ def load_coral_v3_test_subset(
 
         dataset_loader = load_dataset
 
+    token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN") or True
     load_kwargs: dict[str, Any] = {
         "path": CORAL_DATASET_ID,
         "name": subset,
         "split": "test",
         "streaming": True,
-        "token": os.getenv("HUGGINGFACE_HUB_TOKEN", True),
-        "trust_remote_code": True,
+        "token": token,
     }
     if cache_dir is not None:
         load_kwargs["cache_dir"] = cache_dir
