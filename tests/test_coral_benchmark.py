@@ -238,13 +238,13 @@ def test_benchmark_cli_beam_without_lm_uses_no_kenlm_decoder(tmp_path: Path, mon
     monkeypatch.setattr(cli, "make_inference_pipeline", lambda **kwargs: (object(), Path("tokenizer.model")))
     monkeypatch.setattr(cli, "get_device", lambda: SimpleNamespace(type="cpu"))
     monkeypatch.setattr(cli, "resolve_dtype", lambda dtype_name, device: "float32")
-    monkeypatch.setattr(cli, "load_coral_v3_test_subset", lambda *args, **kwargs: (examples, SimpleNamespace(__dict__={})))
+    monkeypatch.setattr(
+        cli, "load_coral_v3_test_subset", lambda *args, **kwargs: (examples, SimpleNamespace(__dict__={}))
+    )
     monkeypatch.setattr(cli, "build_pyctcdecode_labels", lambda path: (["", "h", "e", "j"], {"<pad>"}))
 
     def fake_decoder_factory(labels, *, kenlm_model_path, alpha, beta):
-        decoder_calls.append(
-            {"labels": labels, "kenlm_model_path": kenlm_model_path, "alpha": alpha, "beta": beta}
-        )
+        decoder_calls.append({"labels": labels, "kenlm_model_path": kenlm_model_path, "alpha": alpha, "beta": beta})
         return "beam-decoder"
 
     def fake_decode_batch(*, examples, pipeline, decoder_kind, beam_decoder, beam_width, removable_tokens):
@@ -298,7 +298,9 @@ def test_benchmark_cli_beam_with_lm_writes_alexandra_label(tmp_path: Path, monke
     monkeypatch.setattr(cli, "make_inference_pipeline", lambda **kwargs: (object(), Path("tokenizer.model")))
     monkeypatch.setattr(cli, "get_device", lambda: SimpleNamespace(type="cpu"))
     monkeypatch.setattr(cli, "resolve_dtype", lambda dtype_name, device: "float32")
-    monkeypatch.setattr(cli, "load_coral_v3_test_subset", lambda *args, **kwargs: (examples, SimpleNamespace(__dict__={})))
+    monkeypatch.setattr(
+        cli, "load_coral_v3_test_subset", lambda *args, **kwargs: (examples, SimpleNamespace(__dict__={}))
+    )
     monkeypatch.setattr(cli, "build_pyctcdecode_labels", lambda path: (["", "h", "e", "j"], set()))
     monkeypatch.setattr(
         cli,
@@ -307,9 +309,7 @@ def test_benchmark_cli_beam_with_lm_writes_alexandra_label(tmp_path: Path, monke
     )
 
     def fake_decoder_factory(labels, *, kenlm_model_path, alpha, beta):
-        decoder_calls.append(
-            {"labels": labels, "kenlm_model_path": kenlm_model_path, "alpha": alpha, "beta": beta}
-        )
+        decoder_calls.append({"labels": labels, "kenlm_model_path": kenlm_model_path, "alpha": alpha, "beta": beta})
         return "beam-lm-decoder"
 
     monkeypatch.setattr(cli, "make_decoder_factory", fake_decoder_factory)
