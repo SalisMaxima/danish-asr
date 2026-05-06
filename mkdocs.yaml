@@ -6,6 +6,8 @@ theme:
 nav:
   - Home: index.md
   - Evaluation Results: evaluation-results.md
+  - CoRal-Style Benchmark: coral-style-benchmark.md
+  - OmniASR CoRal Methodology Alignment: omniasr-coral-methodology-alignment.md
   - Project Roadmap: project-roadmap.md
   - Omnilingual ASR: omnilingual-asr-overview.md
   - Data Preparation: data-preparation.md
