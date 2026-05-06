@@ -19,7 +19,13 @@ from danish_asr.coral_benchmark import (
     score_coral_style,
     write_benchmark_outputs,
 )
-from danish_asr.lm import decode_logits_with_argmax, make_inference_pipeline, resolve_dtype
+from danish_asr.lm import (
+    build_pyctcdecode_labels,
+    decode_ctc_logits,
+    make_decoder_factory,
+    make_inference_pipeline,
+    resolve_dtype,
+)
 from danish_asr.utils import get_device, resolve_project_path
 
 
@@ -30,6 +36,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--subset", required=True, choices=("read_aloud", "conversation"))
     parser.add_argument("--tokenizer-name", default="omniASR_tokenizer_written_v2")
     parser.add_argument("--tokenizer-model-path", default=None)
+    parser.add_argument("--decoder", choices=("greedy", "beam"), default="greedy")
+    parser.add_argument("--kenlm-binary", default=None)
+    parser.add_argument("--beam-width", type=int, default=64)
+    parser.add_argument("--alpha", type=float, default=0.6)
+    parser.add_argument("--beta", type=float, default=0.5)
+    parser.add_argument("--report-label", default=None)
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--dtype", choices=("float32", "float16", "bfloat16"), default="bfloat16")
     parser.add_argument("--max-samples", type=int, default=None)
@@ -55,6 +67,10 @@ def _decode_batch(
     *,
     examples: list[CoRalBenchmarkExample],
     pipeline: Any,
+    decoder_kind: str,
+    beam_decoder: Any,
+    beam_width: int,
+    removable_tokens: set[str],
 ) -> list[str]:
     from fairseq2.nn.batch_layout import BatchLayout
 
@@ -71,13 +87,27 @@ def _decode_batch(
     for index in range(logits.shape[0]):
         seq_len = int(output_layout.seq_lens[index])
         predictions.append(
-            decode_logits_with_argmax(
-                logits[index, :seq_len],
+            decode_ctc_logits(
+                logits[index],
                 seq_len=seq_len,
                 token_decoder=pipeline.token_decoder,
+                decoder_kind=decoder_kind,
+                beam_decoder=beam_decoder,
+                beam_width=beam_width,
+                removable_tokens=removable_tokens,
             )
         )
     return predictions
+
+
+def _default_report_label(args: argparse.Namespace) -> str:
+    if args.report_label is not None:
+        return args.report_label
+    if args.decoder == "greedy":
+        return "greedy"
+    if args.kenlm_binary:
+        return "beam + KenLM"
+    return "beam"
 
 
 def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
@@ -98,6 +128,17 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     if model is not None and hasattr(model, "eval"):
         model.eval()
 
+    beam_decoder = None
+    removable_tokens: set[str] = set()
+    if args.decoder == "beam":
+        labels, removable_tokens = build_pyctcdecode_labels(tokenizer_model_path)
+        beam_decoder = make_decoder_factory(
+            labels,
+            kenlm_model_path=args.kenlm_binary,
+            alpha=args.alpha,
+            beta=args.beta,
+        )
+
     examples, filter_stats = load_coral_v3_test_subset(
         args.subset,
         max_samples=args.max_samples,
@@ -110,7 +151,16 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     with torch.inference_mode():
         for start in range(0, len(examples), args.batch_size):
             batch_examples = examples[start : start + args.batch_size]
-            raw_predictions.extend(_decode_batch(examples=batch_examples, pipeline=pipeline))
+            raw_predictions.extend(
+                _decode_batch(
+                    examples=batch_examples,
+                    pipeline=pipeline,
+                    decoder_kind=args.decoder,
+                    beam_decoder=beam_decoder,
+                    beam_width=args.beam_width,
+                    removable_tokens=removable_tokens,
+                )
+            )
             logger.info("Decoded {}/{} examples", len(raw_predictions), len(examples))
 
     predictions, references = normalized_prediction_reference_pairs(raw_predictions, examples)
@@ -120,6 +170,12 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         "checkpoint_path": str(args.checkpoint_path),
         "model_arch": args.model_arch,
         "subset": args.subset,
+        "decoder": args.decoder,
+        "report_label": _default_report_label(args),
+        "kenlm_binary": args.kenlm_binary,
+        "beam_width": args.beam_width,
+        "alpha": args.alpha,
+        "beta": args.beta,
         "tokenizer_name": args.tokenizer_name,
         "tokenizer_model_path": str(tokenizer_model_path),
         "batch_size": args.batch_size,
