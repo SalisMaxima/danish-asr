@@ -20,25 +20,28 @@ treated as provisional until eval filtering is fully verified.
 
 ## CoRal-Style CER Benchmark
 
-This table is the direct comparison target against Alexandra Institute's public
-Røst v3 model cards. The official metric for this table is `cer_coral`, computed
-with the CoRal-style benchmark harness in `scripts/hpc/benchmark_coral_style.py`:
-raw `CoRal-project/coral-v3` test audio, `read_aloud` and `conversation`
-evaluated separately, `0.5s < duration < 10.0s`, Alexandra-compatible text
-normalisation, and bounded aggregate CER/WER.
+This table is the main comparison table against Alexandra Institute's public
+Røst v3 model cards. The main metric here is `cer_coral`, computed with the
+CoRal-style benchmark harness in `scripts/hpc/benchmark_coral_style.py`.
 
-Published anchors are copied from the Røst v3 model cards. The omniASR rows are
-intentionally marked `pending` until the local harness is run on DTU HPC; do not
-compare the WER-only table above to these CER numbers directly.
+In this benchmark, the raw `CoRal-project/coral-v3` test audio is used,
+`read_aloud` and `conversation` are evaluated separately, only utterances
+between `0.5s` and `10.0s` are kept, and the text normalisation follows the
+same overall style as Alexandra's setup.
 
-| Model | Source | Params | Decoder | Read-aloud CER | Conversation CER | Notes |
-|---|---|---:|---|---:|---:|---|
-| `CoRal-project/roest-v3-whisper-1.5b` | published model card | 1.54B | Whisper seq2seq | **4.5%** | **11.6%** | Røst v3 Whisper, trained on CoRal-v3 read-aloud + conversation |
-| `CoRal-project/roest-v3-wav2vec2-315m` | published model card | 315M | CTC | **5.9%** | **13.7%** | Best published Røst v3 CTC-sized reference |
-| `openai/whisper-large-v3` | published Røst model card rerun | 1.54B | Whisper seq2seq | **10.1%** | **27.5%** | Zero-shot baseline in the Røst v3 table |
-| `omniASR_CTC_300M_v2` E6 | local CoRal-style harness | 325M | greedy CTC | pending | pending | `/work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000/model` |
-| `omniASR_CTC_1B_v2` E6 | local CoRal-style harness | 1B | greedy CTC | pending | pending | `/work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model` |
-| `omniASR_CTC_3B_v2` E6 | local CoRal-style harness | 3B | greedy CTC | pending | pending | `/work3/s204696/outputs/omniasr_e6_3b/ws_1.2172dba0/checkpoints/step_30000/model` |
+The published reference rows are copied from the Røst v3 model cards. The
+omniASR rows are still marked `pending` until the local harness is run on DTU
+HPC. So the WER-only table above should not be compared directly to these
+CoRal-style CER numbers.
+
+| Model | Source | Params | Decoder | Read-aloud CER | Read-aloud WER | Conversation CER | Conversation WER | Notes |
+|---|---|---:|---|---:|---:|---:|---:|---|
+| `CoRal-project/roest-v3-whisper-1.5b` | published model card | 1.54B | Whisper seq2seq | **4.5%** | — | **11.6%** | — | Røst v3 Whisper, trained on CoRal-v3 read-aloud + conversation |
+| `CoRal-project/roest-v3-wav2vec2-315m` | published model card | 315M | CTC | **5.9%** | — | **13.7%** | — | Best published Røst v3 CTC-sized reference |
+| `openai/whisper-large-v3` | published Røst model card rerun | 1.54B | Whisper seq2seq | **10.1%** | — | **27.5%** | — | Zero-shot baseline in the Røst v3 table |
+| `omniASR_CTC_300M_v2` E6 | local CoRal-style harness | 325M | greedy CTC | pending | pending | pending | pending | `/work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000/model` |
+| `omniASR_CTC_1B_v2` E6 | local CoRal-style harness | 1B | greedy CTC | pending | pending | pending | pending | `/work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model` |
+| `omniASR_CTC_3B_v2` E6 | local CoRal-style harness | 3B | greedy CTC | pending | pending | pending | pending | `/work3/s204696/outputs/omniasr_e6_3b/ws_1.2172dba0/checkpoints/step_30000/model` |
 
 Run the full matrix with:
 
@@ -58,16 +61,42 @@ Each run writes `predictions.txt`, `references.txt`, `records.jsonl`,
 
 ### Lessons from Alexandra's Setup
 
-- Keep this CER-first CoRal-style table separate from the existing WER-first
-  fairseq2 eval table; the evaluation filters and text normalisation differ.
-- Use the `0.5-10s` benchmark before making claims against Røst, because the
-  existing fairseq2 configs evaluate much longer utterances.
-- Audit the effective read-aloud/conversation sampling ratio in the fairseq2
-  mixture; Alexandra trains on both subsets and interleaves them explicitly.
-- Add a future augmentation ablation inspired by Alexandra's pipeline: peak
-  normalisation, gain, background noise, coloured noise, and random filters.
-- Treat KenLM/beam decoding as a separate improvement experiment. The direct
-  comparison rows above should stay greedy CTC unless explicitly labelled.
+- This CoRal-style table should stay separate from the regular fairseq2 WER
+  table, because the filtering and text normalisation are different.
+- The `0.5-10s` benchmark should be used before making claims against Røst,
+  because the current fairseq2 eval setup includes much longer utterances.
+- The read-aloud/conversation balance matters and should be part of the
+  interpretation, because Alexandra also trained on both subsets together.
+- A later augmentation experiment could copy parts of Alexandra's setup, such
+  as gain, background noise, coloured noise, and random filters.
+- KenLM or beam-search improvements should be reported separately. The direct
+  comparison rows above should stay greedy CTC unless clearly labelled
+  otherwise.
+
+### Training Mixture Audit
+
+The fairseq2 recipes do train on both CoRal subsets, but the raw dataset itself
+is clearly not balanced.
+
+- The current CTC and LLM configs all use the same `coral_v3_danish` mixture
+  dataset with `storage_mode: "MIXTURE_PARQUET"` and `beta_corpus: 0.5`.
+- The generated `language_distribution_0.tsv` shows:
+  - `coral_v3_read_aloud`: `301,302` samples, `524.94` hours
+  - `coral_v3_conversation`: `149,134` samples, `146.25` hours
+- So the raw training data has about `2x` more `read_aloud` samples and about
+  `3.6x` more `read_aloud` audio hours than `conversation`.
+- This makes it very believable that `conversation` is the harder subset in our
+  results.
+- This also most likely matches what Alexandra Instituttet saw themselves,
+  because their CoRal v3 finetuned models were trained on the same underlying
+  CoRal v3 data mixture.
+
+The main caution is that these numbers describe the raw corpus, not the exact
+per-batch sampling seen during training. Since the recipes use `beta_corpus:
+0.5`, fairseq2 may rebalance the two corpora to some extent. So the safest
+conclusion is: both subsets are included, but the source data is strongly
+skewed toward `read_aloud`, and that likely helps explain why `conversation`
+remains harder.
 
 ## Split-Tagged Results
 

@@ -1,0 +1,39 @@
+# Evaluation config for finetuned omniASR_LLM_300M_v2 (E1, 20k steps) on the
+# held-out TEST split of the full CoRal-v3 mixture.
+#
+# This follows the same old fairseq2 evaluation path as the greedy CTC runs.
+# The concrete checkpoint path is patched in by `scripts/hpc/llm_300m/20_eval_e1.sh`
+# after it resolves the latest `ws_1.*` workspace on HPC.
+
+model:
+  name: "omniASR_LLM_300M_v2"
+  path: "__MODEL_PATH__"
+
+dataset:
+  name: "coral_v3_danish"
+  valid_split: "test"
+  storage_mode: "MIXTURE_PARQUET"
+  task_mode: "ASR"
+  mixture_parquet_storage_config:
+    dataset_summary_path: "data/parquet/version=0/language_distribution_0.tsv"
+    beta_corpus: 0.5
+    beta_language: 0.5
+    fragment_loading:
+      cache: true
+  asr_task_config:
+    min_audio_len: 32_000
+    max_audio_len: 240_000
+    max_num_elements: 640_000
+    batch_shuffle_window: 1
+    normalize_audio: true
+    example_shuffle_window: 1
+
+tokenizer:
+  name: "omniASR_tokenizer_written_v2"
+
+gang:
+  timeout: 259200
+
+evaluator:
+  amp: true
+  amp_dtype: "torch.bfloat16"
