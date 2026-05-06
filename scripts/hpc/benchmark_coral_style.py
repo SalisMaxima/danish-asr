@@ -20,7 +20,7 @@ from danish_asr.coral_benchmark import (
     write_benchmark_outputs,
 )
 from danish_asr.lm import decode_logits_with_argmax, make_inference_pipeline, resolve_dtype
-from danish_asr.utils import configure_project_cache_environment, get_device, resolve_project_path
+from danish_asr.utils import get_device, resolve_project_path
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -81,7 +81,6 @@ def _decode_batch(
 
 
 def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
-    configure_project_cache_environment()
     output_dir = resolve_project_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -95,6 +94,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         device=device,
         dtype=dtype,
     )
+    pipeline.model.eval()
 
     examples, filter_stats = load_coral_v3_test_subset(
         args.subset,
@@ -105,10 +105,11 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     logger.info("Filter stats: {}", json.dumps(filter_stats.__dict__, ensure_ascii=False))
 
     raw_predictions: list[str] = []
-    for start in range(0, len(examples), args.batch_size):
-        batch_examples = examples[start : start + args.batch_size]
-        raw_predictions.extend(_decode_batch(examples=batch_examples, pipeline=pipeline))
-        logger.info("Decoded {}/{} examples", len(raw_predictions), len(examples))
+    with torch.inference_mode():
+        for start in range(0, len(examples), args.batch_size):
+            batch_examples = examples[start : start + args.batch_size]
+            raw_predictions.extend(_decode_batch(examples=batch_examples, pipeline=pipeline))
+            logger.info("Decoded {}/{} examples", len(raw_predictions), len(examples))
 
     predictions, references = normalized_prediction_reference_pairs(raw_predictions, examples)
     scores = score_coral_style(predictions, references)
