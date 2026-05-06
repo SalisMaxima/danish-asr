@@ -11,6 +11,9 @@ This project uses Meta's Omnilingual ASR CTC models. The goal is therefore to
 match the **data regime, evaluation regime, normalization, sampling discipline,
 and robustness choices** closely enough that comparisons are meaningful.
 
+For the concrete execution order that follows from this methodology work, see
+[CoRal Alignment Execution Plan](coral-alignment-execution-plan.md).
+
 ## Priority 0 — Lock The Direct Benchmark Before New Training
 
 **Why this is first:** without a CoRal-style benchmark, new training experiments
