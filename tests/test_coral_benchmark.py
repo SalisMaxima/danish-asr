@@ -164,7 +164,11 @@ def test_benchmark_cli_smoke_writes_artifacts(tmp_path: Path, monkeypatch) -> No
     monkeypatch.setattr(
         cli, "load_coral_v3_test_subset", lambda *args, **kwargs: (examples, SimpleNamespace(__dict__={}))
     )
-    monkeypatch.setattr(cli, "_decode_batch", lambda *, examples, pipeline: ["Hej verden"])
+    monkeypatch.setattr(
+        cli,
+        "_decode_batch",
+        lambda *, examples, pipeline, decoder_kind, beam_decoder, beam_width, removable_tokens: ["Hej verden"],
+    )
 
     cli.main(
         [
@@ -182,4 +186,157 @@ def test_benchmark_cli_smoke_writes_artifacts(tmp_path: Path, monkeypatch) -> No
     )
 
     assert (tmp_path / "out" / "predictions.txt").exists()
-    assert json.loads((tmp_path / "out" / "scores.json").read_text(encoding="utf-8"))["scores"]["cer_coral"] == 0.0
+    score_payload = json.loads((tmp_path / "out" / "scores.json").read_text(encoding="utf-8"))
+    assert score_payload["scores"]["cer_coral"] == 0.0
+    assert score_payload["metadata"]["decoder"] == "greedy"
+    assert score_payload["metadata"]["report_label"] == "greedy"
+
+
+def test_benchmark_cli_parse_args_supports_decoder_options() -> None:
+    import scripts.hpc.benchmark_coral_style as cli
+
+    args = cli.parse_args(
+        [
+            "--checkpoint-path",
+            "model",
+            "--model-arch",
+            "300m_v2",
+            "--subset",
+            "read_aloud",
+            "--decoder",
+            "beam",
+            "--kenlm-binary",
+            "lm.bin",
+            "--beam-width",
+            "32",
+            "--alpha",
+            "0.7",
+            "--beta",
+            "1.2",
+            "--report-label",
+            "CTC LM-enabled",
+            "--output-dir",
+            "out",
+        ]
+    )
+
+    assert args.decoder == "beam"
+    assert args.kenlm_binary == "lm.bin"
+    assert args.beam_width == 32
+    assert args.alpha == 0.7
+    assert args.beta == 1.2
+    assert args.report_label == "CTC LM-enabled"
+
+
+def test_benchmark_cli_beam_without_lm_uses_no_kenlm_decoder(tmp_path: Path, monkeypatch) -> None:
+    import scripts.hpc.benchmark_coral_style as cli
+
+    examples = [_example("Hej verden")]
+    decoder_calls: list[dict[str, object]] = []
+    decode_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(cli, "make_inference_pipeline", lambda **kwargs: (object(), Path("tokenizer.model")))
+    monkeypatch.setattr(cli, "get_device", lambda: SimpleNamespace(type="cpu"))
+    monkeypatch.setattr(cli, "resolve_dtype", lambda dtype_name, device: "float32")
+    monkeypatch.setattr(cli, "load_coral_v3_test_subset", lambda *args, **kwargs: (examples, SimpleNamespace(__dict__={})))
+    monkeypatch.setattr(cli, "build_pyctcdecode_labels", lambda path: (["", "h", "e", "j"], {"<pad>"}))
+
+    def fake_decoder_factory(labels, *, kenlm_model_path, alpha, beta):
+        decoder_calls.append(
+            {"labels": labels, "kenlm_model_path": kenlm_model_path, "alpha": alpha, "beta": beta}
+        )
+        return "beam-decoder"
+
+    def fake_decode_batch(*, examples, pipeline, decoder_kind, beam_decoder, beam_width, removable_tokens):
+        decode_calls.append(
+            {
+                "decoder_kind": decoder_kind,
+                "beam_decoder": beam_decoder,
+                "beam_width": beam_width,
+                "removable_tokens": removable_tokens,
+            }
+        )
+        return ["Hej verden"]
+
+    monkeypatch.setattr(cli, "make_decoder_factory", fake_decoder_factory)
+    monkeypatch.setattr(cli, "_decode_batch", fake_decode_batch)
+
+    cli.main(
+        [
+            "--checkpoint-path",
+            str(tmp_path / "model"),
+            "--model-arch",
+            "300m_v2",
+            "--subset",
+            "read_aloud",
+            "--decoder",
+            "beam",
+            "--output-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert decoder_calls == [{"labels": ["", "h", "e", "j"], "kenlm_model_path": None, "alpha": 0.6, "beta": 0.5}]
+    assert decode_calls == [
+        {
+            "decoder_kind": "beam",
+            "beam_decoder": "beam-decoder",
+            "beam_width": 64,
+            "removable_tokens": {"<pad>"},
+        }
+    ]
+    score_payload = json.loads((tmp_path / "out" / "scores.json").read_text(encoding="utf-8"))
+    assert score_payload["metadata"]["report_label"] == "beam"
+
+
+def test_benchmark_cli_beam_with_lm_writes_alexandra_label(tmp_path: Path, monkeypatch) -> None:
+    import scripts.hpc.benchmark_coral_style as cli
+
+    examples = [_example("Hej verden")]
+    decoder_calls: list[dict[str, object]] = []
+
+    monkeypatch.setattr(cli, "make_inference_pipeline", lambda **kwargs: (object(), Path("tokenizer.model")))
+    monkeypatch.setattr(cli, "get_device", lambda: SimpleNamespace(type="cpu"))
+    monkeypatch.setattr(cli, "resolve_dtype", lambda dtype_name, device: "float32")
+    monkeypatch.setattr(cli, "load_coral_v3_test_subset", lambda *args, **kwargs: (examples, SimpleNamespace(__dict__={})))
+    monkeypatch.setattr(cli, "build_pyctcdecode_labels", lambda path: (["", "h", "e", "j"], set()))
+    monkeypatch.setattr(
+        cli,
+        "_decode_batch",
+        lambda *, examples, pipeline, decoder_kind, beam_decoder, beam_width, removable_tokens: ["Hej verden"],
+    )
+
+    def fake_decoder_factory(labels, *, kenlm_model_path, alpha, beta):
+        decoder_calls.append(
+            {"labels": labels, "kenlm_model_path": kenlm_model_path, "alpha": alpha, "beta": beta}
+        )
+        return "beam-lm-decoder"
+
+    monkeypatch.setattr(cli, "make_decoder_factory", fake_decoder_factory)
+
+    cli.main(
+        [
+            "--checkpoint-path",
+            str(tmp_path / "model"),
+            "--model-arch",
+            "300m_v2",
+            "--subset",
+            "conversation",
+            "--decoder",
+            "beam",
+            "--kenlm-binary",
+            "kenlm.bin",
+            "--report-label",
+            "CTC LM-enabled",
+            "--output-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert decoder_calls == [
+        {"labels": ["", "h", "e", "j"], "kenlm_model_path": "kenlm.bin", "alpha": 0.6, "beta": 0.5}
+    ]
+    score_payload = json.loads((tmp_path / "out" / "scores.json").read_text(encoding="utf-8"))
+    assert score_payload["metadata"]["decoder"] == "beam"
+    assert score_payload["metadata"]["kenlm_binary"] == "kenlm.bin"
+    assert score_payload["metadata"]["report_label"] == "CTC LM-enabled"

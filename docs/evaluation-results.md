@@ -31,30 +31,37 @@ Published anchors are copied from the Røst v3 model cards. The omniASR rows are
 intentionally marked `pending` until the local harness is run on DTU HPC; do not
 compare the WER-only table above to these CER numbers directly.
 
-| Model | Source | Params | Decoder | Read-aloud CER | Conversation CER | Notes |
-|---|---|---:|---|---:|---:|---|
-| `CoRal-project/roest-v3-whisper-1.5b` | published model card | 1.54B | Whisper seq2seq | **4.5%** | **11.6%** | Røst v3 Whisper, trained on CoRal-v3 read-aloud + conversation |
-| `CoRal-project/roest-v3-wav2vec2-315m` | published model card | 315M | CTC | **5.9%** | **13.7%** | Best published Røst v3 CTC-sized reference |
-| `openai/whisper-large-v3` | published Røst model card rerun | 1.54B | Whisper seq2seq | **10.1%** | **27.5%** | Zero-shot baseline in the Røst v3 table |
-| `omniASR_CTC_300M_v2` E6 | local CoRal-style harness | 325M | greedy CTC | pending | pending | `/work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000/model` |
-| `omniASR_CTC_1B_v2` E6 | local CoRal-style harness | 1B | greedy CTC | pending | pending | `/work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model` |
-| `omniASR_CTC_3B_v2` E6 | local CoRal-style harness | 3B | greedy CTC | pending | pending | `/work3/s204696/outputs/omniasr_e6_3b/ws_1.2172dba0/checkpoints/step_30000/model` |
+| Model | Source | Params | Decoder | Read-aloud CER | Read-aloud WER | Conversation CER | Conversation WER | Notes |
+|---|---|---:|---|---:|---:|---:|---:|---|
+| `CoRal-project/roest-v3-whisper-1.5b` | published model card | 1.54B | Whisper seq2seq | **4.5%** | — | **11.6%** | — | Røst v3 Whisper, trained on CoRal-v3 read-aloud + conversation |
+| `CoRal-project/roest-v3-wav2vec2-315m` | published model card | 315M | CTC | **5.9%** | — | **13.7%** | — | Best published Røst v3 CTC-sized reference |
+| `openai/whisper-large-v3` | published Røst model card rerun | 1.54B | Whisper seq2seq | **10.1%** | — | **27.5%** | — | Zero-shot baseline in the Røst v3 table |
+| `omniASR_CTC_300M_v2` E6 | local CoRal-style harness | 325M | `CTC no_lm` | pending | pending | pending | pending | greedy CTC proxy for Alexandra `no_lm`; checkpoint `/work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000/model` |
+| `omniASR_CTC_300M_v2` E6 | local CoRal-style harness | 325M | `CTC LM-enabled` | pending | pending | pending | pending | beam + KenLM proxy for Alexandra default decode |
+| `omniASR_CTC_1B_v2` E6 | local CoRal-style harness | 1B | `CTC no_lm` | pending | pending | pending | pending | greedy CTC proxy for Alexandra `no_lm`; checkpoint `/work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model` |
+| `omniASR_CTC_1B_v2` E6 | local CoRal-style harness | 1B | `CTC LM-enabled` | pending | pending | pending | pending | beam + KenLM proxy for Alexandra default decode |
+| `omniASR_CTC_3B_v2` E6 | local CoRal-style harness | 3B | `CTC no_lm` | pending | pending | pending | pending | greedy CTC proxy for Alexandra `no_lm`; checkpoint `/work3/s204696/outputs/omniasr_e6_3b/ws_1.2172dba0/checkpoints/step_30000/model` |
+| `omniASR_CTC_3B_v2` E6 | local CoRal-style harness | 3B | `CTC LM-enabled` | pending | pending | pending | pending | beam + KenLM proxy for Alexandra default decode |
+| `omniASR_LLM_300M_v2` | planned follow-on | 300M | `autoregressive LLM` | pending | pending | pending | pending | benchmark `clear-butterfly-11` under the same CoRal-style regime later |
+| `omniASR_LLM_1B_v2` | planned follow-on | 1B | `autoregressive LLM` | pending | pending | pending | pending | benchmark `crisp-eon-12` under the same CoRal-style regime later |
 
-Run the full matrix with:
+Run the Alexandra-aligned matrix with:
 
 ```bash
-bash scripts/hpc/benchmark_coral_style_matrix.sh
+KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
+bash scripts/hpc/benchmark_coral_style_alexandra_matrix.sh
 ```
 
 For a quick smoke run:
 
 ```bash
-MAX_SAMPLES=5 bash scripts/hpc/benchmark_coral_style_matrix.sh
+KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
+MAX_SAMPLES=5 bash scripts/hpc/benchmark_coral_style_alexandra_matrix.sh
 ```
 
 Each run writes `predictions.txt`, `references.txt`, `records.jsonl`,
 `scores.json`, and `by_group.csv` under
-`/work3/$USER/outputs/coral_style_benchmark/<model>/<subset>/`.
+`/work3/$USER/outputs/coral_style_benchmark_alexandra/<model>/<subset>/<decoder>/`.
 
 ### Lessons from Alexandra's Setup
 
@@ -66,8 +73,10 @@ Each run writes `predictions.txt`, `references.txt`, `records.jsonl`,
   mixture; Alexandra trains on both subsets and interleaves them explicitly.
 - Add a future augmentation ablation inspired by Alexandra's pipeline: peak
   normalisation, gain, background noise, coloured noise, and random filters.
-- Treat KenLM/beam decoding as a separate improvement experiment. The direct
-  comparison rows above should stay greedy CTC unless explicitly labelled.
+- Keep the direct comparison rows above in Alexandra-style labels:
+  `CTC no_lm` and `CTC LM-enabled`.
+- Keep the internal decoder labels `greedy`, `beam`, and `beam + KenLM` in a
+  separate analysis table below, not in the main public-comparison table.
 
 ## Split-Tagged Results
 
@@ -98,26 +107,34 @@ final benchmark evidence until split-aware eval filtering is confirmed.
 - `3B E6-3B 30k` is the current best combined-test result at `23.06%`, but it improves on `1B E6-1B 50k` by only `0.38pp` (`23.43%` -> `23.06%`).
 - That means scaling from `1B` to `3B` is still helping, but only modestly relative to the extra compute already spent to reach the 3B checkpoint.
 
-## LM Decoding Results
+## CTC Decoding Comparison
 
-Iteration 1 keeps LM construction deliberately narrow: the KenLM corpus is built from
-`CoRal v3` `train` transcripts only, using the same local fairseq2 parquet source as
-the omniASR training/eval pipeline. That avoids validation/test leakage while keeping
-the first decoding experiment easy to reproduce.
+This section is a secondary analysis table. The main CoRal-style table above is
+the Alexandra-aligned public comparison. Here we keep the more technical
+decoder terms so it is easier to see how much gain comes from search alone and
+how much comes from KenLM.
 
-| Model | Training | Split | Decoder | LM | Beam | Alpha | Beta | WER | Notes |
-|---|---|---|---|---|---:|---:|---:|---:|---|
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `greedy` | `none` | — | — | — | — | to be filled from `scripts/decode_ctc_with_lm.py` |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `beam` | `none` | `64` | `0.0` | `0.0` | — | first non-LM beam-search comparison |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `beam` | `danish_lm_v1_3gram` | `64` | `0.3` | `0.0` | — | iteration-1 tuning grid |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `beam` | `danish_lm_v1_3gram` | `64` | `0.3` | `0.5` | — | iteration-1 tuning grid |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `beam` | `danish_lm_v1_3gram` | `64` | `0.3` | `1.0` | — | iteration-1 tuning grid |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `beam` | `danish_lm_v1_3gram` | `64` | `0.6` | `0.0` | — | iteration-1 tuning grid |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `beam` | `danish_lm_v1_3gram` | `64` | `0.6` | `0.5` | — | iteration-1 tuning grid |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `beam` | `danish_lm_v1_3gram` | `64` | `0.6` | `1.0` | — | iteration-1 tuning grid |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `beam` | `danish_lm_v1_3gram` | `64` | `0.9` | `0.0` | — | iteration-1 tuning grid |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `beam` | `danish_lm_v1_3gram` | `64` | `0.9` | `0.5` | — | iteration-1 tuning grid |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `combined` | `beam` | `danish_lm_v1_3gram` | `64` | `0.9` | `1.0` | — | iteration-1 tuning grid |
+Iteration 1 keeps LM construction deliberately narrow: the KenLM corpus is
+built from `CoRal v3` `train` transcripts only, using the same local fairseq2
+parquet source as the omniASR training/eval pipeline. That avoids
+validation/test leakage while keeping the first decoding experiment easy to
+reproduce.
+
+| Model | Training | Split | Decoder | LM | Beam | Alpha | Beta | CER | WER | Notes |
+|---|---|---|---|---|---:|---:|---:|---:|---:|---|
+| `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | `greedy` | `none` | — | — | — | pending | pending | direct checkpoint baseline |
+| `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | `beam` | `none` | `64` | `0.0` | `0.0` | pending | pending | search-only comparison |
+| `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | `beam + KenLM` | `danish_lm_v1_3gram` | `64` | pending | pending | pending | pending | best tuned LM row only |
+| `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | `greedy` | `none` | — | — | — | pending | pending | direct checkpoint baseline |
+| `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | `beam` | `none` | `64` | `0.0` | `0.0` | pending | pending | search-only comparison |
+| `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | `beam + KenLM` | `danish_lm_v1_3gram` | `64` | pending | pending | pending | pending | best tuned LM row only |
+
+Run the decoder-analysis benchmark with:
+
+```bash
+KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
+bash scripts/hpc/benchmark_coral_style_decoder_analysis.sh
+```
 
 ## Related Docs
 
