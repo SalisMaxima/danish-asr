@@ -5,7 +5,7 @@ project plan.
 
 It is designed to answer three questions in the right order:
 
-1. How strong are the current OmniASR CTC checkpoints under a CoRal/Rost-style benchmark?
+1. How strong are the current OmniASR CTC checkpoints under a CoRal/Røst-style benchmark?
 2. How much of the gap to the LLM track is architectural, and how much is caused by decoding or benchmark mismatch?
 3. What is the highest-value next training experiment once the benchmark is trustworthy?
 
