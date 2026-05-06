@@ -7,15 +7,15 @@
 
 set -euo pipefail
 
-PROJECT_DIR="${PROJECT_DIR:-/zhome/00/8/147167/danish_asr}"
+export DANISH_ASR_PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-/zhome/00/8/147167/danish_asr}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-/work3/$USER/outputs/coral_style_benchmark}"
 BATCH_SIZE="${BATCH_SIZE:-2}"
 DTYPE="${DTYPE:-bfloat16}"
 MAX_SAMPLES="${MAX_SAMPLES:-}"
 
-source "$PROJECT_DIR/scripts/hpc/env.sh"
+source "$DANISH_ASR_PROJECT_DIR/scripts/hpc/env.sh"
 setup_omniasr
-cd "$PROJECT_DIR"
+cd "$DANISH_ASR_PROJECT_DIR"
 
 run_one() {
   local label="$1"
