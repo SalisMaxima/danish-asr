@@ -12,6 +12,8 @@ import yaml
 CONFIGS_DIR = Path(__file__).parent.parent / "configs" / "fairseq2"
 LLM_EVAL_CONFIGS = sorted(CONFIGS_DIR.glob("llm_*/llm-eval*.yaml"))
 
+assert LLM_EVAL_CONFIGS, f"No LLM eval configs found under {CONFIGS_DIR} — glob pattern may be wrong"
+
 
 @pytest.mark.parametrize("config_path", LLM_EVAL_CONFIGS, ids=lambda p: p.name)
 def test_llm_eval_config_has_family_and_arch_when_path_is_set(config_path: Path) -> None:
