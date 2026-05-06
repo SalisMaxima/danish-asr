@@ -94,7 +94,9 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         device=device,
         dtype=dtype,
     )
-    pipeline.model.eval()
+    model = getattr(pipeline, "model", None)
+    if model is not None and hasattr(model, "eval"):
+        model.eval()
 
     examples, filter_stats = load_coral_v3_test_subset(
         args.subset,
