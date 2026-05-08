@@ -228,6 +228,30 @@ def test_benchmark_cli_parse_args_supports_decoder_options() -> None:
     assert args.report_label == "CTC LM-enabled"
 
 
+def test_benchmark_cli_rejects_beam_options_with_greedy_decoder() -> None:
+    import pytest
+
+    import scripts.hpc.benchmark_coral_style as cli
+
+    with pytest.raises(SystemExit):
+        cli.parse_args(
+            [
+                "--checkpoint-path",
+                "model",
+                "--model-arch",
+                "300m_v2",
+                "--subset",
+                "read_aloud",
+                "--decoder",
+                "greedy",
+                "--kenlm-binary",
+                "lm.bin",
+                "--output-dir",
+                "out",
+            ]
+        )
+
+
 def test_benchmark_cli_beam_without_lm_uses_no_kenlm_decoder(tmp_path: Path, monkeypatch) -> None:
     import scripts.hpc.benchmark_coral_style as cli
 

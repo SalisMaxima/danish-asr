@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
+from typing import Any
 
 from fairseq2.nn.batch_layout import BatchLayout
 from loguru import logger
@@ -26,8 +28,9 @@ from danish_asr.lm import (
 from danish_asr.utils import configure_project_cache_environment, get_device, resolve_project_path
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    raw_argv = sys.argv[1:] if argv is None else argv
     parser.add_argument("--eval-config", default=None)
     parser.add_argument("--checkpoint-path", default=None)
     parser.add_argument("--model-arch", default=None)
@@ -44,7 +47,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dtype", choices=("float32", "float16", "bfloat16"), default="bfloat16")
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--output-dir", required=True)
-    return parser.parse_args()
+    args = parser.parse_args(raw_argv)
+    provided_args = set(raw_argv)
+    if args.decoder == "greedy":
+        greedy_invalid_options = sorted(provided_args & {"--kenlm-binary", "--beam-width", "--alpha", "--beta"})
+        if greedy_invalid_options:
+            parser.error("Beam/KenLM options require `--decoder beam`: " + ", ".join(greedy_invalid_options))
+    return args
 
 
 def _resolve_inputs(args: argparse.Namespace) -> dict[str, str]:
@@ -84,7 +93,7 @@ def _decode_batch(
     row_indices: list[int],
     pipeline,
     decoder_kind: str,
-    beam_decoder,
+    beam_decoder: Any | None,
     beam_width: int,
     removable_tokens: set[str],
 ) -> list[DecodeResult]:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from typing import Any
 
 import numpy as np
@@ -31,6 +32,7 @@ from danish_asr.utils import get_device, resolve_project_path
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
+    raw_argv = sys.argv[1:] if argv is None else argv
     parser.add_argument("--checkpoint-path", required=True)
     parser.add_argument("--model-arch", required=True, choices=("300m_v2", "1b_v2", "3b_v2"))
     parser.add_argument("--subset", required=True, choices=("read_aloud", "conversation"))
@@ -47,7 +49,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--cache-dir", default=None)
     parser.add_argument("--output-dir", required=True)
-    return parser.parse_args(argv)
+    args = parser.parse_args(raw_argv)
+    provided_args = set(raw_argv)
+    if args.decoder == "greedy":
+        greedy_invalid_options = sorted(provided_args & {"--kenlm-binary", "--beam-width", "--alpha", "--beta"})
+        if greedy_invalid_options:
+            parser.error("Beam/KenLM options require `--decoder beam`: " + ", ".join(greedy_invalid_options))
+    return args
 
 
 def _audio_to_tensor(example: CoRalBenchmarkExample) -> torch.Tensor:
@@ -68,7 +76,7 @@ def _decode_batch(
     examples: list[CoRalBenchmarkExample],
     pipeline: Any,
     decoder_kind: str,
-    beam_decoder: Any,
+    beam_decoder: Any | None,
     beam_width: int,
     removable_tokens: set[str],
 ) -> list[str]:
