@@ -20,15 +20,17 @@ current best checkpoints are:
 
 ## Phase 0 - Lock The Benchmark Before New Conclusions
 
-### Step 0.1 - Run the CoRal-style CTC benchmark matrix
+### Step 0.1 - Run the Alexandra-aligned CoRal-style CTC matrix
 
-Run the new benchmark harness for the existing best CTC checkpoints:
+Run the new Alexandra-aligned benchmark harness for the existing best CTC
+checkpoints:
 
 ```bash
-bash scripts/hpc/benchmark_coral_style_matrix.sh
+KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
+bash scripts/hpc/benchmark_coral_style_alexandra_matrix.sh
 ```
 
-Outputs required for each model and subset:
+Outputs required for each model, subset, and decoder row:
 
 - `scores.json`
 - `records.jsonl`
@@ -40,9 +42,12 @@ Outputs required for each model and subset:
 
 Update `docs/evaluation-results.md` with real values for:
 
-- `omniASR_CTC_300M_v2` E6
-- `omniASR_CTC_1B_v2` E6
-- `omniASR_CTC_3B_v2` E6
+- `omniASR_CTC_300M_v2` E6 `CTC no_lm`
+- `omniASR_CTC_300M_v2` E6 `CTC LM-enabled`
+- `omniASR_CTC_1B_v2` E6 `CTC no_lm`
+- `omniASR_CTC_1B_v2` E6 `CTC LM-enabled`
+- `omniASR_CTC_3B_v2` E6 `CTC no_lm`
+- `omniASR_CTC_3B_v2` E6 `CTC LM-enabled`
 
 Required metrics:
 
@@ -58,6 +63,8 @@ From this point on:
 - public comparison to Røst uses CoRal-style CER only
 - internal training tracking can still use fairseq2 WER
 - the two tables should stay separate
+- the headline CTC rows use Alexandra-style labels:
+  `CTC no_lm` and `CTC LM-enabled`
 
 ### Decision gate
 
@@ -66,15 +73,16 @@ until the CTC checkpoints have real CoRal-style CER numbers.
 
 ## Phase 1 - Separate Decoder Effects From Model Effects
 
-### Step 1.1 - Keep greedy CTC as the baseline comparison
+### Step 1.1 - Keep Alexandra-style labels in the main comparison
 
 The direct CTC vs Røst table should remain:
 
-- greedy CTC
-- no KenLM
-- no beam-assisted score in the main public-comparison table
+- `CTC no_lm`
+- `CTC LM-enabled`
+- no extra decoder-only rows in the main public-comparison table
 
-This preserves a clean answer to: "How good is the checkpoint itself?"
+This keeps the public table closer to Alexandra's evaluation logic while still
+preserving a plain-CTC baseline.
 
 ### Step 1.2 - Add a separate CTC decoding comparison
 
@@ -86,6 +94,9 @@ same CoRal-style subsets for the same CTC checkpoints:
 - beam with Danish KenLM
 
 This should be reported in a separate table, not merged into the main benchmark.
+
+For the first pass, use only `omniASR_CTC_3B_v2` E6-3B so decoder effects are
+isolated from model-size effects.
 
 ### Step 1.3 - Use the same filtered examples
 
@@ -117,8 +128,8 @@ Target runs:
 
 Once LLM results are available under the same benchmark, compare:
 
-- CTC greedy CoRal-style CER
-- CTC + LM CoRal-style CER
+- CTC `no_lm` CoRal-style CER
+- CTC `LM-enabled` CoRal-style CER
 - LLM CoRal-style CER
 
 This is the first point where architecture claims become trustworthy.

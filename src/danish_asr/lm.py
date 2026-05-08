@@ -499,3 +499,29 @@ def decode_logits_with_argmax(
         mask[1:] = pred_ids[1:] != pred_ids[:-1]
 
     return _WHITESPACE_RE.sub(" ", token_decoder(pred_ids[mask])).strip()
+
+
+def decode_ctc_logits(
+    logits: torch.Tensor,
+    *,
+    seq_len: int,
+    token_decoder: Callable[[torch.Tensor], str],
+    decoder_kind: str,
+    beam_decoder: Any = None,
+    beam_width: int = 64,
+    removable_tokens: set[str] | None = None,
+) -> str:
+    """Decode one CTC logit sequence with greedy or beam search."""
+    if decoder_kind == "greedy":
+        return decode_logits_with_argmax(logits, seq_len=seq_len, token_decoder=token_decoder)
+
+    if decoder_kind != "beam":
+        msg = f"Unsupported decoder kind: {decoder_kind}"
+        raise ValueError(msg)
+
+    if beam_decoder is None:
+        msg = "Beam decoder must be initialized when decoder_kind='beam'."
+        raise ValueError(msg)
+
+    hypothesis = beam_decoder.decode(logits[:seq_len].float().cpu().numpy(), beam_width=beam_width)
+    return strip_special_tokens(hypothesis, removable_tokens or set())
