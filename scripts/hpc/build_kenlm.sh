@@ -1,8 +1,9 @@
 #!/bin/bash
 #BSUB -J danish_asr_build_kenlm
 #BSUB -q hpc
-#BSUB -n 1
-#BSUB -R "rusage[mem=64GB]"
+#BSUB -n 8
+#BSUB -R "rusage[mem=8GB]"
+#BSUB -R "span[hosts=1]"
 #BSUB -W 12:00
 #BSUB -o /work3/s204696/logs/lsf/build_kenlm_%J.out
 #BSUB -e /work3/s204696/logs/lsf/build_kenlm_%J.err
