@@ -1,0 +1,32 @@
+name: danish_lm_alexandra_proxy
+
+source:
+  kind: hf_text
+  cache_dir: /work3/s204696/hf_cache
+  streaming: true
+  datasets:
+    - name: scandi_wiki_da
+      id: alexandrainst/scandi-wiki
+      subset: da
+      split: train
+      text_column: text
+    - name: scandi_reddit_da
+      id: alexandrainst/scandi-reddit
+      subset: da
+      split: train
+      text_column: doc
+  exclude_datasets:
+    - name: coral_v3_read_aloud_test
+      id: CoRal-project/coral-v3
+      subset: read_aloud
+      split: test
+      text_column: text
+    - name: coral_v3_conversation_test
+      id: CoRal-project/coral-v3
+      subset: conversation
+      split: test
+      text_column: text
+
+output:
+  corpus_text_path: /work3/s204696/data/lm/processed/danish_lm_alexandra_proxy.txt
+  stats_path: /work3/s204696/data/lm/processed/danish_lm_alexandra_proxy.stats.json

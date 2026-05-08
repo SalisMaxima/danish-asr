@@ -1,0 +1,100 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{amsmath}
+
+\title{CTC Beam Search and KenLM Reference}
+\author{Danish ASR Project}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Purpose}
+
+This note summarizes the decoding references used for the OmniASR CTC
+beam-search and KenLM methodology. The primary references are the ApX Machine
+Learning notes on beam search with a language model and building n-gram models
+with KenLM \cite{apxBeamSearchLm,apxKenlmNgram}. The Alexandra-proxy corpus is
+based on Alexandra Institute's CoRal n-gram training code and public
+ScandiWiki/ScandiReddit datasets
+\cite{alexandraCoralNgram,alexandraScandiWiki,alexandraScandiReddit}.
+
+\section{Beam Search}
+
+Greedy CTC decoding chooses the most likely token at every acoustic timestep,
+then applies CTC cleanup by collapsing repeated tokens and removing blank
+tokens. It is fast, but it commits to local choices immediately.
+
+Beam search keeps multiple candidate transcripts alive. At each timestep, the
+decoder extends the current hypotheses, scores the extensions, sorts them, and
+keeps only the top candidates. The number of retained candidates is the beam
+width. A beam width of 64 means that up to 64 partial transcripts survive each
+pruning step.
+
+Without a language model, beam search is still an acoustic-only search. It can
+recover from local ambiguity better than greedy decoding, but it does not know
+which word sequences are more natural.
+
+\section{Language-Model Scoring}
+
+When a language model is added, the decoder combines acoustic and language
+evidence. A common scoring form is:
+
+\[
+\mathrm{score}(W) =
+\mathrm{score}_{\mathrm{acoustic}}(W)
++ \alpha \, \mathrm{score}_{\mathrm{LM}}(W)
++ \beta \, \mathrm{word\_count}(W)
+\]
+
+Here, $\alpha$ controls the language-model weight and $\beta$ is a word
+insertion bonus. The word insertion term helps avoid an excessive preference
+for very short hypotheses.
+
+\section{KenLM}
+
+KenLM is not a variant of beam search. Beam search is the search algorithm;
+KenLM is a toolkit for building and querying n-gram language models. An n-gram
+language model estimates the probability of a word using only the previous
+$n-1$ words. For a trigram model:
+
+\[
+P(w_t \mid w_{t-2}, w_{t-1})
+\]
+
+During beam search, the decoder can query KenLM whenever a candidate hypothesis
+completes a word. The KenLM score then influences whether that hypothesis
+survives pruning.
+
+\section{Project Usage}
+
+In this project:
+
+\begin{itemize}
+  \item \texttt{CTC no\_lm} means greedy CTC decoding.
+  \item \texttt{beam} means CTC beam search without an external language model.
+  \item \texttt{CTC LM-enabled} means CTC beam search with a KenLM n-gram model.
+\end{itemize}
+
+The main Alexandra-proxy KenLM artifact is a 3-gram model trained on Danish
+ScandiWiki and Danish ScandiReddit text, with CoRal-v3 test transcripts
+excluded to avoid evaluation leakage. A smaller CoRal-v3-train-only LM remains
+available as an ablation, but should not be described as Alexandra-aligned. The
+current documented proxy settings are:
+
+\begin{itemize}
+  \item beam width: 64
+  \item alpha: 0.5
+  \item beta: 1.5
+\end{itemize}
+
+If alpha and beta are tuned, they should be tuned only on a validation split and
+then frozen before evaluating on the CoRal-v3 test split.
+
+\bibliographystyle{plain}
+\bibliography{ctc-beam-kenlm-reference}
+
+\end{document}

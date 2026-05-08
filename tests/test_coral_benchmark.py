@@ -300,7 +300,7 @@ def test_benchmark_cli_beam_without_lm_uses_no_kenlm_decoder(tmp_path: Path, mon
         ]
     )
 
-    assert decoder_calls == [{"labels": ["", "h", "e", "j"], "kenlm_model_path": None, "alpha": 0.6, "beta": 0.5}]
+    assert decoder_calls == [{"labels": ["", "h", "e", "j"], "kenlm_model_path": None, "alpha": 0.5, "beta": 1.5}]
     assert decode_calls == [
         {
             "decoder_kind": "beam",
@@ -358,7 +358,7 @@ def test_benchmark_cli_beam_with_lm_writes_alexandra_label(tmp_path: Path, monke
     )
 
     assert decoder_calls == [
-        {"labels": ["", "h", "e", "j"], "kenlm_model_path": "kenlm.bin", "alpha": 0.6, "beta": 0.5}
+        {"labels": ["", "h", "e", "j"], "kenlm_model_path": "kenlm.bin", "alpha": 0.5, "beta": 1.5}
     ]
     score_payload = json.loads((tmp_path / "out" / "scores.json").read_text(encoding="utf-8"))
     assert score_payload["metadata"]["decoder"] == "beam"

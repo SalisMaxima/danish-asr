@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import unicodedata
@@ -13,6 +14,14 @@ from typing import TYPE_CHECKING, Any
 import torch
 
 from danish_asr.utils import configure_project_cache_environment, get_project_fairseq2_cache_dir, resolve_project_path
+
+try:
+    from datasets import load_dataset
+
+    _DATASETS_AVAILABLE = True
+except ImportError:  # pragma: no cover - core project dependency, defensive for minimal installs
+    load_dataset = None  # type: ignore[assignment]
+    _DATASETS_AVAILABLE = False
 
 try:
     import pyarrow.parquet as pq
@@ -97,6 +106,12 @@ class DecodeResult:
 def _require_pyarrow() -> None:
     if not _PYARROW_AVAILABLE:
         msg = "pyarrow is required for parquet-backed LM corpus and decoding scripts. Install the 'omni' dependency group."
+        raise ImportError(msg)
+
+
+def _require_datasets() -> None:
+    if not _DATASETS_AVAILABLE:
+        msg = "datasets is required for Hugging Face text-corpus LM builds."
         raise ImportError(msg)
 
 
@@ -233,6 +248,120 @@ def build_lm_corpus_from_parquet(
     return lines, stats
 
 
+def _hash_text(text: str) -> str:
+    return hashlib.sha1(text.encode("utf-8"), usedforsecurity=False).hexdigest()
+
+
+def _dataset_name(config: dict[str, Any]) -> str:
+    return str(config.get("name") or config.get("id") or "dataset")
+
+
+def _iter_hf_text_rows(
+    datasets_config: Sequence[dict[str, Any]],
+    *,
+    cache_dir: str | Path | None,
+    streaming: bool,
+) -> Iterator[tuple[str, str]]:
+    _require_datasets()
+
+    for dataset_config in datasets_config:
+        dataset_name = _dataset_name(dataset_config)
+        dataset = load_dataset(  # type: ignore[misc]  # nosec B615 - revision configurable via config
+            path=dataset_config["id"],
+            name=dataset_config.get("subset"),
+            split=dataset_config.get("split", "train"),
+            cache_dir=None if cache_dir is None else str(resolve_project_path(cache_dir)),
+            streaming=streaming,
+            trust_remote_code=dataset_config.get("trust_remote_code", True),
+            revision=dataset_config.get("revision"),
+        )
+        text_column = dataset_config.get("text_column", "text")
+
+        for row in dataset:
+            yield dataset_name, str(row[text_column])
+
+
+def build_hf_text_lm_corpus(
+    *,
+    datasets_config: Sequence[dict[str, Any]],
+    output_path: str | Path,
+    stats_path: str | Path,
+    version: str,
+    cache_dir: str | Path | None = None,
+    streaming: bool = True,
+    exclude_datasets_config: Sequence[dict[str, Any]] = (),
+) -> CorpusStats:
+    """Build a de-duplicated text LM corpus from Hugging Face datasets.
+
+    This is intended for the Alexandra-style proxy LM that uses ScandiWiki and
+    ScandiReddit while excluding CoRal-v3 test transcripts.
+    """
+    excluded_texts: set[str] = set()
+    for _source_name, raw_text in _iter_hf_text_rows(
+        exclude_datasets_config,
+        cache_dir=cache_dir,
+        streaming=False,
+    ):
+        normalized = normalize_lm_text(raw_text)
+        if normalized:
+            excluded_texts.add(normalized)
+
+    output = resolve_project_path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    source_names = [_dataset_name(dataset_config) for dataset_config in datasets_config]
+    source_counts = dict.fromkeys(source_names, 0)
+    seen_hashes: set[str] = set()
+    raw_examples = 0
+    written_examples = 0
+    token_count = 0
+
+    with output.open("w", encoding="utf-8") as handle:
+        for dataset_name, raw_text in _iter_hf_text_rows(
+            datasets_config,
+            cache_dir=cache_dir,
+            streaming=streaming,
+        ):
+            raw_examples += 1
+            normalized = normalize_lm_text(raw_text)
+            if not normalized or normalized in excluded_texts:
+                continue
+
+            text_hash = _hash_text(normalized)
+            if text_hash in seen_hashes:
+                continue
+
+            seen_hashes.add(text_hash)
+            handle.write(f"{normalized}\n")
+            written_examples += 1
+            token_count += len(normalized.split())
+            source_counts[dataset_name] = source_counts.get(dataset_name, 0) + 1
+
+    stats = CorpusStats(
+        version=version,
+        split="train",
+        language="da",
+        corpora=source_names,
+        raw_examples=raw_examples,
+        written_examples=written_examples,
+        unique_examples=written_examples,
+        token_count=token_count,
+        source_counts=source_counts,
+        normalization={
+            "unicode_normalization": "NFKC",
+            "lowercase": True,
+            "collapse_whitespace": True,
+            "strip_urls": True,
+            "strip_metadata_tokens": True,
+            "deduplicate_exact_lines": True,
+            "deduplicate_hash": "sha1",
+            "exclude_exact_normalized_texts": len(excluded_texts),
+        },
+    )
+    write_corpus_stats(stats, stats_path)
+    return stats
+
+
 def write_lm_corpus(texts: Iterable[str], output_path: Path) -> None:
     """Write normalized LM text, one line per example."""
     output_path = resolve_project_path(output_path)
@@ -240,11 +369,11 @@ def write_lm_corpus(texts: Iterable[str], output_path: Path) -> None:
     output_path.write_text("".join(f"{line}\n" for line in texts), encoding="utf-8")
 
 
-def write_corpus_stats(stats: CorpusStats, output_path: Path) -> None:
+def write_corpus_stats(stats: CorpusStats, output_path: str | Path) -> None:
     """Write corpus stats as pretty JSON."""
-    output_path = resolve_project_path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(asdict(stats), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    resolved_path = resolve_project_path(output_path)
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved_path.write_text(json.dumps(asdict(stats), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def load_yaml_config(path: str | Path) -> dict[str, Any]:

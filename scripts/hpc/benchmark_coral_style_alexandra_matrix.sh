@@ -32,10 +32,10 @@ OUTPUT_ROOT="${OUTPUT_ROOT:-/work3/$USER/outputs/coral_style_benchmark_alexandra
 BATCH_SIZE="${BATCH_SIZE:-2}"
 DTYPE="${DTYPE:-bfloat16}"
 MAX_SAMPLES="${MAX_SAMPLES:-}"
-KENLM_BINARY="${KENLM_BINARY:-/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin}"
+KENLM_BINARY="${KENLM_BINARY:-/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin}"
 BEAM_WIDTH="${BEAM_WIDTH:-64}"
-ALPHA="${ALPHA:-0.6}"
-BETA="${BETA:-0.5}"
+ALPHA="${ALPHA:-0.5}"
+BETA="${BETA:-1.5}"
 TOKENIZER_MODEL_PATH="${TOKENIZER_MODEL_PATH:-}"
 
 if [[ ! -f "$KENLM_BINARY" ]]; then

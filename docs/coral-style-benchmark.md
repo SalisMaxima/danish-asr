@@ -122,7 +122,7 @@ been executed on DTU HPC.
 
 ## How To Run
 
-Build the train-only KenLM artifact if it is not already present:
+Build the Alexandra-proxy KenLM artifact if it is not already present:
 
 ```bash
 bsub < scripts/hpc/build_lm_corpus.sh
@@ -145,10 +145,10 @@ bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh full
 The submit helper uses these first-pass LM decoding settings unless overridden:
 
 ```bash
-KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin
+KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin
 BEAM_WIDTH=64
-ALPHA=0.6
-BETA=0.5
+ALPHA=0.5
+BETA=1.5
 ```
 
 Run a single benchmark manually:
@@ -254,11 +254,10 @@ both CoRal-style CER and the existing fairseq2 WER for continuity.
 ### Decoding Lessons
 
 The main public-comparison table should keep Alexandra-style labels:
-`CTC no_lm` for greedy decoding and `CTC LM-enabled` for beam+KenLM. The exact
-Røst v3 beam-search weights are not published in the model card, so the first
-OmniASR `CTC LM-enabled` rows use a documented proxy: beam width `64`,
-`alpha=0.6`, `beta=0.5`, and a KenLM model trained only on CoRal-v3 train
-transcripts.
+`CTC no_lm` for greedy decoding and `CTC LM-enabled` for beam+KenLM. The first
+OmniASR `CTC LM-enabled` rows use a documented Alexandra proxy: beam width
+`64`, `alpha=0.5`, `beta=1.5`, and a KenLM model trained on Danish ScandiWiki
+plus Danish ScandiReddit with CoRal-v3 test transcripts excluded.
 
 Report LM decoding separately so readers do not confuse model quality with
 decoder assistance.

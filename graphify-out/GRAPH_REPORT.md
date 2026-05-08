@@ -1,12 +1,12 @@
 # Graph Report - danish_asr  (2026-05-08)
 
 ## Corpus Check
-- 69 files · ~137,247 words
+- 69 files · ~138,499 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1230 nodes · 2731 edges · 37 communities detected
-- Extraction: 84% EXTRACTED · 16% INFERRED · 0% AMBIGUOUS · INFERRED: 425 edges (avg confidence: 0.72)
+- 1262 nodes · 2751 edges · 62 communities detected
+- Extraction: 84% EXTRACTED · 16% INFERRED · 0% AMBIGUOUS · INFERRED: 430 edges (avg confidence: 0.72)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -47,6 +47,31 @@
 - [[_COMMUNITY_Community 34|Community 34]]
 - [[_COMMUNITY_Community 35|Community 35]]
 - [[_COMMUNITY_Community 41|Community 41]]
+- [[_COMMUNITY_Community 43|Community 43]]
+- [[_COMMUNITY_Community 44|Community 44]]
+- [[_COMMUNITY_Community 45|Community 45]]
+- [[_COMMUNITY_Community 46|Community 46]]
+- [[_COMMUNITY_Community 47|Community 47]]
+- [[_COMMUNITY_Community 48|Community 48]]
+- [[_COMMUNITY_Community 49|Community 49]]
+- [[_COMMUNITY_Community 50|Community 50]]
+- [[_COMMUNITY_Community 51|Community 51]]
+- [[_COMMUNITY_Community 52|Community 52]]
+- [[_COMMUNITY_Community 53|Community 53]]
+- [[_COMMUNITY_Community 54|Community 54]]
+- [[_COMMUNITY_Community 55|Community 55]]
+- [[_COMMUNITY_Community 56|Community 56]]
+- [[_COMMUNITY_Community 57|Community 57]]
+- [[_COMMUNITY_Community 58|Community 58]]
+- [[_COMMUNITY_Community 59|Community 59]]
+- [[_COMMUNITY_Community 60|Community 60]]
+- [[_COMMUNITY_Community 61|Community 61]]
+- [[_COMMUNITY_Community 62|Community 62]]
+- [[_COMMUNITY_Community 63|Community 63]]
+- [[_COMMUNITY_Community 64|Community 64]]
+- [[_COMMUNITY_Community 65|Community 65]]
+- [[_COMMUNITY_Community 66|Community 66]]
+- [[_COMMUNITY_Community 67|Community 67]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `PreprocessedCoRalDataset` - 69 edges
@@ -76,19 +101,19 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
-Nodes (251): _(), a(), Ac(), Ae(), ai(), an(), ao(), ap() (+243 more)
+Nodes (250): _(), a(), Ac(), Ae(), ai(), an(), ao(), ap() (+242 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.03
-Nodes (116): Write benchmark artifacts in a stable, inspectable format., write_benchmark_outputs(), build_lm_corpus_from_parquet(), build_pyctcdecode_labels(), chunked(), collate_decode_records(), CorpusStats, decode_ctc_logits() (+108 more)
+Nodes (122): Write benchmark artifacts in a stable, inspectable format., write_benchmark_outputs(), build_hf_text_lm_corpus(), build_lm_corpus_from_parquet(), build_pyctcdecode_labels(), chunked(), collate_decode_records(), CorpusStats (+114 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.05
-Nodes (50): collate_fn(), CoRalDataModule, CoRalDataset, _pad_1d_tensors(), PreprocessedCoRalDataset, CoRal Danish ASR dataset and data module., Pad variable-length 1D tensors to uniform length.      Returns (stacked_tensor,, Custom collate function for variable-length audio. (+42 more)
+Cohesion: 0.04
+Nodes (65): collate_fn(), CoRalDataModule, CoRalDataset, _pad_1d_tensors(), PreprocessedCoRalDataset, CoRal Danish ASR dataset and data module., Pad variable-length 1D tensors to uniform length.      Returns (stacked_tensor,, Custom collate function for variable-length audio. (+57 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.06
-Nodes (62): A(), add(), At(), be(), Bt(), ce(), constructor(), Ct() (+54 more)
+Nodes (63): A(), add(), At(), be(), Bt(), ce(), constructor(), Ct() (+55 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.05
@@ -99,32 +124,32 @@ Cohesion: 0.05
 Nodes (47): _backup_score_file(), check_prerequisites(), _get_score_file(), _log_workspace_snapshot(), main(), _MetricParser, _next_backup_path(), Step 4: Evaluation wrapper for omniASR on HPC.  Runs the omniASR eval recipe on (+39 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.06
-Nodes (33): compute_cer(), compute_metrics(), compute_wer(), ASR evaluation metrics (WER, CER)., Compute Character Error Rate.      Args:         predictions: Model transcriptio, Compute all ASR metrics., Compute Word Error Rate.      Args:         predictions: Model transcriptions, _build_overrides() (+25 more)
-
-### Community 7 - "Community 7"
 Cohesion: 0.08
 Nodes (32): convert_split(), main(), parse_args(), process_audio(), Unified preprocessing for CoRal-v3: fairseq2 + universal Parquet formats.  Resam, Resample to 16kHz and FLAC-encode once.      Returns:         (flac_bytes, audio, Write rows to a fairseq2-format Parquet file., Write rows to a universal-format Parquet file. (+24 more)
 
-### Community 8 - "Community 8"
+### Community 7 - "Community 7"
 Cohesion: 0.08
 Nodes (40): _age_group(), bounded_error_rate(), convert_numeral_to_words(), CoRalBenchmarkExample, _dialect(), _empty_filter_stats(), _example_duration_seconds(), example_group_metadata() (+32 more)
 
-### Community 9 - "Community 9"
+### Community 8 - "Community 8"
 Cohesion: 0.08
 Nodes (24): convert_split(), _get_text_normalize(), main(), normalize_text(), process_audio(), Convert CoRal-v3 HuggingFace dataset to omnilingual ASR Parquet format.  Reads C, Convert one HF split to Parquet part files.      Returns stats dict with num_sam, Write language distribution stats TSV with hours column derived from total_audio (+16 more)
 
-### Community 10 - "Community 10"
+### Community 9 - "Community 9"
 Cohesion: 0.08
 Nodes (20): check_prerequisites(), _DuplicateColWarningFilter, ensure_data_symlink(), _init_wandb(), _log_metrics_to_wandb(), main(), _MetricParser, Training wrapper for omniASR on HPC.  Sets up environment, creates data symlink, (+12 more)
 
-### Community 11 - "Community 11"
+### Community 10 - "Community 10"
 Cohesion: 0.13
 Nodes (32): ArtifactVersionRow, audit(), _build_arg_parser(), build_artifact_report(), build_run_file_report(), _bytes_to_gib(), collect_artifact_rows(), collect_run_file_rows() (+24 more)
 
+### Community 11 - "Community 11"
+Cohesion: 0.09
+Nodes (18): compute_cer(), compute_metrics(), compute_wer(), ASR evaluation metrics (WER, CER)., Compute Character Error Rate.      Args:         predictions: Model transcriptio, Compute all ASR metrics., Compute Word Error Rate.      Args:         predictions: Model transcriptions, ASRLitModel (+10 more)
+
 ### Community 12 - "Community 12"
 Cohesion: 0.12
-Nodes (31): Aa(), De(), Ea(), El(), fo(), fu(), hn(), iu() (+23 more)
+Nodes (32): Aa(), De(), Ea(), El(), fo(), fu(), hn(), iu() (+24 more)
 
 ### Community 13 - "Community 13"
 Cohesion: 0.1
@@ -222,8 +247,108 @@ Nodes (1): LM-related helper scripts.
 Cohesion: 1.0
 Nodes (1): True once the first warning occurrence has been seen.
 
+### Community 43 - "Community 43"
+Cohesion: 1.0
+Nodes (1): Compact statistics for an LM text build.
+
+### Community 44 - "Community 44"
+Cohesion: 1.0
+Nodes (1): Decoded hypothesis with reference metadata.
+
+### Community 45 - "Community 45"
+Cohesion: 1.0
+Nodes (1): Normalize transcript text for LM training without changing Danish orthography.
+
+### Community 46 - "Community 46"
+Cohesion: 1.0
+Nodes (1): Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``.
+
+### Community 47 - "Community 47"
+Cohesion: 1.0
+Nodes (1): Yield rows from fairseq2 parquet shards for the requested corpora/split.
+
+### Community 48 - "Community 48"
+Cohesion: 1.0
+Nodes (1): Build a deterministic LM text corpus from fairseq2 parquet transcripts.
+
+### Community 49 - "Community 49"
+Cohesion: 1.0
+Nodes (1): Write normalized LM text, one line per example.
+
+### Community 50 - "Community 50"
+Cohesion: 1.0
+Nodes (1): Write corpus stats as pretty JSON.
+
+### Community 51 - "Community 51"
+Cohesion: 1.0
+Nodes (1): Load a small YAML config file.
+
+### Community 52 - "Community 52"
+Cohesion: 1.0
+Nodes (1): Find a cached tokenizer model file using the asset card basename.
+
+### Community 53 - "Community 53"
+Cohesion: 1.0
+Nodes (1): Load the OmniASR tokenizer, preferring an explicit or cached local model file.
+
+### Community 54 - "Community 54"
+Cohesion: 1.0
+Nodes (1): Build pyctcdecode labels in the exact OmniASR logit order.
+
+### Community 55 - "Community 55"
+Cohesion: 1.0
+Nodes (1): Remove special-token text artifacts after beam decoding.
+
+### Community 56 - "Community 56"
+Cohesion: 1.0
+Nodes (1): Load a custom OmniASR CTC checkpoint using fairseq2's registered family.
+
+### Community 57 - "Community 57"
+Cohesion: 1.0
+Nodes (1): Create an OmniASR inference pipeline for CTC decoding.
+
+### Community 58 - "Community 58"
+Cohesion: 1.0
+Nodes (1): Yield fixed-size chunks from a sequence.
+
+### Community 59 - "Community 59"
+Cohesion: 1.0
+Nodes (1): Read UTF-8 text lines without trailing newlines.
+
+### Community 60 - "Community 60"
+Cohesion: 1.0
+Nodes (1): Write UTF-8 text lines with trailing newlines.
+
+### Community 61 - "Community 61"
+Cohesion: 1.0
+Nodes (1): Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con
+
+### Community 62 - "Community 62"
+Cohesion: 1.0
+Nodes (1): Construct a pyctcdecode decoder lazily.
+
+### Community 63 - "Community 63"
+Cohesion: 1.0
+Nodes (1): Compute simple WER summary from aligned prediction/reference lists.
+
+### Community 64 - "Community 64"
+Cohesion: 1.0
+Nodes (1): Resolve a dtype string with a CPU-safe fallback.
+
+### Community 65 - "Community 65"
+Cohesion: 1.0
+Nodes (1): Split decode records into aligned prediction and reference lists.
+
+### Community 66 - "Community 66"
+Cohesion: 1.0
+Nodes (1): Apply greedy CTC decoding to a single logit sequence.
+
+### Community 67 - "Community 67"
+Cohesion: 1.0
+Nodes (1): Decode one CTC logit sequence with greedy or beam search.
+
 ## Knowledge Gaps
-- **233 isolated node(s):** `Invoke tasks for Danish ASR.  Tasks are organized into namespaces for better org`, `Load a module from a file path.`, `CoRal Danish ASR dataset and data module.`, `CoRal Danish speech dataset wrapper.      Wraps HuggingFace datasets for CoRal r`, `CoRal dataset from preprocessed Parquet (no on-the-fly resampling).      Reads u` (+228 more)
+- **259 isolated node(s):** `Invoke tasks for Danish ASR.  Tasks are organized into namespaces for better org`, `Load a module from a file path.`, `CoRal Danish ASR dataset and data module.`, `CoRal Danish speech dataset wrapper.      Wraps HuggingFace datasets for CoRal r`, `CoRal dataset from preprocessed Parquet (no on-the-fly resampling).      Reads u` (+254 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `Community 29`** (3 nodes): `Register danish_asr asset cards (datasets) with fairseq2.`, `setup_fairseq2_extension()`, `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -241,16 +366,66 @@ Nodes (1): True once the first warning occurrence has been seen.
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 41`** (1 nodes): `True once the first warning occurrence has been seen.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 43`** (1 nodes): `Compact statistics for an LM text build.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 44`** (1 nodes): `Decoded hypothesis with reference metadata.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 45`** (1 nodes): `Normalize transcript text for LM training without changing Danish orthography.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 46`** (1 nodes): `Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 47`** (1 nodes): `Yield rows from fairseq2 parquet shards for the requested corpora/split.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 48`** (1 nodes): `Build a deterministic LM text corpus from fairseq2 parquet transcripts.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 49`** (1 nodes): `Write normalized LM text, one line per example.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 50`** (1 nodes): `Write corpus stats as pretty JSON.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 51`** (1 nodes): `Load a small YAML config file.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 52`** (1 nodes): `Find a cached tokenizer model file using the asset card basename.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 53`** (1 nodes): `Load the OmniASR tokenizer, preferring an explicit or cached local model file.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 54`** (1 nodes): `Build pyctcdecode labels in the exact OmniASR logit order.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 55`** (1 nodes): `Remove special-token text artifacts after beam decoding.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 56`** (1 nodes): `Load a custom OmniASR CTC checkpoint using fairseq2's registered family.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 57`** (1 nodes): `Create an OmniASR inference pipeline for CTC decoding.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 58`** (1 nodes): `Yield fixed-size chunks from a sequence.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 59`** (1 nodes): `Read UTF-8 text lines without trailing newlines.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 60`** (1 nodes): `Write UTF-8 text lines with trailing newlines.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 61`** (1 nodes): `Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 62`** (1 nodes): `Construct a pyctcdecode decoder lazily.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 63`** (1 nodes): `Compute simple WER summary from aligned prediction/reference lists.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 64`** (1 nodes): `Resolve a dtype string with a CPU-safe fallback.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 65`** (1 nodes): `Split decode records into aligned prediction and reference lists.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 66`** (1 nodes): `Apply greedy CTC decoding to a single logit sequence.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 67`** (1 nodes): `Decode one CTC logit sequence with greedy or beam search.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `set()` connect `Community 1` to `Community 3`, `Community 4`, `Community 5`, `Community 7`, `Community 8`, `Community 10`?**
-  _High betweenness centrality (0.397) - this node is a cross-community bridge._
+- **Why does `set()` connect `Community 1` to `Community 3`, `Community 4`, `Community 5`, `Community 6`, `Community 7`, `Community 9`?**
+  _High betweenness centrality (0.379) - this node is a cross-community bridge._
 - **Why does `_t()` connect `Community 3` to `Community 0`, `Community 1`?**
-  _High betweenness centrality (0.228) - this node is a cross-community bridge._
+  _High betweenness centrality (0.234) - this node is a cross-community bridge._
 - **Why does `main()` connect `Community 4` to `Community 1`, `Community 5`?**
-  _High betweenness centrality (0.128) - this node is a cross-community bridge._
+  _High betweenness centrality (0.101) - this node is a cross-community bridge._
 - **Are the 63 inferred relationships involving `PreprocessedCoRalDataset` (e.g. with `TestCoRalDataset` and `TestCollateFn`) actually correct?**
   _`PreprocessedCoRalDataset` has 63 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 2 inferred relationships involving `F()` (e.g. with `Kt()` and `ee()`) actually correct?**

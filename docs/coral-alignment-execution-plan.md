@@ -35,8 +35,8 @@ Before the full run, smoke test the same matrix:
 bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh smoke
 ```
 
-If `/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin` does not exist yet, build
-the train-only KenLM artifact first:
+If `/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin` does not
+exist yet, build the Alexandra-proxy KenLM artifact first:
 
 ```bash
 bsub < scripts/hpc/build_lm_corpus.sh
@@ -123,17 +123,18 @@ The decoding comparison should use the same CoRal-style regime:
 ### Step 1.4 - Treat beam + KenLM as a documented proxy
 
 The public Røst v3 model card reports the CoRal-v3 CER results and training
-command, but it does not currently expose exact beam-search hyperparameters.
-Until those are recovered from released artifacts or upstream code, report
-OmniASR `CTC LM-enabled` as a documented proxy rather than an exact clone of
-Alexandra's decoder.
+command, while Alexandra's CoRal code exposes the n-gram LM construction path.
+Use the released Alexandra ScandiWiki/ScandiReddit corpora and the closest
+published Røst LM decoder weights as a documented proxy rather than claiming an
+exact clone of Alexandra's full decoder stack.
 
 First-pass fixed settings:
 
 - `beam_width=64`
-- `alpha=0.6`
-- `beta=0.5`
-- KenLM trained only on CoRal-v3 train transcripts, excluding dev/test text
+- `alpha=0.5`
+- `beta=1.5`
+- KenLM trained on Danish ScandiWiki plus Danish ScandiReddit, excluding
+  CoRal-v3 test transcripts
 
 If tuning is needed, tune `alpha` and `beta` on dev only, freeze the chosen
 setting, and then run the CoRal-v3 test benchmark once. Do not tune LM

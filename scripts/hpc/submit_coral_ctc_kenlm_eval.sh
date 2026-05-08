@@ -6,10 +6,10 @@
 #   bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh full
 #
 # Optional overrides:
-#   KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin
+#   KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin
 #   BEAM_WIDTH=64
-#   ALPHA=0.6
-#   BETA=0.5
+#   ALPHA=0.5
+#   BETA=1.5
 
 set -euo pipefail
 
@@ -20,10 +20,10 @@ JOB_SCRIPT="$PROJECT_DIR/scripts/hpc/benchmark_coral_style_alexandra_matrix.sh"
 
 mkdir -p "/work3/$USER/logs/lsf"
 
-export KENLM_BINARY="${KENLM_BINARY:-/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin}"
+export KENLM_BINARY="${KENLM_BINARY:-/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin}"
 export BEAM_WIDTH="${BEAM_WIDTH:-64}"
-export ALPHA="${ALPHA:-0.6}"
-export BETA="${BETA:-0.5}"
+export ALPHA="${ALPHA:-0.5}"
+export BETA="${BETA:-1.5}"
 export DANISH_ASR_PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-$PROJECT_DIR}"
 
 if [[ ! -f "$KENLM_BINARY" ]]; then

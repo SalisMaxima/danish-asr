@@ -371,16 +371,18 @@ After the greedy CoRal-style table is populated, run a second decoding table:
 - beam with Danish KenLM
 
 Use the same fixed checkpoints and same CoRal-style benchmark output format.
-The Røst v3 model card does not currently expose exact beam width or LM weight
-settings, so report `beam + KenLM` as a documented proxy unless those values are
-recovered from released artifacts or upstream code.
+Alexandra's CoRal code exposes the n-gram LM construction path, and released
+Røst LM metadata gives a useful `alpha=0.5`, `beta=1.5` proxy. Report
+`beam + KenLM` as a documented proxy unless the exact Røst v3 decoder stack is
+fully recovered.
 
 First-pass fixed settings:
 
 - `beam_width=64`
-- `alpha=0.6`
-- `beta=0.5`
-- KenLM corpus: CoRal-v3 train transcripts only, excluding dev/test text
+- `alpha=0.5`
+- `beta=1.5`
+- KenLM corpus: Danish ScandiWiki plus Danish ScandiReddit, excluding CoRal-v3
+  test transcripts
 
 If tuning is needed, tune `alpha` and `beta` on dev only, then freeze the chosen
 setting before evaluating the CoRal-v3 test split.

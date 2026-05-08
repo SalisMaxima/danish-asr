@@ -69,8 +69,8 @@ bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh smoke
 ```
 
 The submit helper expects the KenLM artifact at
-`/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin`. If it is missing, build it
-first with:
+`/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin`. If it is
+missing, build it first with:
 
 ```bash
 bsub < scripts/hpc/build_lm_corpus.sh
@@ -166,20 +166,19 @@ the Alexandra-aligned public comparison. Here we keep the more technical
 decoder terms so it is easier to see how much gain comes from search alone and
 how much comes from KenLM.
 
-Iteration 1 keeps LM construction deliberately narrow: the KenLM corpus is
-built from `CoRal v3` `train` transcripts only, using the same local fairseq2
-parquet source as the omniASR training/eval pipeline. That avoids
-validation/test leakage while keeping the first decoding experiment easy to
-reproduce.
+Iteration 1 uses an Alexandra-proxy KenLM corpus: Danish ScandiWiki plus Danish
+ScandiReddit, with CoRal-v3 test transcripts excluded. The older CoRal-v3
+train-only LM remains useful as a leakage-safe ablation, but the main
+`CTC LM-enabled` rows should use the Alexandra-proxy artifact.
 
 | Model | Training | Split | Decoder | LM | Beam | Alpha | Beta | CER | WER | Notes |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---|
 | `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | `greedy` | `none` | — | — | — | pending | pending | direct checkpoint baseline |
 | `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | `beam` | `none` | `64` | `0.0` | `0.0` | pending | pending | search-only comparison |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | `beam + KenLM` | `danish_lm_v1_3gram` | `64` | pending | pending | pending | pending | best tuned LM row only |
+| `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | `beam + KenLM` | `danish_lm_alexandra_proxy_3gram` | `64` | `0.5` | `1.5` | pending | pending | Alexandra-proxy LM row |
 | `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | `greedy` | `none` | — | — | — | pending | pending | direct checkpoint baseline |
 | `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | `beam` | `none` | `64` | `0.0` | `0.0` | pending | pending | search-only comparison |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | `beam + KenLM` | `danish_lm_v1_3gram` | `64` | pending | pending | pending | pending | best tuned LM row only |
+| `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | `beam + KenLM` | `danish_lm_alexandra_proxy_3gram` | `64` | `0.5` | `1.5` | pending | pending | Alexandra-proxy LM row |
 
 Run the decoder-analysis benchmark with:
 
