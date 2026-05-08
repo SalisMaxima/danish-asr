@@ -5,7 +5,7 @@
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
-#BSUB -W 3:00
+#BSUB -W 8:00
 #BSUB -B
 #BSUB -N
 #BSUB -u s204696@dtu.dk
@@ -14,6 +14,8 @@
 #
 # Evaluate finetuned omniASR_LLM_300M_v2 (E1, nominally 20k steps) on 3 test splits
 # using the same old fairseq2 evaluation path as the greedy CTC runs.
+# Walltime note: the combined split alone has been observed at ~135 min on gpua100;
+# the full matrix runs combined + read-aloud + conversation sequentially.
 #
 # Usage:
 #   bsub < scripts/hpc/llm_300m/20_eval_e1.sh

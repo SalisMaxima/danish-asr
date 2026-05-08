@@ -7,6 +7,8 @@
 
 model:
   name: "omniASR_LLM_1B_v2"
+  family: "wav2vec2_llama"
+  arch: "1b_v2"
   path: "__MODEL_PATH__"
 
 dataset:
