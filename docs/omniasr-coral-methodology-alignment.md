@@ -31,13 +31,13 @@ Run the new CoRal-style benchmark harness for:
 Use:
 
 ```bash
-bash scripts/hpc/benchmark_coral_style_matrix.sh
+bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh full
 ```
 
 For a smoke run:
 
 ```bash
-MAX_SAMPLES=5 bash scripts/hpc/benchmark_coral_style_matrix.sh
+bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh smoke
 ```
 
 ### Acceptance Criteria
@@ -132,9 +132,12 @@ No meaningful GPU cost. This can be done before more training.
 
 ## Priority 3 — Add A Short-Utterance Training Variant
 
-**Why this matters:** Alexandra's ASR finetuning filters training examples to
-`1.0s-10.0s`, while your current fairseq2 CTC configs use roughly `2s-60s`.
-This is likely one of the biggest methodology differences.
+**Why this matters:** Alexandra's public benchmark is short-utterance and
+CER-first. The local CoRal-style evaluation harness uses
+`0.5s < duration < 10.0s`, while the current fairseq2 CTC configs train on
+roughly `2s-60s`. The new training-alignment run should use the same
+`0.5s-10.0s` duration window as the CoRal-style evaluation benchmark, so the
+training and evaluation methodologies match.
 
 ### Change
 
@@ -144,12 +147,16 @@ but changes the length regime:
 - model: start with `omniASR_CTC_1B_v2`
 - train split: CoRal-v3 train
 - valid split: CoRal-v3 dev
-- min audio length: approximately `1.0s`
+- min audio length: approximately `0.5s`
 - max audio length: approximately `10.0s`
 - keep shuffle windows at `1000`
 - keep LR at `5e-5` initially
 - keep tri-stage scheduler initially
 - keep greedy CTC decoding for direct comparison
+
+Use the same duration window for training and public-comparison evaluation:
+`0.5s < duration < 10.0s`. At 16 kHz this means `min_audio_len: 8_000` and
+`max_audio_len: 160_000`.
 
 ### Recommended First Config
 
@@ -168,7 +175,7 @@ model:
 
 dataset:
   asr_task_config:
-    min_audio_len: 16_000       # 1.0s at 16kHz
+    min_audio_len: 8_000        # 0.5s at 16kHz
     max_audio_len: 160_000      # 10.0s at 16kHz
     batch_shuffle_window: 1000
     example_shuffle_window: 1000
@@ -364,6 +371,21 @@ After the greedy CoRal-style table is populated, run a second decoding table:
 - beam with Danish KenLM
 
 Use the same fixed checkpoints and same CoRal-style benchmark output format.
+Alexandra's CoRal code exposes the n-gram LM construction path, and released
+Røst LM metadata gives a useful `alpha=0.5`, `beta=1.5` proxy. Report
+`beam + KenLM` as a documented proxy unless the exact Røst v3 decoder stack is
+fully recovered.
+
+First-pass fixed settings:
+
+- `beam_width=64`
+- `alpha=0.5`
+- `beta=1.5`
+- KenLM corpus: Danish ScandiWiki plus Danish ScandiReddit, excluding CoRal-v3
+  test transcripts
+
+If tuning is needed, tune `alpha` and `beta` on dev only, then freeze the chosen
+setting before evaluating the CoRal-v3 test split.
 
 ### Acceptance Criteria
 

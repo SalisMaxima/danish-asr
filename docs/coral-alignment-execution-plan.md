@@ -26,8 +26,21 @@ Run the new Alexandra-aligned benchmark harness for the existing best CTC
 checkpoints:
 
 ```bash
-KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
-bash scripts/hpc/benchmark_coral_style_alexandra_matrix.sh
+bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh full
+```
+
+Before the full run, smoke test the same matrix:
+
+```bash
+bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh smoke
+```
+
+If `/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin` does not
+exist yet, build the Alexandra-proxy KenLM artifact first:
+
+```bash
+bsub < scripts/hpc/build_lm_corpus.sh
+bsub < scripts/hpc/build_kenlm.sh
 ```
 
 Outputs required for each model, subset, and decoder row:
@@ -106,6 +119,26 @@ The decoding comparison should use the same CoRal-style regime:
 - `read_aloud` and `conversation` separately
 - `0.5s < duration < 10.0s`
 - same normalization as the benchmark harness
+
+### Step 1.4 - Treat beam + KenLM as a documented proxy
+
+The public Røst v3 model card reports the CoRal-v3 CER results and training
+command, while Alexandra's CoRal code exposes the n-gram LM construction path.
+Use the released Alexandra ScandiWiki/ScandiReddit corpora and the closest
+published Røst LM decoder weights as a documented proxy rather than claiming an
+exact clone of Alexandra's full decoder stack.
+
+First-pass fixed settings:
+
+- `beam_width=64`
+- `alpha=0.5`
+- `beta=1.5`
+- KenLM trained on Danish ScandiWiki plus Danish ScandiReddit, excluding
+  CoRal-v3 test transcripts
+
+If tuning is needed, tune `alpha` and `beta` on dev only, freeze the chosen
+setting, and then run the CoRal-v3 test benchmark once. Do not tune LM
+parameters on the test split.
 
 ### Decision gate
 
@@ -199,12 +232,17 @@ Why:
 
 Target training regime:
 
-- min audio length about `1.0s`
+- min audio length about `0.5s`
 - max audio length about `10.0s`
 - keep LR at `5e-5`
 - keep shuffle windows at `1000`
 - keep tri-stage scheduler
 - keep greedy CTC for the first direct comparison
+
+Training and evaluation should use the same short-utterance window:
+`0.5s < duration < 10.0s`. This keeps the new training run aligned with the
+CoRal-style benchmark and avoids introducing a train/eval duration mismatch.
+Use `min_audio_len=8_000` and `max_audio_len=160_000` at 16 kHz.
 
 ### Step 4.3 - Smoke test, then run full training
 

@@ -7,13 +7,16 @@
 #BSUB -R "select[gpu80gb]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 12:00
+#BSUB -B
+#BSUB -N
+#BSUB -u s204696@dtu.dk
 #BSUB -o /work3/s204696/logs/lsf/decode_lm_%J.out
 #BSUB -e /work3/s204696/logs/lsf/decode_lm_%J.err
 
 # Standalone LM-decoding grid for OmniASR CTC checkpoints.
 #
 # Usage example:
-#   KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
+#   KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin \
 #   bsub < scripts/hpc/decode_with_lm.sh
 
 set -euo pipefail
@@ -27,8 +30,8 @@ EVAL_CONFIG="${EVAL_CONFIG:-configs/fairseq2/3b/ctc-eval-e6-3b.yaml}"
 KENLM_BINARY="${KENLM_BINARY:-}"
 TOKENIZER_MODEL_PATH="${TOKENIZER_MODEL_PATH:-}"
 BEAM_WIDTH="${BEAM_WIDTH:-64}"
-ALPHAS="${ALPHAS:-0.3 0.6 0.9}"
-BETAS="${BETAS:-0.0 0.5 1.0}"
+ALPHAS="${ALPHAS:-0.5}"
+BETAS="${BETAS:-1.5}"
 BATCH_SIZE="${BATCH_SIZE:-2}"
 
 mkdir -p "$OUTPUT_ROOT"

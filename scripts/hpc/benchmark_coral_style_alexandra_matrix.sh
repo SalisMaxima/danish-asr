@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+#BSUB -J coral_ctc_alexandra_matrix
+#BSUB -q gpua100
+#BSUB -n 4
+#BSUB -R "rusage[mem=32GB]"
+#BSUB -R "span[hosts=1]"
+#BSUB -R "select[gpu80gb]"
+#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -W 24:00
+#BSUB -B
+#BSUB -N
+#BSUB -u s204696@dtu.dk
+#BSUB -o /work3/s204696/logs/lsf/coral_ctc_alexandra_matrix_%J.out
+#BSUB -e /work3/s204696/logs/lsf/coral_ctc_alexandra_matrix_%J.err
+#
 # Run Alexandra-aligned CoRal-style benchmarks for the fixed 300M, 1B, and 3B checkpoints.
 #
 # This runner populates the main public-comparison table with two decoder rows:
@@ -6,30 +20,45 @@
 #   2. CTC LM-enabled  -> beam + KenLM
 #
 # Usage:
-#   KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
-#   bash scripts/hpc/benchmark_coral_style_alexandra_matrix.sh
+#   bsub < scripts/hpc/benchmark_coral_style_alexandra_matrix.sh
+#
+# Smoke run:
+#   MAX_SAMPLES=5 bsub < scripts/hpc/benchmark_coral_style_alexandra_matrix.sh
 
 set -euo pipefail
 
-export DANISH_ASR_PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-/zhome/00/8/147167/danish_asr}"
+export DANISH_ASR_PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-/work3/$USER/outputs/coral_style_benchmark_alexandra}"
 BATCH_SIZE="${BATCH_SIZE:-2}"
 DTYPE="${DTYPE:-bfloat16}"
 MAX_SAMPLES="${MAX_SAMPLES:-}"
-KENLM_BINARY="${KENLM_BINARY:-}"
+KENLM_BINARY="${KENLM_BINARY:-/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin}"
 BEAM_WIDTH="${BEAM_WIDTH:-64}"
-ALPHA="${ALPHA:-0.6}"
-BETA="${BETA:-0.5}"
+ALPHA="${ALPHA:-0.5}"
+BETA="${BETA:-1.5}"
 TOKENIZER_MODEL_PATH="${TOKENIZER_MODEL_PATH:-}"
 
-if [[ -z "$KENLM_BINARY" ]]; then
-  echo "KENLM_BINARY must be set for the Alexandra-aligned LM-enabled rows."
+if [[ ! -f "$KENLM_BINARY" ]]; then
+  echo "KENLM_BINARY not found: $KENLM_BINARY" >&2
+  echo "Build it first with:" >&2
+  echo "  bsub < scripts/hpc/build_lm_corpus.sh" >&2
+  echo "  bsub < scripts/hpc/build_kenlm.sh" >&2
   exit 1
 fi
 
 source "$DANISH_ASR_PROJECT_DIR/scripts/hpc/env.sh"
 setup_omniasr
 cd "$DANISH_ASR_PROJECT_DIR"
+
+echo "=== Alexandra-aligned CTC CoRal-style matrix ==="
+echo "Output root:   $OUTPUT_ROOT"
+echo "KenLM binary:  $KENLM_BINARY"
+echo "Beam width:    $BEAM_WIDTH"
+echo "Alpha/Beta:    $ALPHA / $BETA"
+echo "Max samples:   ${MAX_SAMPLES:-full}"
+echo "Started:       $(date)"
+echo "Node:          $(hostname)"
+nvidia-smi
 
 run_one() {
   local label="$1"

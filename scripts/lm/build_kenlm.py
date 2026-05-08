@@ -30,7 +30,7 @@ def run_kenlm_command(command: list[str], *, stdin_path: Path | None = None, std
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", default="configs/lm/coral_train_only_v1.yaml")
+    parser.add_argument("--config", default="configs/lm/alexandra_proxy_v1.yaml")
     parser.add_argument("--order", type=int, default=3)
     parser.add_argument("--text-path", default=None)
     parser.add_argument("--output-prefix", default=None)
