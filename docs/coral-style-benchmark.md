@@ -82,18 +82,21 @@ Useful optional inputs:
 - `--tokenizer-name`
 - `--tokenizer-model-path`
 
-The CLI uses greedy CTC decoding. That is intentional: the direct comparison rows
-should describe the base fine-tuned checkpoint behavior. Beam search and KenLM
-decoding should be reported separately.
+The CLI supports greedy CTC, beam search, and beam+KenLM decoding. The public
+comparison table should use Alexandra-style labels: `CTC no_lm` for greedy CTC
+and `CTC LM-enabled` for beam+KenLM.
 
 ### Matrix Runner
 
-`scripts/hpc/benchmark_coral_style_matrix.sh` runs the fixed comparison matrix:
+`scripts/hpc/benchmark_coral_style_alexandra_matrix.sh` runs the fixed
+comparison matrix, and `scripts/hpc/submit_coral_ctc_kenlm_eval.sh` submits it
+through LSF:
 
 - `omniASR_CTC_300M_v2` E6 at 50k steps
 - `omniASR_CTC_1B_v2` E6 at 50k steps
 - `omniASR_CTC_3B_v2` E6 at 30k steps
 - both `read_aloud` and `conversation`
+- both `CTC no_lm` and `CTC LM-enabled`
 
 Default checkpoint paths:
 
@@ -119,16 +122,33 @@ been executed on DTU HPC.
 
 ## How To Run
 
+Build the train-only KenLM artifact if it is not already present:
+
+```bash
+bsub < scripts/hpc/build_lm_corpus.sh
+bsub < scripts/hpc/build_kenlm.sh
+```
+
+Run a quick smoke test for the Alexandra-aligned CTC matrix, including both
+greedy `CTC no_lm` and beam+KenLM `CTC LM-enabled` rows:
+
+```bash
+bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh smoke
+```
+
 Run the full benchmark matrix on HPC:
 
 ```bash
-bash scripts/hpc/benchmark_coral_style_matrix.sh
+bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh full
 ```
 
-Run a quick smoke test:
+The submit helper uses these first-pass LM decoding settings unless overridden:
 
 ```bash
-MAX_SAMPLES=5 bash scripts/hpc/benchmark_coral_style_matrix.sh
+KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin
+BEAM_WIDTH=64
+ALPHA=0.6
+BETA=0.5
 ```
 
 Run a single benchmark manually:
@@ -196,7 +216,7 @@ Key differences:
 | Split shape | combined and split-tagged configs | explicit `read_aloud` / `conversation` |
 | Duration filter | longer utterances allowed | `0.5s < duration < 10.0s` |
 | Text normalization | omniASR/fairseq2 path | Alexandra-compatible benchmark path |
-| Decoder | fairseq2 eval recipe | greedy CTC through local inference pipeline |
+| Decoder | fairseq2 eval recipe | greedy CTC plus documented beam+KenLM rows |
 
 ## Lessons From Alexandra's Setup
 
@@ -227,15 +247,18 @@ background noise, colored noise, and random filters. Your current fairseq2 CTC
 configs mainly normalize audio. A sensible next ablation is a moderate
 augmentation run focused on whether conversation CER improves.
 
-Alexandra's public benchmark uses short utterances. A future training experiment
-should test whether chunking or filtering closer to `1-10s` improves CoRal-style
-CER without hurting the longer-utterance fairseq2 evaluation.
+Alexandra's public benchmark uses short utterances. The next training experiment
+should match the benchmark window, `0.5s < duration < 10.0s`, and then measure
+both CoRal-style CER and the existing fairseq2 WER for continuity.
 
 ### Decoding Lessons
 
-Greedy CTC should remain the official direct-comparison decoder for the first
-omniASR table. KenLM and beam search are valuable, but they answer a different
-question: how much downstream decoding can improve a fine-tuned checkpoint.
+The main public-comparison table should keep Alexandra-style labels:
+`CTC no_lm` for greedy decoding and `CTC LM-enabled` for beam+KenLM. The exact
+Røst v3 beam-search weights are not published in the model card, so the first
+OmniASR `CTC LM-enabled` rows use a documented proxy: beam width `64`,
+`alpha=0.6`, `beta=0.5`, and a KenLM model trained only on CoRal-v3 train
+transcripts.
 
 Report LM decoding separately so readers do not confuse model quality with
 decoder assistance.

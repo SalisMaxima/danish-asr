@@ -59,15 +59,22 @@ CoRal-style CER numbers.
 Run the Alexandra-aligned matrix with:
 
 ```bash
-KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
-bash scripts/hpc/benchmark_coral_style_alexandra_matrix.sh
+bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh full
 ```
 
 For a quick smoke run:
 
 ```bash
-KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
-MAX_SAMPLES=5 bash scripts/hpc/benchmark_coral_style_alexandra_matrix.sh
+bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh smoke
+```
+
+The submit helper expects the KenLM artifact at
+`/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin`. If it is missing, build it
+first with:
+
+```bash
+bsub < scripts/hpc/build_lm_corpus.sh
+bsub < scripts/hpc/build_kenlm.sh
 ```
 
 Each run writes `predictions.txt`, `references.txt`, `records.jsonl`,
@@ -177,8 +184,7 @@ reproduce.
 Run the decoder-analysis benchmark with:
 
 ```bash
-KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
-bash scripts/hpc/benchmark_coral_style_decoder_analysis.sh
+bsub < scripts/hpc/benchmark_coral_style_decoder_analysis.sh
 ```
 
 ## Related Docs

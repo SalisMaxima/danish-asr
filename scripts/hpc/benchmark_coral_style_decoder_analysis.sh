@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+#BSUB -J coral_ctc_decoder_analysis
+#BSUB -q gpua100
+#BSUB -n 4
+#BSUB -R "rusage[mem=32GB]"
+#BSUB -R "span[hosts=1]"
+#BSUB -R "select[gpu80gb]"
+#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -W 12:00
+#BSUB -B
+#BSUB -N
+#BSUB -u s204696@dtu.dk
+#BSUB -o /work3/s204696/logs/lsf/coral_ctc_decoder_analysis_%J.out
+#BSUB -e /work3/s204696/logs/lsf/coral_ctc_decoder_analysis_%J.err
+#
 # Run the decoder-analysis CoRal-style benchmark for the fixed 3B E6 checkpoint.
 #
 # This runner populates the secondary interpretability table with:
@@ -7,17 +21,19 @@
 #   3. beam + KenLM
 #
 # Usage:
-#   KENLM_BINARY=/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin \
-#   bash scripts/hpc/benchmark_coral_style_decoder_analysis.sh
+#   bsub < scripts/hpc/benchmark_coral_style_decoder_analysis.sh
+#
+# Smoke run:
+#   MAX_SAMPLES=5 bsub < scripts/hpc/benchmark_coral_style_decoder_analysis.sh
 
 set -euo pipefail
 
-export DANISH_ASR_PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-/zhome/00/8/147167/danish_asr}"
+export DANISH_ASR_PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-/work3/$USER/outputs/coral_style_decoder_analysis}"
 BATCH_SIZE="${BATCH_SIZE:-2}"
 DTYPE="${DTYPE:-bfloat16}"
 MAX_SAMPLES="${MAX_SAMPLES:-}"
-KENLM_BINARY="${KENLM_BINARY:-}"
+KENLM_BINARY="${KENLM_BINARY:-/work3/$USER/artifacts/lm/danish_lm_v1_3gram.bin}"
 BEAM_WIDTH="${BEAM_WIDTH:-64}"
 ALPHAS="${ALPHAS:-0.6}"
 BETAS="${BETAS:-0.5}"
@@ -26,14 +42,30 @@ CHECKPOINT_PATH="${CHECKPOINT_PATH:-/work3/s204696/outputs/omniasr_e6_3b/ws_1.21
 MODEL_ARCH="${MODEL_ARCH:-3b_v2}"
 MODEL_LABEL="${MODEL_LABEL:-omniasr_ctc_3b_e6_30k}"
 
-if [[ -z "$KENLM_BINARY" ]]; then
-  echo "KENLM_BINARY must be set for the beam + KenLM analysis rows."
+if [[ ! -f "$KENLM_BINARY" ]]; then
+  echo "KENLM_BINARY not found: $KENLM_BINARY" >&2
+  echo "Build it first with:" >&2
+  echo "  bsub < scripts/hpc/build_lm_corpus.sh" >&2
+  echo "  bsub < scripts/hpc/build_kenlm.sh" >&2
   exit 1
 fi
 
 source "$DANISH_ASR_PROJECT_DIR/scripts/hpc/env.sh"
 setup_omniasr
 cd "$DANISH_ASR_PROJECT_DIR"
+
+echo "=== CTC decoder-analysis CoRal-style benchmark ==="
+echo "Output root:   $OUTPUT_ROOT"
+echo "Checkpoint:    $CHECKPOINT_PATH"
+echo "Model arch:    $MODEL_ARCH"
+echo "KenLM binary:  $KENLM_BINARY"
+echo "Beam width:    $BEAM_WIDTH"
+echo "Alphas:        $ALPHAS"
+echo "Betas:         $BETAS"
+echo "Max samples:   ${MAX_SAMPLES:-full}"
+echo "Started:       $(date)"
+echo "Node:          $(hostname)"
+nvidia-smi
 
 run_one() {
   local subset="$1"
