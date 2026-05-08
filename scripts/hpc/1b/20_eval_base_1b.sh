@@ -41,6 +41,16 @@ echo "Started:        $(date)"
 echo "Node:           $(hostname)"
 nvidia-smi
 
+# Generate per-corpus subset TSVs so the per-split configs can use valid_split: "test"
+# with a corpus-filtered TSV. The "test_<corpus>" split-name suffix is silently ignored
+# by the wav2vec2_asr recipe and falls back to the full combined test set.
+MAIN_TSV="data/parquet/version=0/language_distribution_0.tsv"
+{ head -1 "$MAIN_TSV"; awk -F'\t' 'NR>1 && $1 == "coral_v3_read_aloud"' "$MAIN_TSV"; } \
+    > "data/parquet/version=0/language_distribution_read_aloud.tsv"
+{ head -1 "$MAIN_TSV"; awk -F'\t' 'NR>1 && $1 == "coral_v3_conversation"' "$MAIN_TSV"; } \
+    > "data/parquet/version=0/language_distribution_conversation.tsv"
+echo "Generated per-corpus subset TSVs from $MAIN_TSV"
+
 had_failures=0
 
 split_tag() {

@@ -2,6 +2,11 @@
 # conversation test subset.
 # No model.path — fairseq2 loads the pretrained checkpoint from the asset registry.
 #
+# Subset filtering: valid_split "test" scoped to the conversation corpus via a
+# corpus-filtered TSV. The "test_<corpus>" split-name suffix is not supported for
+# LLM model families and causes an immediate exit. The shell script generates the
+# subset TSV from language_distribution_0.tsv before running this config.
+#
 # Used by: scripts/hpc/llm_300m/19_eval_base.sh
 
 model:
@@ -11,11 +16,11 @@ model:
 
 dataset:
   name: "coral_v3_danish"
-  valid_split: "test_coral_v3_conversation"
+  valid_split: "test"
   storage_mode: "MIXTURE_PARQUET"
   task_mode: "ASR"
   mixture_parquet_storage_config:
-    dataset_summary_path: "data/parquet/version=0/language_distribution_0.tsv"
+    dataset_summary_path: "data/parquet/version=0/language_distribution_conversation.tsv"
     beta_corpus: 0.5
     beta_language: 0.5
     fragment_loading:
