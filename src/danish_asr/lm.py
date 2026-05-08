@@ -267,13 +267,13 @@ def _iter_hf_text_rows(
 
     for dataset_config in datasets_config:
         dataset_name = _dataset_name(dataset_config)
-        dataset = load_dataset(  # type: ignore[misc]  # nosec B615 - revision pinning is opt-in via config
+        dataset = load_dataset(  # type: ignore[misc]  # nosec B615 - revision is pinned per dataset in config
             path=dataset_config["id"],
             name=dataset_config.get("subset"),
             split=dataset_config.get("split", "train"),
             cache_dir=None if cache_dir is None else str(resolve_project_path(cache_dir)),
             streaming=streaming,
-            trust_remote_code=dataset_config.get("trust_remote_code", True),
+            trust_remote_code=dataset_config.get("trust_remote_code", False),
             revision=dataset_config.get("revision"),
         )
         text_column = dataset_config.get("text_column", "text")
