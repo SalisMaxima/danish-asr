@@ -261,12 +261,13 @@ def _iter_hf_text_rows(
     *,
     cache_dir: str | Path | None,
     streaming: bool,
+    skip_counts: dict[str, int] | None = None,
 ) -> Iterator[tuple[str, str]]:
     _require_datasets()
 
     for dataset_config in datasets_config:
         dataset_name = _dataset_name(dataset_config)
-        dataset = load_dataset(  # type: ignore[misc]  # nosec B615 - revision configurable via config
+        dataset = load_dataset(  # type: ignore[misc]  # nosec B615 - revision pinning is opt-in via config
             path=dataset_config["id"],
             name=dataset_config.get("subset"),
             split=dataset_config.get("split", "train"),
@@ -276,9 +277,29 @@ def _iter_hf_text_rows(
             revision=dataset_config.get("revision"),
         )
         text_column = dataset_config.get("text_column", "text")
+        skipped_missing = 0
+        skipped_null = 0
 
         for row in dataset:
-            yield dataset_name, str(row[text_column])
+            if text_column not in row:
+                skipped_missing += 1
+                continue
+            value = row[text_column]
+            if value is None:
+                skipped_null += 1
+                continue
+            yield dataset_name, str(value)
+
+        if skipped_missing or skipped_null:
+            logger.warning(
+                "Dataset {!r}: skipped {} rows missing column {!r} and {} null values.",
+                dataset_name,
+                skipped_missing,
+                text_column,
+                skipped_null,
+            )
+        if skip_counts is not None:
+            skip_counts[dataset_name] = skipped_missing + skipped_null
 
 
 def build_hf_text_lm_corpus(
@@ -289,13 +310,21 @@ def build_hf_text_lm_corpus(
     version: str,
     cache_dir: str | Path | None = None,
     streaming: bool = True,
-    exclude_datasets_config: Sequence[dict[str, Any]] = (),
+    exclude_datasets_config: Sequence[dict[str, Any]],
 ) -> CorpusStats:
-    """Build a de-duplicated text LM corpus from Hugging Face datasets.
+    """Build a de-duplicated text LM corpus from one or more Hugging Face text datasets.
 
-    This is intended for the Alexandra-style proxy LM that uses ScandiWiki and
-    ScandiReddit while excluding CoRal-v3 test transcripts.
+    Optionally subtracts exact-match normalized texts from `exclude_datasets_config`
+    so eval transcripts can be held out (pass `[]` to opt out explicitly).
     """
+    if not exclude_datasets_config:
+        logger.warning(
+            "exclude_datasets_config is empty: LM corpus will NOT exclude any held-out texts. "
+            "If you intend to hold out an eval set (e.g., CoRal-v3 test), configure it; "
+            "otherwise pass an explicit empty list to silence this warning.",
+        )
+
+    # Excludes are loaded eagerly so the full set is in memory before we stream the source corpora.
     excluded_texts: set[str] = set()
     for _source_name, raw_text in _iter_hf_text_rows(
         exclude_datasets_config,
@@ -310,32 +339,53 @@ def build_hf_text_lm_corpus(
     output.parent.mkdir(parents=True, exist_ok=True)
 
     source_names = [_dataset_name(dataset_config) for dataset_config in datasets_config]
+    if len(source_names) != len(set(source_names)):
+        msg = f"Duplicate dataset names in datasets_config would corrupt source_counts: {source_names}"
+        raise ValueError(msg)
+
     source_counts = dict.fromkeys(source_names, 0)
+    skip_counts: dict[str, int] = {}
     seen_hashes: set[str] = set()
     raw_examples = 0
     written_examples = 0
     token_count = 0
 
-    with output.open("w", encoding="utf-8") as handle:
-        for dataset_name, raw_text in _iter_hf_text_rows(
-            datasets_config,
-            cache_dir=cache_dir,
-            streaming=streaming,
-        ):
-            raw_examples += 1
-            normalized = normalize_lm_text(raw_text)
-            if not normalized or normalized in excluded_texts:
-                continue
+    tmp_output = output.with_suffix(output.suffix + ".tmp")
+    try:
+        with tmp_output.open("w", encoding="utf-8") as handle:
+            for dataset_name, raw_text in _iter_hf_text_rows(
+                datasets_config,
+                cache_dir=cache_dir,
+                streaming=streaming,
+                skip_counts=skip_counts,
+            ):
+                raw_examples += 1
+                normalized = normalize_lm_text(raw_text)
+                if not normalized or normalized in excluded_texts:
+                    continue
 
-            text_hash = _hash_text(normalized)
-            if text_hash in seen_hashes:
-                continue
+                text_hash = _hash_text(normalized)
+                if text_hash in seen_hashes:
+                    continue
 
-            seen_hashes.add(text_hash)
-            handle.write(f"{normalized}\n")
-            written_examples += 1
-            token_count += len(normalized.split())
-            source_counts[dataset_name] = source_counts.get(dataset_name, 0) + 1
+                seen_hashes.add(text_hash)
+                handle.write(f"{normalized}\n")
+                written_examples += 1
+                token_count += len(normalized.split())
+                source_counts[dataset_name] = source_counts.get(dataset_name, 0) + 1
+
+        if written_examples == 0:
+            msg = (
+                "Built corpus contains zero examples after normalization, dedup, and exclusion. "
+                "Refusing to publish an empty LM corpus."
+            )
+            raise ValueError(msg)
+
+        tmp_output.replace(output)
+    except BaseException:
+        if tmp_output.exists():
+            tmp_output.unlink()
+        raise
 
     stats = CorpusStats(
         version=version,
@@ -356,6 +406,7 @@ def build_hf_text_lm_corpus(
             "deduplicate_exact_lines": True,
             "deduplicate_hash": "sha1",
             "exclude_exact_normalized_texts": len(excluded_texts),
+            "skipped_rows_per_dataset": skip_counts,
         },
     )
     write_corpus_stats(stats, stats_path)

@@ -5,6 +5,9 @@
 #BSUB -R "rusage[mem=8GB]"
 #BSUB -R "span[hosts=1]"
 #BSUB -W 12:00
+#BSUB -B
+#BSUB -N
+#BSUB -u s204696@dtu.dk
 #BSUB -o /work3/s204696/logs/lsf/build_kenlm_%J.out
 #BSUB -e /work3/s204696/logs/lsf/build_kenlm_%J.err
 #
@@ -34,7 +37,7 @@ BUILD_BINARY_BIN="${BUILD_BINARY_BIN:-build_binary}"
 
 uv sync
 
-uv run python scripts/lm/build_kenlm.py \
+python scripts/lm/build_kenlm.py \
     --config "$LM_CONFIG" \
     --text-path "$LM_TEXT_PATH" \
     --output-prefix "$KENLM_OUTPUT_PREFIX" \

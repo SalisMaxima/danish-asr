@@ -42,6 +42,12 @@ def main() -> None:
         write_lm_corpus(texts, output["corpus_text_path"])
         write_corpus_stats(stats, output["stats_path"])
     elif source_kind == "hf_text":
+        if "exclude_datasets" not in source:
+            msg = (
+                "hf_text source must set `exclude_datasets` explicitly (use `[]` to opt out). "
+                "A typo or omitted key would silently train the LM on held-out eval transcripts."
+            )
+            raise ValueError(msg)
         stats = build_hf_text_lm_corpus(
             datasets_config=source["datasets"],
             output_path=output["corpus_text_path"],
@@ -49,7 +55,7 @@ def main() -> None:
             version=config["name"],
             cache_dir=source.get("cache_dir"),
             streaming=source.get("streaming", True),
-            exclude_datasets_config=source.get("exclude_datasets", ()),
+            exclude_datasets_config=source["exclude_datasets"],
         )
     else:
         msg = f"Unsupported LM corpus source kind: {source_kind}"

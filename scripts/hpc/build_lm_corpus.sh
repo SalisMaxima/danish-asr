@@ -4,6 +4,9 @@
 #BSUB -n 1
 #BSUB -R "rusage[mem=32GB]"
 #BSUB -W 12:00
+#BSUB -B
+#BSUB -N
+#BSUB -u s204696@dtu.dk
 #BSUB -o /work3/s204696/logs/lsf/build_lm_corpus_%J.out
 #BSUB -e /work3/s204696/logs/lsf/build_lm_corpus_%J.err
 #
@@ -22,5 +25,5 @@ uv sync
 
 LM_CONFIG="${LM_CONFIG:-configs/lm/alexandra_proxy_hpc_s204696.yaml}"
 
-uv run python scripts/lm/build_danish_lm_corpus.py \
+python scripts/lm/build_danish_lm_corpus.py \
     --config "$LM_CONFIG"

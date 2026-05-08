@@ -7,6 +7,9 @@
 #BSUB -R "select[gpu80gb]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 12:00
+#BSUB -B
+#BSUB -N
+#BSUB -u s204696@dtu.dk
 #BSUB -o /work3/s204696/logs/lsf/decode_lm_%J.out
 #BSUB -e /work3/s204696/logs/lsf/decode_lm_%J.err
 
