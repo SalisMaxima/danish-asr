@@ -3,6 +3,7 @@
 # Usage: source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 
 # --- Cache and scratch directories ---
+export PATH="$HOME/.local/bin:$PATH"
 export HF_HOME=/work3/$USER/hf_cache
 export HF_DATASETS_CACHE=/work3/$USER/hf_cache/datasets
 export FAIRSEQ2_CACHE_DIR=/work3/$USER/fairseq2_cache

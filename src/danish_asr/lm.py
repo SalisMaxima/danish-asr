@@ -7,6 +7,7 @@ import json
 import re
 import unicodedata
 from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -267,6 +268,7 @@ def _iter_hf_text_rows(
 
     for dataset_config in datasets_config:
         dataset_name = _dataset_name(dataset_config)
+        text_column = dataset_config.get("text_column", "text")
         dataset = load_dataset(  # type: ignore[misc]  # nosec B615 - revision is pinned per dataset in config
             path=dataset_config["id"],
             name=dataset_config.get("subset"),
@@ -276,7 +278,10 @@ def _iter_hf_text_rows(
             trust_remote_code=dataset_config.get("trust_remote_code", False),
             revision=dataset_config.get("revision"),
         )
-        text_column = dataset_config.get("text_column", "text")
+        # Avoid decoding large unused columns such as CoRal's audio payload when
+        # we only need transcripts for LM training/exclusion.
+        with suppress(AttributeError, ValueError):
+            dataset = dataset.select_columns([text_column])
         skipped_missing = 0
         skipped_null = 0
 
@@ -310,6 +315,7 @@ def build_hf_text_lm_corpus(
     version: str,
     cache_dir: str | Path | None = None,
     streaming: bool = True,
+    exclude_streaming: bool = True,
     exclude_datasets_config: Sequence[dict[str, Any]],
 ) -> CorpusStats:
     """Build a de-duplicated text LM corpus from one or more Hugging Face text datasets.
@@ -329,7 +335,7 @@ def build_hf_text_lm_corpus(
     for _source_name, raw_text in _iter_hf_text_rows(
         exclude_datasets_config,
         cache_dir=cache_dir,
-        streaming=False,
+        streaming=exclude_streaming,
     ):
         normalized = normalize_lm_text(raw_text)
         if normalized:
@@ -406,6 +412,7 @@ def build_hf_text_lm_corpus(
             "deduplicate_exact_lines": True,
             "deduplicate_hash": "sha1",
             "exclude_exact_normalized_texts": len(excluded_texts),
+            "exclude_streaming": exclude_streaming,
             "skipped_rows_per_dataset": skip_counts,
         },
     )

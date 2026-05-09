@@ -43,6 +43,7 @@ dependencies = [
 omni = [
     "omnilingual-asr>=0.1.0",
     "pyarrow>=24.0.0",
+    "tensorboard>=2.20.0",
 ]
 dev = [
     "coverage>=7.13.5",

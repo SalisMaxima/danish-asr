@@ -36,6 +36,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-prefix", default=None)
     parser.add_argument("--lmplz-bin", default="lmplz")
     parser.add_argument("--build-binary-bin", default="build_binary")
+    parser.add_argument("--memory", default=None, help="KenLM lmplz memory budget, e.g. 24G or 80%.")
+    parser.add_argument("--temp-dir", type=Path, default=None, help="Directory for KenLM temporary files.")
+    parser.add_argument(
+        "--skip-symbols",
+        action="store_true",
+        help="Pass KenLM --skip_symbols to treat <s>, </s>, and <unk> in corpus text as whitespace.",
+    )
     return parser.parse_args()
 
 
@@ -52,7 +59,17 @@ def main() -> None:
     arpa_path = output_prefix.with_suffix(".arpa")
     binary_path = output_prefix.with_suffix(".bin")
 
-    run_kenlm_command([args.lmplz_bin, "-o", str(args.order)], stdin_path=text_path, stdout_path=arpa_path)
+    lmplz_command = [args.lmplz_bin, "-o", str(args.order)]
+    if args.memory:
+        lmplz_command.extend(["-S", args.memory])
+    if args.temp_dir:
+        temp_dir = resolve_project_path(args.temp_dir)
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        lmplz_command.extend(["-T", str(temp_dir)])
+    if args.skip_symbols:
+        lmplz_command.append("--skip_symbols")
+
+    run_kenlm_command(lmplz_command, stdin_path=text_path, stdout_path=arpa_path)
     run_kenlm_command([args.build_binary_bin, str(arpa_path), str(binary_path)])
 
     logger.info("Built KenLM artifacts: {} and {}", arpa_path, binary_path)

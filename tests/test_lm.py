@@ -65,14 +65,23 @@ def test_build_hf_text_lm_corpus_uses_configured_columns_and_excludes_eval_text(
 ) -> None:
     import danish_asr.lm as lm
 
+    class FakeDataset(list):
+        def select_columns(self, columns):
+            selected_columns.append(tuple(columns))
+            return self
+
+    seen_streaming: list[tuple[str, bool]] = []
+    selected_columns: list[tuple[str, ...]] = []
+
     def fake_load_dataset(path, name, split, cache_dir, streaming, trust_remote_code, revision=None):
-        del split, cache_dir, streaming, trust_remote_code, revision
+        del split, cache_dir, trust_remote_code, revision
+        seen_streaming.append((path, streaming))
         if path == "alexandrainst/scandi-wiki" and name == "da":
-            return [{"text": "Hej Wikipedia"}, {"text": "Eval sentence"}]
+            return FakeDataset([{"text": "Hej Wikipedia"}, {"text": "Eval sentence"}])
         if path == "alexandrainst/scandi-reddit" and name == "da":
-            return [{"doc": "Hej Reddit"}, {"doc": "Hej Reddit"}]
+            return FakeDataset([{"doc": "Hej Reddit"}, {"doc": "Hej Reddit"}])
         if path == "CoRal-project/coral-v3" and name == "read_aloud":
-            return [{"text": "Eval sentence"}]
+            return FakeDataset([{"text": "Eval sentence"}])
         msg = f"Unexpected dataset: {path}/{name}"
         raise AssertionError(msg)
 
@@ -115,6 +124,13 @@ def test_build_hf_text_lm_corpus_uses_configured_columns_and_excludes_eval_text(
     assert stats.unique_examples == 2
     assert stats.source_counts == {"wiki": 1, "reddit": 1}
     assert stats.normalization["exclude_exact_normalized_texts"] == 1
+    assert stats.normalization["exclude_streaming"] is True
+    assert seen_streaming == [
+        ("CoRal-project/coral-v3", True),
+        ("alexandrainst/scandi-wiki", True),
+        ("alexandrainst/scandi-reddit", True),
+    ]
+    assert selected_columns == [("text",), ("text",), ("doc",)]
 
 
 def test_build_hf_text_lm_corpus_excludes_after_normalization(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
