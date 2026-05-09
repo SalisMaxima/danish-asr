@@ -271,3 +271,4 @@ def test_score_predictions_returns_percent_wer() -> None:
     summary = score_predictions(["hej verden"], ["hej verden"])
     assert summary["num_examples"] == 1
     assert summary["wer"] == 0.0
+    assert summary["cer"] == 0.0

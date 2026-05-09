@@ -562,6 +562,7 @@ dev = [
     { name = "zensical" },
 ]
 omni = [
+    { name = "kenlm" },
     { name = "omnilingual-asr" },
     { name = "pyarrow" },
     { name = "tensorboard" },
@@ -612,6 +613,7 @@ dev = [
     { name = "zensical", specifier = ">=0.0.40,<0.1.0" },
 ]
 omni = [
+    { name = "kenlm", specifier = ">=0.3.0" },
     { name = "omnilingual-asr", specifier = ">=0.1.0" },
     { name = "pyarrow", specifier = ">=24.0.0" },
     { name = "tensorboard", specifier = ">=2.20.0" },

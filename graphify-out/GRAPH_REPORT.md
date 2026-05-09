@@ -1,12 +1,12 @@
 # Graph Report - danish_asr  (2026-05-09)
 
 ## Corpus Check
-- 196 files · ~286,400,526 words
+- 199 files · ~286,402,149 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2470 nodes · 4551 edges · 167 communities detected
-- Extraction: 88% EXTRACTED · 12% INFERRED · 0% AMBIGUOUS · INFERRED: 555 edges (avg confidence: 0.74)
+- 2509 nodes · 4613 edges · 171 communities detected
+- Extraction: 88% EXTRACTED · 12% INFERRED · 0% AMBIGUOUS · INFERRED: 561 edges (avg confidence: 0.74)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -177,6 +177,10 @@
 - [[_COMMUNITY_Community 200|Community 200]]
 - [[_COMMUNITY_Community 201|Community 201]]
 - [[_COMMUNITY_Community 202|Community 202]]
+- [[_COMMUNITY_Community 203|Community 203]]
+- [[_COMMUNITY_Community 204|Community 204]]
+- [[_COMMUNITY_Community 205|Community 205]]
+- [[_COMMUNITY_Community 206|Community 206]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `F()` - 70 edges
@@ -206,79 +210,79 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.02
-Nodes (284): _(), a(), Aa(), Ac(), Ae(), ai(), an(), ao() (+276 more)
+Nodes (283): _(), a(), Aa(), Ac(), Ae(), ai(), an(), ao() (+275 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.02
 Nodes (192): CYTHON_MAYBE_UNUSED_VAR(), __Pyx_AddTraceback(), __pyx_bisect_code_objects(), __Pyx_CalculateMetaclass(), __Pyx_call_destructor(), __Pyx_check_single_interpreter(), __Pyx_CheckKeywordStrings(), __Pyx_CLineForTraceback() (+184 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.03
-Nodes (124): build_hf_text_lm_corpus(), build_lm_corpus_from_parquet(), build_pyctcdecode_labels(), chunked(), collate_decode_records(), CorpusStats, _dataset_name(), decode_ctc_logits() (+116 more)
+Cohesion: 0.02
+Nodes (117): log_gpu_info(), log_line_to_wandb(), log_system_info(), Shared infrastructure for HPC scripts: logging, paths, environment helpers., Log hostname, user, Python version, CUDA_VISIBLE_DEVICES, LSB_JOBID, disk space., Parse a fairseq2 output line and log matching metrics to W&B., Log torch CUDA availability, device names, and VRAM., Configure loguru with console (INFO) and file (DEBUG) sinks.      Returns the pa (+109 more)
 
 ### Community 3 - "Community 3"
+Cohesion: 0.03
+Nodes (132): Write benchmark artifacts in a stable, inspectable format., write_benchmark_outputs(), build_hf_text_lm_corpus(), build_lm_corpus_from_parquet(), build_pyctcdecode_labels(), chunked(), collate_decode_records(), CorpusStats (+124 more)
+
+### Community 4 - "Community 4"
 Cohesion: 0.04
 Nodes (65): collate_fn(), CoRalDataModule, CoRalDataset, _pad_1d_tensors(), PreprocessedCoRalDataset, CoRal Danish ASR dataset and data module., Pad variable-length 1D tensors to uniform length.      Returns (stacked_tensor,, Custom collate function for variable-length audio. (+57 more)
 
-### Community 4 - "Community 4"
-Cohesion: 0.03
-Nodes (76): IsNan(), BOOST_AUTO_TEST_CASE(), BackoffMessages, BlankManager, BuildTrie(), FindBlanks, Gram(), InitializeFromARPA() (+68 more)
-
 ### Community 5 - "Community 5"
 Cohesion: 0.03
-Nodes (72): log_gpu_info(), log_line_to_wandb(), log_system_info(), Shared infrastructure for HPC scripts: logging, paths, environment helpers., Log hostname, user, Python version, CUDA_VISIBLE_DEVICES, LSB_JOBID, disk space., Parse a fairseq2 output line and log matching metrics to W&B., Log torch CUDA availability, device names, and VRAM., Configure loguru with console (INFO) and file (DEBUG) sinks.      Returns the pa (+64 more)
+Nodes (52): Arc, Evaluate(), LowerBound(), Vertex, Write(), Run(), BOOST_AUTO_TEST_CASE(), BOOST_AUTO_TEST_CASE() (+44 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.04
-Nodes (56): convert_split(), main(), parse_args(), process_audio(), Unified preprocessing for CoRal-v3: fairseq2 + universal Parquet formats.  Resam, Resample to 16kHz and FLAC-encode once.      Returns:         (flac_bytes, audio, Write rows to a fairseq2-format Parquet file., Write rows to a universal-format Parquet file. (+48 more)
+Nodes (54): convert_split(), main(), parse_args(), process_audio(), Unified preprocessing for CoRal-v3: fairseq2 + universal Parquet formats.  Resam, Resample to 16kHz and FLAC-encode once.      Returns:         (flac_bytes, audio, Write rows to a fairseq2-format Parquet file., Write rows to a universal-format Parquet file. (+46 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.03
-Nodes (49): Arc, Evaluate(), LowerBound(), Vertex, Run(), BOOST_AUTO_TEST_CASE(), BOOST_AUTO_TEST_CASE(), BOOST_AUTO_TEST_CASE() (+41 more)
+Cohesion: 0.05
+Nodes (55): IsNan(), BOOST_AUTO_TEST_CASE(), EndOfFileException(), CrossPlatformIsNaN(), FilePiece(), FindDelimiterOrEOF(), FirstToken(), Initialize() (+47 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.06
-Nodes (62): A(), add(), At(), be(), Bt(), ce(), constructor(), Ct() (+54 more)
+Cohesion: 0.04
+Nodes (48): MergeWorker, ReunifyBackoff(), BOOST_AUTO_TEST_CASE(), CheckOutput, WriteBackoffs, WriteInput, CompareFiles, MergeVocab() (+40 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.04
-Nodes (48): ConsumeNewline(), IsEntirelyWhiteSpace(), ReadARPACounts(), ReadBackoff(), ReadCount(), ReadEnd(), ReadNGramHeader(), ActivateLowerMiddle (+40 more)
+Nodes (49): ConsumeNewline(), IsEntirelyWhiteSpace(), ReadARPACounts(), ReadBackoff(), ReadCount(), ReadEnd(), ReadNGramHeader(), ActivateLowerMiddle (+41 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.04
-Nodes (42): Callback, Interpolate(), OutputProbBackoff, OutputQ, CountText(), InitialProbabilities(), InterpolateProbabilities(), Master (+34 more)
+Cohesion: 0.06
+Nodes (61): A(), add(), At(), be(), Bt(), ce(), constructor(), Ct() (+53 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.05
-Nodes (47): _backup_score_file(), check_prerequisites(), _get_score_file(), _log_workspace_snapshot(), main(), _MetricParser, _next_backup_path(), Step 4: Evaluation wrapper for omniASR on HPC.  Runs the omniASR eval recipe on (+39 more)
+Nodes (47): FinishFile(), GrowForSearch(), InitializeBinary(), IsBinaryFormat(), MapFile(), MatchCheck(), ReadHeader(), RecognizeBinary() (+39 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.05
 Nodes (37): compute_cer(), compute_metrics(), compute_wer(), ASR evaluation metrics (WER, CER)., Compute Character Error Rate.      Args:         predictions: Model transcriptio, Compute all ASR metrics., Compute Word Error Rate.      Args:         predictions: Model transcriptions, build_model() (+29 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.06
-Nodes (42): FinishFile(), GrowForSearch(), InitializeBinary(), IsBinaryFormat(), MapFile(), MatchCheck(), ReadHeader(), RecognizeBinary() (+34 more)
+Cohesion: 0.09
+Nodes (44): Advance(), AdvanceToNonspace(), ConsumeFirstCharacter(), ConsumeSubString(), ConsumeSubStringImpl(), IsCharacterDigitForRadix(), IsDecimalDigitForRadix(), isDigit() (+36 more)
 
 ### Community 14 - "Community 14"
 Cohesion: 0.06
 Nodes (32): BiggestPowerTen(), DigitGen(), DigitGenCounted(), FastDtoa(), Grisu3(), Grisu3Counted(), RoundWeed(), RoundWeedCounted() (+24 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.07
-Nodes (42): _age_group(), bounded_error_rate(), convert_numeral_to_words(), CoRalBenchmarkExample, _dialect(), _empty_filter_stats(), _example_duration_seconds(), example_group_metadata() (+34 more)
+Cohesion: 0.08
+Nodes (41): _age_group(), bounded_error_rate(), convert_numeral_to_words(), CoRalBenchmarkExample, _dialect(), _empty_filter_stats(), _example_duration_seconds(), example_group_metadata() (+33 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.11
-Nodes (36): Advance(), AdvanceToNonspace(), ConsumeFirstCharacter(), ConsumeSubString(), ConsumeSubStringImpl(), IsCharacterDigitForRadix(), IsDecimalDigitForRadix(), isDigit() (+28 more)
+Cohesion: 0.09
+Nodes (18): SetSpecial(), Add(), ComputeRenumbering(), ConfigureEnumerate(), FinishedLoading(), GenericFinished(), HashForVocab(), Insert() (+10 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.08
-Nodes (20): SetSpecial(), Add(), ComputeRenumbering(), ConfigureEnumerate(), FinishedLoading(), GenericFinished(), HashForVocab(), Insert() (+12 more)
-
-### Community 18 - "Community 18"
 Cohesion: 0.13
 Nodes (32): ArtifactVersionRow, audit(), _build_arg_parser(), build_artifact_report(), build_run_file_report(), _bytes_to_gib(), collect_artifact_rows(), collect_run_file_rows() (+24 more)
+
+### Community 18 - "Community 18"
+Cohesion: 0.11
+Nodes (31): _checkpoint_exists(), _emit_coral_subsets(), _emit_models(), _emit_my_splits(), _emit_shell(), _expand(), _import_modules(), load_manifest() (+23 more)
 
 ### Community 19 - "Community 19"
 Cohesion: 0.13
@@ -301,20 +305,20 @@ Cohesion: 0.1
 Nodes (23): _available_llm_hardware(), _has_module(), hpc_smoke(), hpc_sweep(), omniasr(), omniasr_eval(), omniasr_sweep(), Training and hyperparameter tuning tasks. (+15 more)
 
 ### Community 24 - "Community 24"
+Cohesion: 0.12
+Nodes (13): Callback, Interpolate(), OutputProbBackoff, OutputQ, CountText(), InitialProbabilities(), InterpolateProbabilities(), Master (+5 more)
+
+### Community 25 - "Community 25"
 Cohesion: 0.14
 Nodes (19): check_auth(), convert_parquet(), download(), download_all(), _hf_env_prefix(), preprocess(), Data management tasks for Danish ASR., Unified preprocessing: resample + FLAC-encode CoRal-v3 once.      Args: (+11 more)
 
-### Community 25 - "Community 25"
+### Community 26 - "Community 26"
 Cohesion: 0.11
 Nodes (19): ci(), deps_outdated(), deps_tree(), install_hooks(), Code quality and testing tasks., Run ruff linter and formatter., Run tests with coverage report., Run fast unit tests only (excludes slow and data-dependent tests). (+11 more)
 
-### Community 26 - "Community 26"
-Cohesion: 0.19
-Nodes (10): _DummyCTCModel, _DummyProcessor, _DummySeq2SeqInner, _DummySeq2SeqModel, _DummyTokenizer, Tests for the training module., test_ctc_build_processor_uses_vocab_asset(), test_ctc_validation_prefers_normalized_references() (+2 more)
-
 ### Community 27 - "Community 27"
 Cohesion: 0.19
-Nodes (13): BinaryTest(), Blanks(), Continuation(), Everything(), ExpectEnumerateVocab, ExtendLeftTest(), GetState(), LoadingTest() (+5 more)
+Nodes (10): _DummyCTCModel, _DummyProcessor, _DummySeq2SeqInner, _DummySeq2SeqModel, _DummyTokenizer, Tests for the training module., test_ctc_build_processor_uses_vocab_asset(), test_ctc_validation_prefers_normalized_references() (+2 more)
 
 ### Community 28 - "Community 28"
 Cohesion: 0.15
@@ -530,350 +534,366 @@ Nodes (1): True once the first warning occurrence has been seen.
 
 ### Community 117 - "Community 117"
 Cohesion: 1.0
-Nodes (1): Compact statistics for an LM text build.
+Nodes (1): Resolve a dtype string with a CPU-safe fallback.
 
 ### Community 118 - "Community 118"
 Cohesion: 1.0
-Nodes (1): Decoded hypothesis with reference metadata.
+Nodes (1): Split decode records into aligned prediction and reference lists.
 
 ### Community 119 - "Community 119"
 Cohesion: 1.0
-Nodes (1): Normalize transcript text for LM training without changing Danish orthography.
+Nodes (1): Apply greedy CTC decoding to a single logit sequence.
 
 ### Community 120 - "Community 120"
 Cohesion: 1.0
-Nodes (1): Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``.
+Nodes (1): Decode one CTC logit sequence with greedy or beam search.
 
 ### Community 121 - "Community 121"
 Cohesion: 1.0
-Nodes (1): Yield rows from fairseq2 parquet shards for the requested corpora/split.
+Nodes (1): Compact statistics for an LM text build.
 
 ### Community 122 - "Community 122"
 Cohesion: 1.0
-Nodes (1): Build a deterministic LM text corpus from fairseq2 parquet transcripts.
+Nodes (1): Decoded hypothesis with reference metadata.
 
 ### Community 123 - "Community 123"
 Cohesion: 1.0
-Nodes (1): Build a de-duplicated text LM corpus from one or more Hugging Face text datasets
+Nodes (1): Normalize transcript text for LM training without changing Danish orthography.
 
 ### Community 124 - "Community 124"
 Cohesion: 1.0
-Nodes (1): Write normalized LM text, one line per example.
+Nodes (1): Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``.
 
 ### Community 125 - "Community 125"
 Cohesion: 1.0
-Nodes (1): Write corpus stats as pretty JSON.
+Nodes (1): Yield rows from fairseq2 parquet shards for the requested corpora/split.
 
 ### Community 126 - "Community 126"
 Cohesion: 1.0
-Nodes (1): Load a small YAML config file.
+Nodes (1): Build a deterministic LM text corpus from fairseq2 parquet transcripts.
 
 ### Community 127 - "Community 127"
 Cohesion: 1.0
-Nodes (1): Find a cached tokenizer model file using the asset card basename.
+Nodes (1): Build a de-duplicated text LM corpus from one or more Hugging Face text datasets
 
 ### Community 128 - "Community 128"
 Cohesion: 1.0
-Nodes (1): Load the OmniASR tokenizer, preferring an explicit or cached local model file.
+Nodes (1): Write normalized LM text, one line per example.
 
 ### Community 129 - "Community 129"
 Cohesion: 1.0
-Nodes (1): Build pyctcdecode labels in the exact OmniASR logit order.
+Nodes (1): Write corpus stats as pretty JSON.
 
 ### Community 130 - "Community 130"
 Cohesion: 1.0
-Nodes (1): Remove special-token text artifacts after beam decoding.
+Nodes (1): Load a small YAML config file.
 
 ### Community 131 - "Community 131"
 Cohesion: 1.0
-Nodes (1): Load a custom OmniASR CTC checkpoint using fairseq2's registered family.
+Nodes (1): Find a cached tokenizer model file using the asset card basename.
 
 ### Community 132 - "Community 132"
 Cohesion: 1.0
-Nodes (1): Create an OmniASR inference pipeline for CTC decoding.
+Nodes (1): Load the OmniASR tokenizer, preferring an explicit or cached local model file.
 
 ### Community 133 - "Community 133"
 Cohesion: 1.0
-Nodes (1): Read UTF-8 text lines without trailing newlines.
+Nodes (1): Build pyctcdecode labels in the exact OmniASR logit order.
 
 ### Community 134 - "Community 134"
 Cohesion: 1.0
-Nodes (1): Read UTF-8 text lines without trailing newlines.
+Nodes (1): Remove special-token text artifacts after beam decoding.
 
 ### Community 135 - "Community 135"
 Cohesion: 1.0
-Nodes (1): Write UTF-8 text lines with trailing newlines.
+Nodes (1): Load a custom OmniASR CTC checkpoint using fairseq2's registered family.
 
 ### Community 136 - "Community 136"
 Cohesion: 1.0
-Nodes (1): Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con
+Nodes (1): Create an OmniASR inference pipeline for CTC decoding.
 
 ### Community 137 - "Community 137"
 Cohesion: 1.0
-Nodes (1): Construct a pyctcdecode decoder lazily.
+Nodes (1): Read UTF-8 text lines without trailing newlines.
 
 ### Community 138 - "Community 138"
 Cohesion: 1.0
-Nodes (1): Compute simple WER summary from aligned prediction/reference lists.
+Nodes (1): Read UTF-8 text lines without trailing newlines.
 
 ### Community 139 - "Community 139"
 Cohesion: 1.0
-Nodes (1): Resolve a dtype string with a CPU-safe fallback.
+Nodes (1): Write UTF-8 text lines with trailing newlines.
 
 ### Community 140 - "Community 140"
 Cohesion: 1.0
-Nodes (1): Split decode records into aligned prediction and reference lists.
+Nodes (1): Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con
 
 ### Community 141 - "Community 141"
 Cohesion: 1.0
-Nodes (1): Apply greedy CTC decoding to a single logit sequence.
+Nodes (1): Construct a pyctcdecode decoder lazily.
 
 ### Community 142 - "Community 142"
 Cohesion: 1.0
-Nodes (1): Decode one CTC logit sequence with greedy or beam search.
+Nodes (1): Compute simple WER summary from aligned prediction/reference lists.
 
 ### Community 143 - "Community 143"
 Cohesion: 1.0
-Nodes (1): Build a de-duplicated text LM corpus from one or more Hugging Face text datasets
+Nodes (1): Resolve a dtype string with a CPU-safe fallback.
 
 ### Community 144 - "Community 144"
 Cohesion: 1.0
-Nodes (1): Write normalized LM text, one line per example.
+Nodes (1): Split decode records into aligned prediction and reference lists.
 
 ### Community 145 - "Community 145"
 Cohesion: 1.0
-Nodes (1): Write corpus stats as pretty JSON.
+Nodes (1): Apply greedy CTC decoding to a single logit sequence.
 
 ### Community 146 - "Community 146"
 Cohesion: 1.0
-Nodes (1): Load a small YAML config file.
+Nodes (1): Decode one CTC logit sequence with greedy or beam search.
 
 ### Community 147 - "Community 147"
 Cohesion: 1.0
-Nodes (1): Build pyctcdecode labels in the exact OmniASR logit order.
+Nodes (1): Build a de-duplicated text LM corpus from one or more Hugging Face text datasets
 
 ### Community 148 - "Community 148"
 Cohesion: 1.0
-Nodes (1): Resolve a dtype string with a CPU-safe fallback.
+Nodes (1): Write normalized LM text, one line per example.
 
 ### Community 149 - "Community 149"
 Cohesion: 1.0
-Nodes (1): Build pyctcdecode labels in the exact OmniASR logit order.
+Nodes (1): Write corpus stats as pretty JSON.
 
 ### Community 150 - "Community 150"
 Cohesion: 1.0
-Nodes (1): Remove special-token text artifacts after beam decoding.
+Nodes (1): Load a small YAML config file.
 
 ### Community 151 - "Community 151"
 Cohesion: 1.0
-Nodes (1): Write UTF-8 text lines with trailing newlines.
+Nodes (1): Build pyctcdecode labels in the exact OmniASR logit order.
 
 ### Community 152 - "Community 152"
 Cohesion: 1.0
-Nodes (1): Create an OmniASR inference pipeline for CTC decoding.
+Nodes (1): Resolve a dtype string with a CPU-safe fallback.
 
 ### Community 153 - "Community 153"
 Cohesion: 1.0
-Nodes (1): Yield fixed-size chunks from a sequence.
+Nodes (1): Build pyctcdecode labels in the exact OmniASR logit order.
 
 ### Community 154 - "Community 154"
 Cohesion: 1.0
-Nodes (1): Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con
+Nodes (1): Remove special-token text artifacts after beam decoding.
 
 ### Community 155 - "Community 155"
 Cohesion: 1.0
-Nodes (1): Construct a pyctcdecode decoder lazily.
+Nodes (1): Write UTF-8 text lines with trailing newlines.
 
 ### Community 156 - "Community 156"
 Cohesion: 1.0
-Nodes (1): Compute simple WER summary from aligned prediction/reference lists.
+Nodes (1): Create an OmniASR inference pipeline for CTC decoding.
 
 ### Community 157 - "Community 157"
 Cohesion: 1.0
-Nodes (1): Resolve a dtype string with a CPU-safe fallback.
+Nodes (1): Yield fixed-size chunks from a sequence.
 
 ### Community 158 - "Community 158"
 Cohesion: 1.0
-Nodes (1): Split decode records into aligned prediction and reference lists.
+Nodes (1): Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con
 
 ### Community 159 - "Community 159"
 Cohesion: 1.0
-Nodes (1): Apply greedy CTC decoding to a single logit sequence.
+Nodes (1): Construct a pyctcdecode decoder lazily.
 
 ### Community 160 - "Community 160"
 Cohesion: 1.0
-Nodes (1): Decode one CTC logit sequence with greedy or beam search.
+Nodes (1): Compute simple WER summary from aligned prediction/reference lists.
 
 ### Community 161 - "Community 161"
 Cohesion: 1.0
-Nodes (1): Exclusion is enforced on normalized text, so casing / URLs / metadata don't bypa
+Nodes (1): Resolve a dtype string with a CPU-safe fallback.
 
 ### Community 162 - "Community 162"
 Cohesion: 1.0
-Nodes (1): Build a de-duplicated text LM corpus from Hugging Face datasets.      This is in
+Nodes (1): Split decode records into aligned prediction and reference lists.
 
 ### Community 163 - "Community 163"
 Cohesion: 1.0
-Nodes (1): Write normalized LM text, one line per example.
+Nodes (1): Apply greedy CTC decoding to a single logit sequence.
 
 ### Community 164 - "Community 164"
 Cohesion: 1.0
-Nodes (1): Write corpus stats as pretty JSON.
+Nodes (1): Decode one CTC logit sequence with greedy or beam search.
 
 ### Community 165 - "Community 165"
 Cohesion: 1.0
-Nodes (1): Load a small YAML config file.
+Nodes (1): Exclusion is enforced on normalized text, so casing / URLs / metadata don't bypa
 
 ### Community 166 - "Community 166"
 Cohesion: 1.0
-Nodes (1): Find a cached tokenizer model file using the asset card basename.
+Nodes (1): Build a de-duplicated text LM corpus from Hugging Face datasets.      This is in
 
 ### Community 167 - "Community 167"
 Cohesion: 1.0
-Nodes (1): Load the OmniASR tokenizer, preferring an explicit or cached local model file.
+Nodes (1): Write normalized LM text, one line per example.
 
 ### Community 168 - "Community 168"
 Cohesion: 1.0
-Nodes (1): Remove special-token text artifacts after beam decoding.
+Nodes (1): Write corpus stats as pretty JSON.
 
 ### Community 169 - "Community 169"
 Cohesion: 1.0
-Nodes (1): Load a custom OmniASR CTC checkpoint using fairseq2's registered family.
+Nodes (1): Load a small YAML config file.
 
 ### Community 170 - "Community 170"
 Cohesion: 1.0
-Nodes (1): Create an OmniASR inference pipeline for CTC decoding.
+Nodes (1): Find a cached tokenizer model file using the asset card basename.
 
 ### Community 171 - "Community 171"
 Cohesion: 1.0
-Nodes (1): Yield fixed-size chunks from a sequence.
+Nodes (1): Load the OmniASR tokenizer, preferring an explicit or cached local model file.
 
 ### Community 172 - "Community 172"
 Cohesion: 1.0
-Nodes (1): Read UTF-8 text lines without trailing newlines.
+Nodes (1): Remove special-token text artifacts after beam decoding.
 
 ### Community 173 - "Community 173"
 Cohesion: 1.0
-Nodes (1): Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con
+Nodes (1): Load a custom OmniASR CTC checkpoint using fairseq2's registered family.
 
 ### Community 174 - "Community 174"
 Cohesion: 1.0
-Nodes (1): Construct a pyctcdecode decoder lazily.
+Nodes (1): Create an OmniASR inference pipeline for CTC decoding.
 
 ### Community 175 - "Community 175"
 Cohesion: 1.0
-Nodes (1): Compute simple WER summary from aligned prediction/reference lists.
+Nodes (1): Yield fixed-size chunks from a sequence.
 
 ### Community 176 - "Community 176"
 Cohesion: 1.0
-Nodes (1): Split decode records into aligned prediction and reference lists.
+Nodes (1): Read UTF-8 text lines without trailing newlines.
 
 ### Community 177 - "Community 177"
 Cohesion: 1.0
-Nodes (1): Apply greedy CTC decoding to a single logit sequence.
+Nodes (1): Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con
 
 ### Community 178 - "Community 178"
 Cohesion: 1.0
-Nodes (1): Decode one CTC logit sequence with greedy or beam search.
+Nodes (1): Construct a pyctcdecode decoder lazily.
 
 ### Community 179 - "Community 179"
 Cohesion: 1.0
-Nodes (1): Compact statistics for an LM text build.
+Nodes (1): Compute simple WER summary from aligned prediction/reference lists.
 
 ### Community 180 - "Community 180"
 Cohesion: 1.0
-Nodes (1): Decoded hypothesis with reference metadata.
+Nodes (1): Split decode records into aligned prediction and reference lists.
 
 ### Community 181 - "Community 181"
 Cohesion: 1.0
-Nodes (1): Normalize transcript text for LM training without changing Danish orthography.
+Nodes (1): Apply greedy CTC decoding to a single logit sequence.
 
 ### Community 182 - "Community 182"
 Cohesion: 1.0
-Nodes (1): Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``.
+Nodes (1): Decode one CTC logit sequence with greedy or beam search.
 
 ### Community 183 - "Community 183"
 Cohesion: 1.0
-Nodes (1): Yield rows from fairseq2 parquet shards for the requested corpora/split.
+Nodes (1): Compact statistics for an LM text build.
 
 ### Community 184 - "Community 184"
 Cohesion: 1.0
-Nodes (1): Build a deterministic LM text corpus from fairseq2 parquet transcripts.
+Nodes (1): Decoded hypothesis with reference metadata.
 
 ### Community 185 - "Community 185"
 Cohesion: 1.0
-Nodes (1): Write normalized LM text, one line per example.
+Nodes (1): Normalize transcript text for LM training without changing Danish orthography.
 
 ### Community 186 - "Community 186"
 Cohesion: 1.0
-Nodes (1): Write corpus stats as pretty JSON.
+Nodes (1): Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``.
 
 ### Community 187 - "Community 187"
 Cohesion: 1.0
-Nodes (1): Load a small YAML config file.
+Nodes (1): Yield rows from fairseq2 parquet shards for the requested corpora/split.
 
 ### Community 188 - "Community 188"
 Cohesion: 1.0
-Nodes (1): Find a cached tokenizer model file using the asset card basename.
+Nodes (1): Build a deterministic LM text corpus from fairseq2 parquet transcripts.
 
 ### Community 189 - "Community 189"
 Cohesion: 1.0
-Nodes (1): Load the OmniASR tokenizer, preferring an explicit or cached local model file.
+Nodes (1): Write normalized LM text, one line per example.
 
 ### Community 190 - "Community 190"
 Cohesion: 1.0
-Nodes (1): Build pyctcdecode labels in the exact OmniASR logit order.
+Nodes (1): Write corpus stats as pretty JSON.
 
 ### Community 191 - "Community 191"
 Cohesion: 1.0
-Nodes (1): Remove special-token text artifacts after beam decoding.
+Nodes (1): Load a small YAML config file.
 
 ### Community 192 - "Community 192"
 Cohesion: 1.0
-Nodes (1): Load a custom OmniASR CTC checkpoint using fairseq2's registered family.
+Nodes (1): Find a cached tokenizer model file using the asset card basename.
 
 ### Community 193 - "Community 193"
 Cohesion: 1.0
-Nodes (1): Create an OmniASR inference pipeline for CTC decoding.
+Nodes (1): Load the OmniASR tokenizer, preferring an explicit or cached local model file.
 
 ### Community 194 - "Community 194"
 Cohesion: 1.0
-Nodes (1): Yield fixed-size chunks from a sequence.
+Nodes (1): Build pyctcdecode labels in the exact OmniASR logit order.
 
 ### Community 195 - "Community 195"
 Cohesion: 1.0
-Nodes (1): Read UTF-8 text lines without trailing newlines.
+Nodes (1): Remove special-token text artifacts after beam decoding.
 
 ### Community 196 - "Community 196"
 Cohesion: 1.0
-Nodes (1): Write UTF-8 text lines with trailing newlines.
+Nodes (1): Load a custom OmniASR CTC checkpoint using fairseq2's registered family.
 
 ### Community 197 - "Community 197"
 Cohesion: 1.0
-Nodes (1): Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con
+Nodes (1): Create an OmniASR inference pipeline for CTC decoding.
 
 ### Community 198 - "Community 198"
 Cohesion: 1.0
-Nodes (1): Construct a pyctcdecode decoder lazily.
+Nodes (1): Yield fixed-size chunks from a sequence.
 
 ### Community 199 - "Community 199"
 Cohesion: 1.0
-Nodes (1): Compute simple WER summary from aligned prediction/reference lists.
+Nodes (1): Read UTF-8 text lines without trailing newlines.
 
 ### Community 200 - "Community 200"
 Cohesion: 1.0
-Nodes (1): Split decode records into aligned prediction and reference lists.
+Nodes (1): Write UTF-8 text lines with trailing newlines.
 
 ### Community 201 - "Community 201"
 Cohesion: 1.0
-Nodes (1): Apply greedy CTC decoding to a single logit sequence.
+Nodes (1): Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con
 
 ### Community 202 - "Community 202"
+Cohesion: 1.0
+Nodes (1): Construct a pyctcdecode decoder lazily.
+
+### Community 203 - "Community 203"
+Cohesion: 1.0
+Nodes (1): Compute simple WER summary from aligned prediction/reference lists.
+
+### Community 204 - "Community 204"
+Cohesion: 1.0
+Nodes (1): Split decode records into aligned prediction and reference lists.
+
+### Community 205 - "Community 205"
+Cohesion: 1.0
+Nodes (1): Apply greedy CTC decoding to a single logit sequence.
+
+### Community 206 - "Community 206"
 Cohesion: 1.0
 Nodes (1): Decode one CTC logit sequence with greedy or beam search.
 
 ## Knowledge Gaps
-- **348 isolated node(s):** `Invoke tasks for Danish ASR.  Tasks are organized into namespaces for better org`, `Load a module from a file path.`, `CoRal Danish ASR dataset and data module.`, `CoRal Danish speech dataset wrapper.      Wraps HuggingFace datasets for CoRal r`, `CoRal dataset from preprocessed Parquet (no on-the-fly resampling).      Reads u` (+343 more)
+- **356 isolated node(s):** `Invoke tasks for Danish ASR.  Tasks are organized into namespaces for better org`, `Load a module from a file path.`, `CoRal Danish ASR dataset and data module.`, `CoRal Danish speech dataset wrapper.      Wraps HuggingFace datasets for CoRal r`, `CoRal dataset from preprocessed Parquet (no on-the-fly resampling).      Reads u` (+351 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `Community 46`** (7 nodes): `exception.cc`, `ErrnoException()`, `Exception()`, `HandleStrerror()`, `OverflowException()`, `SetLocation()`, `WindowsException()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -917,188 +937,196 @@ Nodes (1): Decode one CTC logit sequence with greedy or beam search.
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 113`** (1 nodes): `True once the first warning occurrence has been seen.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 117`** (1 nodes): `Compact statistics for an LM text build.`
+- **Thin community `Community 117`** (1 nodes): `Resolve a dtype string with a CPU-safe fallback.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 118`** (1 nodes): `Decoded hypothesis with reference metadata.`
+- **Thin community `Community 118`** (1 nodes): `Split decode records into aligned prediction and reference lists.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 119`** (1 nodes): `Normalize transcript text for LM training without changing Danish orthography.`
+- **Thin community `Community 119`** (1 nodes): `Apply greedy CTC decoding to a single logit sequence.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 120`** (1 nodes): `Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``.`
+- **Thin community `Community 120`** (1 nodes): `Decode one CTC logit sequence with greedy or beam search.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 121`** (1 nodes): `Yield rows from fairseq2 parquet shards for the requested corpora/split.`
+- **Thin community `Community 121`** (1 nodes): `Compact statistics for an LM text build.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 122`** (1 nodes): `Build a deterministic LM text corpus from fairseq2 parquet transcripts.`
+- **Thin community `Community 122`** (1 nodes): `Decoded hypothesis with reference metadata.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 123`** (1 nodes): `Build a de-duplicated text LM corpus from one or more Hugging Face text datasets`
+- **Thin community `Community 123`** (1 nodes): `Normalize transcript text for LM training without changing Danish orthography.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 124`** (1 nodes): `Write normalized LM text, one line per example.`
+- **Thin community `Community 124`** (1 nodes): `Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 125`** (1 nodes): `Write corpus stats as pretty JSON.`
+- **Thin community `Community 125`** (1 nodes): `Yield rows from fairseq2 parquet shards for the requested corpora/split.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 126`** (1 nodes): `Load a small YAML config file.`
+- **Thin community `Community 126`** (1 nodes): `Build a deterministic LM text corpus from fairseq2 parquet transcripts.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 127`** (1 nodes): `Find a cached tokenizer model file using the asset card basename.`
+- **Thin community `Community 127`** (1 nodes): `Build a de-duplicated text LM corpus from one or more Hugging Face text datasets`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 128`** (1 nodes): `Load the OmniASR tokenizer, preferring an explicit or cached local model file.`
+- **Thin community `Community 128`** (1 nodes): `Write normalized LM text, one line per example.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 129`** (1 nodes): `Build pyctcdecode labels in the exact OmniASR logit order.`
+- **Thin community `Community 129`** (1 nodes): `Write corpus stats as pretty JSON.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 130`** (1 nodes): `Remove special-token text artifacts after beam decoding.`
+- **Thin community `Community 130`** (1 nodes): `Load a small YAML config file.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 131`** (1 nodes): `Load a custom OmniASR CTC checkpoint using fairseq2's registered family.`
+- **Thin community `Community 131`** (1 nodes): `Find a cached tokenizer model file using the asset card basename.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 132`** (1 nodes): `Create an OmniASR inference pipeline for CTC decoding.`
+- **Thin community `Community 132`** (1 nodes): `Load the OmniASR tokenizer, preferring an explicit or cached local model file.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 133`** (1 nodes): `Read UTF-8 text lines without trailing newlines.`
+- **Thin community `Community 133`** (1 nodes): `Build pyctcdecode labels in the exact OmniASR logit order.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 134`** (1 nodes): `Read UTF-8 text lines without trailing newlines.`
+- **Thin community `Community 134`** (1 nodes): `Remove special-token text artifacts after beam decoding.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 135`** (1 nodes): `Write UTF-8 text lines with trailing newlines.`
+- **Thin community `Community 135`** (1 nodes): `Load a custom OmniASR CTC checkpoint using fairseq2's registered family.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 136`** (1 nodes): `Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con`
+- **Thin community `Community 136`** (1 nodes): `Create an OmniASR inference pipeline for CTC decoding.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 137`** (1 nodes): `Construct a pyctcdecode decoder lazily.`
+- **Thin community `Community 137`** (1 nodes): `Read UTF-8 text lines without trailing newlines.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 138`** (1 nodes): `Compute simple WER summary from aligned prediction/reference lists.`
+- **Thin community `Community 138`** (1 nodes): `Read UTF-8 text lines without trailing newlines.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 139`** (1 nodes): `Resolve a dtype string with a CPU-safe fallback.`
+- **Thin community `Community 139`** (1 nodes): `Write UTF-8 text lines with trailing newlines.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 140`** (1 nodes): `Split decode records into aligned prediction and reference lists.`
+- **Thin community `Community 140`** (1 nodes): `Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 141`** (1 nodes): `Apply greedy CTC decoding to a single logit sequence.`
+- **Thin community `Community 141`** (1 nodes): `Construct a pyctcdecode decoder lazily.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 142`** (1 nodes): `Decode one CTC logit sequence with greedy or beam search.`
+- **Thin community `Community 142`** (1 nodes): `Compute simple WER summary from aligned prediction/reference lists.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 143`** (1 nodes): `Build a de-duplicated text LM corpus from one or more Hugging Face text datasets`
+- **Thin community `Community 143`** (1 nodes): `Resolve a dtype string with a CPU-safe fallback.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 144`** (1 nodes): `Write normalized LM text, one line per example.`
+- **Thin community `Community 144`** (1 nodes): `Split decode records into aligned prediction and reference lists.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 145`** (1 nodes): `Write corpus stats as pretty JSON.`
+- **Thin community `Community 145`** (1 nodes): `Apply greedy CTC decoding to a single logit sequence.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 146`** (1 nodes): `Load a small YAML config file.`
+- **Thin community `Community 146`** (1 nodes): `Decode one CTC logit sequence with greedy or beam search.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 147`** (1 nodes): `Build pyctcdecode labels in the exact OmniASR logit order.`
+- **Thin community `Community 147`** (1 nodes): `Build a de-duplicated text LM corpus from one or more Hugging Face text datasets`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 148`** (1 nodes): `Resolve a dtype string with a CPU-safe fallback.`
+- **Thin community `Community 148`** (1 nodes): `Write normalized LM text, one line per example.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 149`** (1 nodes): `Build pyctcdecode labels in the exact OmniASR logit order.`
+- **Thin community `Community 149`** (1 nodes): `Write corpus stats as pretty JSON.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 150`** (1 nodes): `Remove special-token text artifacts after beam decoding.`
+- **Thin community `Community 150`** (1 nodes): `Load a small YAML config file.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 151`** (1 nodes): `Write UTF-8 text lines with trailing newlines.`
+- **Thin community `Community 151`** (1 nodes): `Build pyctcdecode labels in the exact OmniASR logit order.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 152`** (1 nodes): `Create an OmniASR inference pipeline for CTC decoding.`
+- **Thin community `Community 152`** (1 nodes): `Resolve a dtype string with a CPU-safe fallback.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 153`** (1 nodes): `Yield fixed-size chunks from a sequence.`
+- **Thin community `Community 153`** (1 nodes): `Build pyctcdecode labels in the exact OmniASR logit order.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 154`** (1 nodes): `Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con`
+- **Thin community `Community 154`** (1 nodes): `Remove special-token text artifacts after beam decoding.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 155`** (1 nodes): `Construct a pyctcdecode decoder lazily.`
+- **Thin community `Community 155`** (1 nodes): `Write UTF-8 text lines with trailing newlines.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 156`** (1 nodes): `Compute simple WER summary from aligned prediction/reference lists.`
+- **Thin community `Community 156`** (1 nodes): `Create an OmniASR inference pipeline for CTC decoding.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 157`** (1 nodes): `Resolve a dtype string with a CPU-safe fallback.`
+- **Thin community `Community 157`** (1 nodes): `Yield fixed-size chunks from a sequence.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 158`** (1 nodes): `Split decode records into aligned prediction and reference lists.`
+- **Thin community `Community 158`** (1 nodes): `Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 159`** (1 nodes): `Apply greedy CTC decoding to a single logit sequence.`
+- **Thin community `Community 159`** (1 nodes): `Construct a pyctcdecode decoder lazily.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 160`** (1 nodes): `Decode one CTC logit sequence with greedy or beam search.`
+- **Thin community `Community 160`** (1 nodes): `Compute simple WER summary from aligned prediction/reference lists.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 161`** (1 nodes): `Exclusion is enforced on normalized text, so casing / URLs / metadata don't bypa`
+- **Thin community `Community 161`** (1 nodes): `Resolve a dtype string with a CPU-safe fallback.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 162`** (1 nodes): `Build a de-duplicated text LM corpus from Hugging Face datasets.      This is in`
+- **Thin community `Community 162`** (1 nodes): `Split decode records into aligned prediction and reference lists.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 163`** (1 nodes): `Write normalized LM text, one line per example.`
+- **Thin community `Community 163`** (1 nodes): `Apply greedy CTC decoding to a single logit sequence.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 164`** (1 nodes): `Write corpus stats as pretty JSON.`
+- **Thin community `Community 164`** (1 nodes): `Decode one CTC logit sequence with greedy or beam search.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 165`** (1 nodes): `Load a small YAML config file.`
+- **Thin community `Community 165`** (1 nodes): `Exclusion is enforced on normalized text, so casing / URLs / metadata don't bypa`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 166`** (1 nodes): `Find a cached tokenizer model file using the asset card basename.`
+- **Thin community `Community 166`** (1 nodes): `Build a de-duplicated text LM corpus from Hugging Face datasets.      This is in`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 167`** (1 nodes): `Load the OmniASR tokenizer, preferring an explicit or cached local model file.`
+- **Thin community `Community 167`** (1 nodes): `Write normalized LM text, one line per example.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 168`** (1 nodes): `Remove special-token text artifacts after beam decoding.`
+- **Thin community `Community 168`** (1 nodes): `Write corpus stats as pretty JSON.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 169`** (1 nodes): `Load a custom OmniASR CTC checkpoint using fairseq2's registered family.`
+- **Thin community `Community 169`** (1 nodes): `Load a small YAML config file.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 170`** (1 nodes): `Create an OmniASR inference pipeline for CTC decoding.`
+- **Thin community `Community 170`** (1 nodes): `Find a cached tokenizer model file using the asset card basename.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 171`** (1 nodes): `Yield fixed-size chunks from a sequence.`
+- **Thin community `Community 171`** (1 nodes): `Load the OmniASR tokenizer, preferring an explicit or cached local model file.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 172`** (1 nodes): `Read UTF-8 text lines without trailing newlines.`
+- **Thin community `Community 172`** (1 nodes): `Remove special-token text artifacts after beam decoding.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 173`** (1 nodes): `Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con`
+- **Thin community `Community 173`** (1 nodes): `Load a custom OmniASR CTC checkpoint using fairseq2's registered family.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 174`** (1 nodes): `Construct a pyctcdecode decoder lazily.`
+- **Thin community `Community 174`** (1 nodes): `Create an OmniASR inference pipeline for CTC decoding.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 175`** (1 nodes): `Compute simple WER summary from aligned prediction/reference lists.`
+- **Thin community `Community 175`** (1 nodes): `Yield fixed-size chunks from a sequence.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 176`** (1 nodes): `Split decode records into aligned prediction and reference lists.`
+- **Thin community `Community 176`** (1 nodes): `Read UTF-8 text lines without trailing newlines.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 177`** (1 nodes): `Apply greedy CTC decoding to a single logit sequence.`
+- **Thin community `Community 177`** (1 nodes): `Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 178`** (1 nodes): `Decode one CTC logit sequence with greedy or beam search.`
+- **Thin community `Community 178`** (1 nodes): `Construct a pyctcdecode decoder lazily.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 179`** (1 nodes): `Compact statistics for an LM text build.`
+- **Thin community `Community 179`** (1 nodes): `Compute simple WER summary from aligned prediction/reference lists.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 180`** (1 nodes): `Decoded hypothesis with reference metadata.`
+- **Thin community `Community 180`** (1 nodes): `Split decode records into aligned prediction and reference lists.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 181`** (1 nodes): `Normalize transcript text for LM training without changing Danish orthography.`
+- **Thin community `Community 181`** (1 nodes): `Apply greedy CTC decoding to a single logit sequence.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 182`** (1 nodes): `Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``.`
+- **Thin community `Community 182`** (1 nodes): `Decode one CTC logit sequence with greedy or beam search.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 183`** (1 nodes): `Yield rows from fairseq2 parquet shards for the requested corpora/split.`
+- **Thin community `Community 183`** (1 nodes): `Compact statistics for an LM text build.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 184`** (1 nodes): `Build a deterministic LM text corpus from fairseq2 parquet transcripts.`
+- **Thin community `Community 184`** (1 nodes): `Decoded hypothesis with reference metadata.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 185`** (1 nodes): `Write normalized LM text, one line per example.`
+- **Thin community `Community 185`** (1 nodes): `Normalize transcript text for LM training without changing Danish orthography.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 186`** (1 nodes): `Write corpus stats as pretty JSON.`
+- **Thin community `Community 186`** (1 nodes): `Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 187`** (1 nodes): `Load a small YAML config file.`
+- **Thin community `Community 187`** (1 nodes): `Yield rows from fairseq2 parquet shards for the requested corpora/split.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 188`** (1 nodes): `Find a cached tokenizer model file using the asset card basename.`
+- **Thin community `Community 188`** (1 nodes): `Build a deterministic LM text corpus from fairseq2 parquet transcripts.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 189`** (1 nodes): `Load the OmniASR tokenizer, preferring an explicit or cached local model file.`
+- **Thin community `Community 189`** (1 nodes): `Write normalized LM text, one line per example.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 190`** (1 nodes): `Build pyctcdecode labels in the exact OmniASR logit order.`
+- **Thin community `Community 190`** (1 nodes): `Write corpus stats as pretty JSON.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 191`** (1 nodes): `Remove special-token text artifacts after beam decoding.`
+- **Thin community `Community 191`** (1 nodes): `Load a small YAML config file.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 192`** (1 nodes): `Load a custom OmniASR CTC checkpoint using fairseq2's registered family.`
+- **Thin community `Community 192`** (1 nodes): `Find a cached tokenizer model file using the asset card basename.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 193`** (1 nodes): `Create an OmniASR inference pipeline for CTC decoding.`
+- **Thin community `Community 193`** (1 nodes): `Load the OmniASR tokenizer, preferring an explicit or cached local model file.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 194`** (1 nodes): `Yield fixed-size chunks from a sequence.`
+- **Thin community `Community 194`** (1 nodes): `Build pyctcdecode labels in the exact OmniASR logit order.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 195`** (1 nodes): `Read UTF-8 text lines without trailing newlines.`
+- **Thin community `Community 195`** (1 nodes): `Remove special-token text artifacts after beam decoding.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 196`** (1 nodes): `Write UTF-8 text lines with trailing newlines.`
+- **Thin community `Community 196`** (1 nodes): `Load a custom OmniASR CTC checkpoint using fairseq2's registered family.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 197`** (1 nodes): `Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con`
+- **Thin community `Community 197`** (1 nodes): `Create an OmniASR inference pipeline for CTC decoding.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 198`** (1 nodes): `Construct a pyctcdecode decoder lazily.`
+- **Thin community `Community 198`** (1 nodes): `Yield fixed-size chunks from a sequence.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 199`** (1 nodes): `Compute simple WER summary from aligned prediction/reference lists.`
+- **Thin community `Community 199`** (1 nodes): `Read UTF-8 text lines without trailing newlines.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 200`** (1 nodes): `Split decode records into aligned prediction and reference lists.`
+- **Thin community `Community 200`** (1 nodes): `Write UTF-8 text lines with trailing newlines.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 201`** (1 nodes): `Apply greedy CTC decoding to a single logit sequence.`
+- **Thin community `Community 201`** (1 nodes): `Resolve checkpoint, tokenizer, dataset root, and split metadata from an eval con`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 202`** (1 nodes): `Decode one CTC logit sequence with greedy or beam search.`
+- **Thin community `Community 202`** (1 nodes): `Construct a pyctcdecode decoder lazily.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 203`** (1 nodes): `Compute simple WER summary from aligned prediction/reference lists.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 204`** (1 nodes): `Split decode records into aligned prediction and reference lists.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 205`** (1 nodes): `Apply greedy CTC decoding to a single logit sequence.`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 206`** (1 nodes): `Decode one CTC logit sequence with greedy or beam search.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `set()` connect `Community 8` to `Community 2`, `Community 5`, `Community 6`, `Community 11`, `Community 15`?**
-  _High betweenness centrality (0.209) - this node is a cross-community bridge._
-- **Why does `_t()` connect `Community 8` to `Community 0`?**
-  _High betweenness centrality (0.132) - this node is a cross-community bridge._
-- **Why does `F()` connect `Community 0` to `Community 8`, `Community 1`?**
-  _High betweenness centrality (0.120) - this node is a cross-community bridge._
+- **Why does `set()` connect `Community 3` to `Community 10`, `Community 2`, `Community 6`, `Community 15`?**
+  _High betweenness centrality (0.206) - this node is a cross-community bridge._
+- **Why does `_t()` connect `Community 10` to `Community 0`, `Community 3`?**
+  _High betweenness centrality (0.130) - this node is a cross-community bridge._
+- **Why does `F()` connect `Community 0` to `Community 1`, `Community 10`?**
+  _High betweenness centrality (0.115) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `F()` (e.g. with `Kt()` and `ee()`) actually correct?**
   _`F()` has 4 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 63 inferred relationships involving `PreprocessedCoRalDataset` (e.g. with `TestCoRalDataset` and `TestCollateFn`) actually correct?**

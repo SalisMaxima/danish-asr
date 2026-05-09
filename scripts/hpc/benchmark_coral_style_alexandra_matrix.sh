@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #BSUB -J coral_ctc_alexandra_matrix
 #BSUB -q gpua100
 #BSUB -n 4
@@ -13,11 +13,7 @@
 #BSUB -o /work3/s204696/logs/lsf/coral_ctc_alexandra_matrix_%J.out
 #BSUB -e /work3/s204696/logs/lsf/coral_ctc_alexandra_matrix_%J.err
 #
-# Run Alexandra-aligned CoRal-style benchmarks for the fixed 300M, 1B, and 3B checkpoints.
-#
-# This runner populates the main public-comparison table with two decoder rows:
-#   1. CTC no_lm       -> greedy CTC
-#   2. CTC LM-enabled  -> beam + KenLM
+# Run Alexandra-aligned CoRal-style benchmarks for fixed fine-tuned CTC checkpoints.
 #
 # Usage:
 #   bsub < scripts/hpc/benchmark_coral_style_alexandra_matrix.sh
@@ -28,57 +24,92 @@
 set -euo pipefail
 
 export DANISH_ASR_PROJECT_DIR="${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-/work3/$USER/outputs/coral_style_benchmark_alexandra}"
-BATCH_SIZE="${BATCH_SIZE:-2}"
+MANIFEST="${CTC_KENLM_MANIFEST:-$DANISH_ASR_PROJECT_DIR/configs/eval/ctc_kenlm_finetuned_hpc.yaml}"
 DTYPE="${DTYPE:-bfloat16}"
 MAX_SAMPLES="${MAX_SAMPLES:-}"
-KENLM_BINARY="${KENLM_BINARY:-/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin}"
-BEAM_WIDTH="${BEAM_WIDTH:-64}"
-ALPHA="${ALPHA:-0.5}"
-BETA="${BETA:-1.5}"
+OVERWRITE="${OVERWRITE:-false}"
+KENLM_BINARY="${KENLM_BINARY:-}"
+BEAM_WIDTH="${BEAM_WIDTH:-}"
+ALPHA="${ALPHA:-}"
+BETA="${BETA:-}"
 TOKENIZER_MODEL_PATH="${TOKENIZER_MODEL_PATH:-}"
-
-if [[ ! -f "$KENLM_BINARY" ]]; then
-  echo "KENLM_BINARY not found: $KENLM_BINARY" >&2
-  echo "Build it first with:" >&2
-  echo "  bsub < scripts/hpc/build_lm_corpus.sh" >&2
-  echo "  bsub < scripts/hpc/build_kenlm.sh" >&2
-  exit 1
-fi
+MIN_SECONDS="${MIN_SECONDS:-}"
+MAX_SECONDS="${MAX_SECONDS:-}"
 
 source "$DANISH_ASR_PROJECT_DIR/scripts/hpc/env.sh"
 setup_omniasr
 cd "$DANISH_ASR_PROJECT_DIR"
+
+eval "$(python scripts/hpc/check_ctc_kenlm_eval_ready.py --manifest "$MANIFEST" --emit shell)"
+
+OUTPUT_ROOT="${OUTPUT_ROOT:-$CTC_OUTPUT_ROOT_CORAL}"
+KENLM_BINARY="${KENLM_BINARY:-$CTC_KENLM_BINARY}"
+HF_CACHE_DIR="${HF_CACHE_DIR:-$CTC_HF_CACHE_DIR}"
+TOKENIZER_NAME="${TOKENIZER_NAME:-$CTC_TOKENIZER_NAME}"
+TOKENIZER_MODEL_PATH="${TOKENIZER_MODEL_PATH:-$CTC_TOKENIZER_MODEL_PATH}"
+BEAM_WIDTH="${BEAM_WIDTH:-$CTC_BEAM_WIDTH}"
+ALPHA="${ALPHA:-$CTC_ALPHA}"
+BETA="${BETA:-$CTC_BETA}"
+MIN_SECONDS="${MIN_SECONDS:-$CTC_MIN_SECONDS}"
+MAX_SECONDS="${MAX_SECONDS:-$CTC_MAX_SECONDS}"
+
+python scripts/hpc/check_ctc_kenlm_eval_ready.py \
+  --manifest "$MANIFEST" \
+  --method coral \
+  --print-quota
+
+if ! mkdir -p "$OUTPUT_ROOT" 2>/dev/null; then
+  echo "ERROR: Cannot create eval workspace: $OUTPUT_ROOT" >&2
+  echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
+  exit 1
+fi
 
 echo "=== Alexandra-aligned CTC CoRal-style matrix ==="
 echo "Output root:   $OUTPUT_ROOT"
 echo "KenLM binary:  $KENLM_BINARY"
 echo "Beam width:    $BEAM_WIDTH"
 echo "Alpha/Beta:    $ALPHA / $BETA"
+echo "Duration:      $MIN_SECONDS < duration < $MAX_SECONDS"
 echo "Max samples:   ${MAX_SAMPLES:-full}"
 echo "Started:       $(date)"
 echo "Node:          $(hostname)"
 nvidia-smi
 
+had_failures=0
+
 run_one() {
   local label="$1"
   local arch="$2"
   local checkpoint="$3"
-  local subset="$4"
-  local decoder="$5"
-  local report_label="$6"
-  local output_leaf="$7"
+  local batch_size="$4"
+  local subset="$5"
+  local decoder="$6"
+  local report_label="$7"
+  local output_leaf="$8"
+  local run_dir="$OUTPUT_ROOT/$label/$subset/$output_leaf"
+
+  if [[ -f "$run_dir/SUCCESS" && "$OVERWRITE" != "true" ]]; then
+    echo "Skipping completed run: $run_dir"
+    return 0
+  fi
+
+  mkdir -p "$run_dir"
+  rm -f "$run_dir/SUCCESS" "$run_dir/FAILED"
 
   local args=(
-    uv run python scripts/hpc/benchmark_coral_style.py
+    python scripts/hpc/benchmark_coral_style.py
     --checkpoint-path "$checkpoint"
     --model-arch "$arch"
     --subset "$subset"
+    --tokenizer-name "$TOKENIZER_NAME"
     --decoder "$decoder"
     --report-label "$report_label"
-    --batch-size "$BATCH_SIZE"
+    --batch-size "${BATCH_SIZE:-$batch_size}"
     --dtype "$DTYPE"
-    --output-dir "$OUTPUT_ROOT/$label/$subset/$output_leaf"
+    --min-seconds "$MIN_SECONDS"
+    --max-seconds "$MAX_SECONDS"
+    --cache-dir "$HF_CACHE_DIR"
+    --output-dir "$run_dir"
   )
 
   if [[ -n "$MAX_SAMPLES" ]]; then
@@ -97,22 +128,34 @@ run_one() {
   fi
 
   echo "Running $label on $subset with $report_label"
-  "${args[@]}"
+  printf "%q " "${args[@]}" > "$run_dir/command.txt"
+  printf "\n" >> "$run_dir/command.txt"
+  if "${args[@]}" > "$run_dir/run.log" 2>&1; then
+    date > "$run_dir/SUCCESS"
+  else
+    local code=$?
+    echo "$code" > "$run_dir/FAILED"
+    echo "ERROR: Run failed: $run_dir" >&2
+    tail -80 "$run_dir/run.log" >&2 || true
+    had_failures=1
+  fi
 }
 
-for subset in read_aloud conversation; do
-  for spec in \
-    "omniasr_ctc_300m_e6_50k 300m_v2 /work3/s204696/outputs/omniasr_e6/ws_1.0bb2600b/checkpoints/step_50000/model" \
-    "omniasr_ctc_1b_e6_50k 1b_v2 /work3/s204696/outputs/omniasr_e6_1b/ws_1.f85211dd/checkpoints/step_50000/model" \
-    "omniasr_ctc_3b_e6_30k 3b_v2 /work3/s204696/outputs/omniasr_e6_3b/ws_1.2172dba0/checkpoints/step_30000/model"
-  do
-    # shellcheck disable=SC2086
-    set -- $spec
-    label="$1"
-    arch="$2"
-    checkpoint="$3"
+while IFS=$'\t' read -r subset; do
+  echo ""
+  echo "=== CoRal subset: $subset ==="
+  while IFS=$'\t' read -r label arch checkpoint batch_size; do
+    echo ""
+    echo "--- Model: $label ($arch) ---"
+    run_one "$label" "$arch" "$checkpoint" "$batch_size" "$subset" "greedy" "CTC no_lm" "greedy"
+    run_one "$label" "$arch" "$checkpoint" "$batch_size" "$subset" "beam" "CTC LM-enabled" "beam_lm_a${ALPHA}_b${BETA}"
+  done < <(python scripts/hpc/check_ctc_kenlm_eval_ready.py --manifest "$MANIFEST" --emit models)
+done < <(python scripts/hpc/check_ctc_kenlm_eval_ready.py --manifest "$MANIFEST" --emit coral-subsets)
 
-    run_one "$label" "$arch" "$checkpoint" "$subset" "greedy" "CTC no_lm" "ctc_no_lm"
-    run_one "$label" "$arch" "$checkpoint" "$subset" "beam" "CTC LM-enabled" "ctc_lm_enabled"
-  done
-done
+echo ""
+echo "Finished: $(date)"
+
+if [ "$had_failures" -ne 0 ]; then
+  echo "One or more CoRal-style CTC + KenLM runs failed." >&2
+  exit 1
+fi

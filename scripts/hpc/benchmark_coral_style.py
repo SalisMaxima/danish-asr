@@ -47,6 +47,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--dtype", choices=("float32", "float16", "bfloat16"), default="bfloat16")
     parser.add_argument("--max-samples", type=int, default=None)
+    parser.add_argument("--min-seconds", type=float, default=0.5)
+    parser.add_argument("--max-seconds", type=float, default=10.0)
     parser.add_argument("--cache-dir", default=None)
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args(raw_argv)
@@ -151,6 +153,8 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         args.subset,
         max_samples=args.max_samples,
         cache_dir=args.cache_dir,
+        min_seconds=args.min_seconds,
+        max_seconds=args.max_seconds,
     )
     logger.info("Loaded {} filtered CoRal-v3 {} examples", len(examples), args.subset)
     logger.info("Filter stats: {}", json.dumps(filter_stats.__dict__, ensure_ascii=False))
@@ -189,6 +193,8 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         "batch_size": args.batch_size,
         "dtype": str(dtype),
         "max_samples": args.max_samples,
+        "min_seconds": args.min_seconds,
+        "max_seconds": args.max_seconds,
         "filter_stats": filter_stats.__dict__,
         "official_metric": "cer_coral",
         "metric_units": "percent",

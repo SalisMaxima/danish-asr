@@ -1,4 +1,4 @@
-"""Compute WER from saved prediction and reference text files."""
+"""Compute WER/CER from saved prediction and reference text files."""
 
 from __future__ import annotations
 

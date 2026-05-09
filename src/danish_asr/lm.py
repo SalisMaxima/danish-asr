@@ -640,17 +640,19 @@ def make_decoder_factory(
 
 
 def score_predictions(predictions: Sequence[str], references: Sequence[str]) -> dict[str, Any]:
-    """Compute simple WER summary from aligned prediction/reference lists."""
+    """Compute simple WER/CER summaries from aligned prediction/reference lists."""
     if len(predictions) != len(references):
         msg = "Predictions and references must have the same number of lines."
         raise ValueError(msg)
 
-    from jiwer import wer
+    from jiwer import cer, wer
 
-    score = wer(list(references), list(predictions))
+    reference_list = list(references)
+    prediction_list = list(predictions)
     return {
         "num_examples": len(predictions),
-        "wer": score * 100.0,
+        "wer": wer(reference_list, prediction_list) * 100.0,
+        "cer": cer(reference_list, prediction_list) * 100.0,
     }
 
 
