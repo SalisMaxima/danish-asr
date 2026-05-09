@@ -32,6 +32,12 @@ BATCH_SIZE="${BATCH_SIZE:-4}"
 DTYPE="${DTYPE:-bfloat16}"
 OVERWRITE="${OVERWRITE:-false}"
 
+if [[ ! -f "$CHECKPOINT" ]]; then
+    echo "ERROR: Checkpoint not found: $CHECKPOINT" >&2
+    echo "ERROR: Re-run a zero-shot eval to repopulate the fairseq2 cache, or set CHECKPOINT=<path>." >&2
+    exit 1
+fi
+
 echo "=== 300M Base (Zero-Shot) Greedy Evaluation ==="
 echo "Checkpoint:  $CHECKPOINT"
 echo "Output root: $OUTPUT_ROOT"
