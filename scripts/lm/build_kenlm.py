@@ -69,6 +69,13 @@ def main() -> None:
     if args.skip_symbols:
         lmplz_command.append("--skip_symbols")
 
+    if not text_path.is_file():
+        msg = f"LM corpus text file not found: {text_path}"
+        raise FileNotFoundError(msg)
+    if text_path.stat().st_size == 0:
+        msg = f"LM corpus text file is empty: {text_path}. Run build_danish_lm_corpus.py first."
+        raise ValueError(msg)
+
     run_kenlm_command(lmplz_command, stdin_path=text_path, stdout_path=arpa_path)
     run_kenlm_command([args.build_binary_bin, str(arpa_path), str(binary_path)])
 

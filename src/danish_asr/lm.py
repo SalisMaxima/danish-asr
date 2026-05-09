@@ -7,7 +7,6 @@ import json
 import re
 import unicodedata
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -227,6 +226,14 @@ def build_lm_corpus_from_parquet(
         token_count += len(normalized.split())
         source_counts[row["corpus"]] = source_counts.get(row["corpus"], 0) + 1
 
+    if not lines:
+        msg = (
+            f"build_lm_corpus_from_parquet produced zero lines from {dataset_root!r} "
+            f"(split={split!r}, corpora={list(corpora)!r}). "
+            "Verify that the parquet data exists and dataset_root is correct."
+        )
+        raise ValueError(msg)
+
     stats = CorpusStats(
         version=LM_VERSION,
         split=split,
@@ -280,8 +287,14 @@ def _iter_hf_text_rows(
         )
         # Avoid decoding large unused columns such as CoRal's audio payload when
         # we only need transcripts for LM training/exclusion.
-        with suppress(AttributeError, ValueError):
+        try:
             dataset = dataset.select_columns([text_column])
+        except AttributeError:
+            logger.warning(
+                "Dataset {!r}: select_columns not available (likely streaming IterableDataset); "
+                "all columns will be decoded.",
+                dataset_name,
+            )
         skipped_missing = 0
         skipped_null = 0
 
@@ -320,14 +333,15 @@ def build_hf_text_lm_corpus(
 ) -> CorpusStats:
     """Build a de-duplicated text LM corpus from one or more Hugging Face text datasets.
 
-    Optionally subtracts exact-match normalized texts from `exclude_datasets_config`
-    so eval transcripts can be held out (pass `[]` to opt out explicitly).
+    Subtracts exact-match normalized texts from `exclude_datasets_config` so eval
+    transcripts can be held out. Configure this with the eval dataset entries to
+    silence the warning below.
     """
     if not exclude_datasets_config:
         logger.warning(
             "exclude_datasets_config is empty: LM corpus will NOT exclude any held-out texts. "
-            "If you intend to hold out an eval set (e.g., CoRal-v3 test), configure it; "
-            "otherwise pass an explicit empty list to silence this warning.",
+            "If you intend to hold out an eval set (e.g., CoRal-v3 test), add it to "
+            "exclude_datasets_config in the YAML config.",
         )
 
     # Excludes are loaded eagerly so the full set is in memory before we stream the source corpora.

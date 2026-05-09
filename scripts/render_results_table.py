@@ -73,7 +73,14 @@ def _cell_class(header: str) -> str:
     normalized = header.lower()
     if "config" in normalized or "script" in normalized:
         return "path-cell"
-    if normalized in {"test wer", "read-aloud wer", "conversation wer"}:
+    if normalized in {
+        "test wer",
+        "read-aloud wer",
+        "conversation wer",
+        "test cer",
+        "read-aloud cer",
+        "conversation cer",
+    }:
         return "metric-cell"
     if normalized in {"steps", "params"}:
         return "number-cell"
@@ -93,7 +100,7 @@ def _build_html(section: str, header: list[str], rows: list[list[str]]) -> str:
         body_rows.append("<tr>" + "".join(cells) + "</tr>")
 
     header_html = "".join(f"<th>{html.escape(value)}</th>" for value in header)
-    subtitle = "Fairseq2 WER result provenance: training recipe, evaluation recipe, metric, and W&B run."
+    subtitle = "Result provenance: training recipe, evaluation recipe, metric, and W&B run."
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -314,6 +321,8 @@ def main() -> None:
         html_path = Path(tmp_dir) / f"{_slugify(args.section)}.html"
         html_path.write_text(rendered, encoding="utf-8")
         _render_png(html_path, output_path, width=args.width, height=args.height, scale=args.scale)
+        if not output_path.is_file() or output_path.stat().st_size == 0:
+            raise RuntimeError(f"Chrome exited 0 but output PNG was not written or is empty: {output_path}")
     print(f"Wrote {output_path}")
 
 

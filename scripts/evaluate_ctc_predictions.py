@@ -21,6 +21,12 @@ def main() -> None:
     args = parse_args()
     predictions = read_text_lines(args.predictions)
     references = read_text_lines(args.references)
+
+    if not predictions:
+        raise ValueError(f"Predictions file is empty: {args.predictions}")
+    if not references:
+        raise ValueError(f"References file is empty: {args.references}")
+
     summary = score_predictions(predictions, references)
 
     if args.output_json:

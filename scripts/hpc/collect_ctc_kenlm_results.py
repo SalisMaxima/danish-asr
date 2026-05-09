@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
+
 from scripts.hpc.check_ctc_kenlm_eval_ready import DEFAULT_MANIFEST, load_manifest
 
 FIELDS = [
@@ -50,8 +52,19 @@ def _collect_root(root: Path, methodology: str) -> list[dict[str, Any]]:
         return rows
 
     for scores_path in sorted(root.glob("*/*/*/scores.json")):
-        model, split_or_subset, decoder = scores_path.parent.relative_to(root).parts[:3]
-        scores, metadata = _scores_and_metadata(scores_path)
+        try:
+            model, split_or_subset, decoder = scores_path.parent.relative_to(root).parts[:3]
+            scores, metadata = _scores_and_metadata(scores_path)
+        except (json.JSONDecodeError, KeyError, ValueError) as ex:
+            logger.warning("Skipping corrupt result file {}: {}", scores_path, ex)
+            continue
+        num_examples = scores.get("num_examples")
+        if not num_examples:
+            logger.warning(
+                "Result at {} has num_examples={}; likely a failed or empty run.",
+                scores_path.parent,
+                num_examples,
+            )
         rows.append(
             {
                 "methodology": methodology,
@@ -59,7 +72,7 @@ def _collect_root(root: Path, methodology: str) -> list[dict[str, Any]]:
                 "split_or_subset": split_or_subset,
                 "decoder": decoder,
                 "success": (scores_path.parent / "SUCCESS").exists(),
-                "num_examples": scores.get("num_examples"),
+                "num_examples": num_examples,
                 "wer": scores.get("wer"),
                 "cer": scores.get("cer"),
                 "wer_coral": scores.get("wer_coral"),

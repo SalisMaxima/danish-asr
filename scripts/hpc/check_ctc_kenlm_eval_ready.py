@@ -52,6 +52,8 @@ def _checkpoint_exists(path: str | Path) -> bool:
     ).is_file()
 
 
+# Mirrors lm.parse_valid_split; kept private to avoid importing the full lm module
+# in this preflight script which is designed to run with minimal dependencies.
 def _parse_valid_split(valid_split: str) -> tuple[str, str | None]:
     if valid_split in {"train", "dev", "test"}:
         return valid_split, None
@@ -97,7 +99,12 @@ def _print_quota() -> None:
     if quota_bin is None:
         return
     print("=== work3 quota ===")
-    subprocess.run([quota_bin], check=False)
+    result = subprocess.run([quota_bin], check=False)
+    if result.returncode != 0:
+        print(
+            f"WARNING: getquota_work3.sh exited with code {result.returncode}; quota information may be incomplete.",
+            file=sys.stderr,
+        )
 
 
 def validate_manifest(

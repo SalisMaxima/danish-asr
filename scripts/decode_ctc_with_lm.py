@@ -234,6 +234,14 @@ def main() -> None:
             )
         )
 
+    if not results:
+        msg = (
+            f"Decoding produced zero results for split={resolved['dataset_split']!r} "
+            f"at {resolved['dataset_root']!r}. Verify that the parquet data exists."
+        )
+        logger.error(msg)
+        raise RuntimeError(msg)
+
     predictions, references = collate_decode_records(results)
     predictions_path = output_dir / "predictions.txt"
     references_path = output_dir / "references.txt"

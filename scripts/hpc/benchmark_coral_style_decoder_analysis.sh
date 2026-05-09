@@ -76,7 +76,7 @@ run_one() {
   local beta="${6:-}"
 
   local args=(
-    uv run python scripts/hpc/benchmark_coral_style.py
+    python scripts/hpc/benchmark_coral_style.py
     --checkpoint-path "$CHECKPOINT_PATH"
     --model-arch "$MODEL_ARCH"
     --subset "$subset"
