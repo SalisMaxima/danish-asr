@@ -75,6 +75,24 @@ echo "Started:       $(date)"
 echo "Node:          $(hostname)"
 nvidia-smi
 
+echo "=== Dependency versions ==="
+python -c "
+import sys, importlib
+print('Python:', sys.version)
+for pkg in ['torch', 'fairseq2', 'omnilingual_asr', 'pyctcdecode', 'kenlm', 'pyarrow', 'datasets']:
+    try:
+        m = importlib.import_module(pkg)
+        print(f'{pkg}: {getattr(m, \"__version__\", \"(no __version__)\")!r}')
+    except Exception as e:
+        print(f'{pkg}: MISSING ({e})')
+"
+if [[ -f "$KENLM_BINARY" ]]; then
+  echo "KenLM binary: $KENLM_BINARY ($(du -sh "$KENLM_BINARY" | cut -f1))"
+else
+  echo "KenLM binary: NOT FOUND ($KENLM_BINARY)"
+fi
+echo "==========================="
+
 had_failures=0
 
 run_one() {
