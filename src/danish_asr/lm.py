@@ -226,6 +226,14 @@ def build_lm_corpus_from_parquet(
         token_count += len(normalized.split())
         source_counts[row["corpus"]] = source_counts.get(row["corpus"], 0) + 1
 
+    if not lines:
+        msg = (
+            f"build_lm_corpus_from_parquet produced zero lines from {dataset_root!r} "
+            f"(split={split!r}, corpora={list(corpora)!r}). "
+            "Verify that the parquet data exists and dataset_root is correct."
+        )
+        raise ValueError(msg)
+
     stats = CorpusStats(
         version=LM_VERSION,
         split=split,
@@ -267,6 +275,7 @@ def _iter_hf_text_rows(
 
     for dataset_config in datasets_config:
         dataset_name = _dataset_name(dataset_config)
+        text_column = dataset_config.get("text_column", "text")
         dataset = load_dataset(  # type: ignore[misc]  # nosec B615 - revision is pinned per dataset in config
             path=dataset_config["id"],
             name=dataset_config.get("subset"),
@@ -276,7 +285,16 @@ def _iter_hf_text_rows(
             trust_remote_code=dataset_config.get("trust_remote_code", False),
             revision=dataset_config.get("revision"),
         )
-        text_column = dataset_config.get("text_column", "text")
+        # Avoid decoding large unused columns such as CoRal's audio payload when
+        # we only need transcripts for LM training/exclusion.
+        try:
+            dataset = dataset.select_columns([text_column])
+        except AttributeError:
+            logger.warning(
+                "Dataset {!r}: select_columns not available (likely streaming IterableDataset); "
+                "all columns will be decoded.",
+                dataset_name,
+            )
         skipped_missing = 0
         skipped_null = 0
 
@@ -310,18 +328,20 @@ def build_hf_text_lm_corpus(
     version: str,
     cache_dir: str | Path | None = None,
     streaming: bool = True,
+    exclude_streaming: bool = True,
     exclude_datasets_config: Sequence[dict[str, Any]],
 ) -> CorpusStats:
     """Build a de-duplicated text LM corpus from one or more Hugging Face text datasets.
 
-    Optionally subtracts exact-match normalized texts from `exclude_datasets_config`
-    so eval transcripts can be held out (pass `[]` to opt out explicitly).
+    Subtracts exact-match normalized texts from `exclude_datasets_config` so eval
+    transcripts can be held out. Configure this with the eval dataset entries to
+    silence the warning below.
     """
     if not exclude_datasets_config:
         logger.warning(
             "exclude_datasets_config is empty: LM corpus will NOT exclude any held-out texts. "
-            "If you intend to hold out an eval set (e.g., CoRal-v3 test), configure it; "
-            "otherwise pass an explicit empty list to silence this warning.",
+            "If you intend to hold out an eval set (e.g., CoRal-v3 test), add it to "
+            "exclude_datasets_config in the YAML config.",
         )
 
     # Excludes are loaded eagerly so the full set is in memory before we stream the source corpora.
@@ -329,7 +349,7 @@ def build_hf_text_lm_corpus(
     for _source_name, raw_text in _iter_hf_text_rows(
         exclude_datasets_config,
         cache_dir=cache_dir,
-        streaming=False,
+        streaming=exclude_streaming,
     ):
         normalized = normalize_lm_text(raw_text)
         if normalized:
@@ -406,6 +426,7 @@ def build_hf_text_lm_corpus(
             "deduplicate_exact_lines": True,
             "deduplicate_hash": "sha1",
             "exclude_exact_normalized_texts": len(excluded_texts),
+            "exclude_streaming": exclude_streaming,
             "skipped_rows_per_dataset": skip_counts,
         },
     )
@@ -633,17 +654,19 @@ def make_decoder_factory(
 
 
 def score_predictions(predictions: Sequence[str], references: Sequence[str]) -> dict[str, Any]:
-    """Compute simple WER summary from aligned prediction/reference lists."""
+    """Compute simple WER/CER summaries from aligned prediction/reference lists."""
     if len(predictions) != len(references):
         msg = "Predictions and references must have the same number of lines."
         raise ValueError(msg)
 
-    from jiwer import wer
+    from jiwer import cer, wer
 
-    score = wer(list(references), list(predictions))
+    reference_list = list(references)
+    prediction_list = list(predictions)
     return {
         "num_examples": len(predictions),
-        "wer": score * 100.0,
+        "wer": wer(reference_list, prediction_list) * 100.0,
+        "cer": cer(reference_list, prediction_list) * 100.0,
     }
 
 

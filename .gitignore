@@ -37,6 +37,10 @@ data/processed/
 data/preprocessed/
 data/parquet/
 data/parquet_dryrun/
+data/hf_cache/
+data/lm/processed/
+artifacts/
+external/
 *.pt
 *.pth
 *.ckpt
@@ -51,6 +55,7 @@ FULLAUTO_CONTEXT.md
 feedback/
 
 # graphify local/generated artifacts
+.graphify_*
 .codex.bak-empty*
 graphify-out/.graphify_*
 graphify-out/cache/
@@ -58,3 +63,5 @@ graphify-out/graph.json
 graphify-out/graph.html
 graphify-out/manifest.json
 graphify-out/cost.json
+src/graphify-out/
+scripts/graphify-out/

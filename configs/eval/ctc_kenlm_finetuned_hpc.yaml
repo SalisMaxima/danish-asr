@@ -1,0 +1,48 @@
+artifacts:
+  kenlm_binary: /work3/${USER}/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin
+  parquet_root: /work3/${USER}/data/parquet/version=0
+  hf_cache_dir: /work3/${USER}/hf_cache
+
+output_roots:
+  my_method: /work3/${USER}/outputs/ctc_kenlm_my_method
+  coral_method: /work3/${USER}/outputs/ctc_kenlm_coral_method
+  results: /work3/${USER}/outputs/ctc_kenlm_results
+
+tokenizer:
+  name: omniASR_tokenizer_written_v2
+  model_path:
+
+beam:
+  width: 64
+  alpha: 0.5
+  beta: 1.5
+
+coral:
+  min_seconds: 0.5
+  max_seconds: 10.0
+  subsets:
+    - read_aloud
+    - conversation
+
+my_method:
+  dataset_splits:
+    - label: combined
+      split: test
+    - label: read_aloud
+      split: test_coral_v3_read_aloud
+    - label: conversation
+      split: test_coral_v3_conversation
+
+models:
+  - label: 300m_e6_50k
+    arch: 300m_v2
+    checkpoint_path: /work3/${USER}/models/ctc/300m_e6_50k/omniASR_CTC_300M_v2_e6_step50k.pt
+    batch_size: 4
+  - label: 1b_e6_50k
+    arch: 1b_v2
+    checkpoint_path: /work3/${USER}/models/ctc/1b_e6_50k/omniASR_CTC_1B_v2_e6_step50k.pt
+    batch_size: 2
+  - label: 3b_e6_30k
+    arch: 3b_v2
+    checkpoint_path: /work3/${USER}/models/ctc/3b_e6_30k/omniASR_CTC_3B_v2_e6_step30k.pt
+    batch_size: 1

@@ -4,6 +4,7 @@ source:
   kind: hf_text
   cache_dir: /work3/s204696/hf_cache
   streaming: true
+  exclude_streaming: true
   datasets:
     - name: scandi_wiki_da
       id: alexandrainst/scandi-wiki

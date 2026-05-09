@@ -226,6 +226,53 @@ def test_benchmark_cli_parse_args_supports_decoder_options() -> None:
     assert args.alpha == 0.7
     assert args.beta == 1.2
     assert args.report_label == "CTC LM-enabled"
+    assert args.min_seconds == 0.5
+    assert args.max_seconds == 10.0
+
+
+def test_benchmark_cli_passes_duration_window_to_loader(tmp_path: Path, monkeypatch) -> None:
+    import scripts.hpc.benchmark_coral_style as cli
+
+    examples = [_example("Hej verden")]
+    seen_loader_kwargs: dict[str, object] = {}
+
+    monkeypatch.setattr(cli, "make_inference_pipeline", lambda **kwargs: (object(), Path("tokenizer.model")))
+    monkeypatch.setattr(cli, "get_device", lambda: SimpleNamespace(type="cpu"))
+    monkeypatch.setattr(cli, "resolve_dtype", lambda dtype_name, device: "float32")
+
+    def fake_loader(*args, **kwargs):
+        seen_loader_kwargs.update(kwargs)
+        return examples, SimpleNamespace(__dict__={})
+
+    monkeypatch.setattr(cli, "load_coral_v3_test_subset", fake_loader)
+    monkeypatch.setattr(
+        cli,
+        "_decode_batch",
+        lambda *, examples, pipeline, decoder_kind, beam_decoder, beam_width, removable_tokens: ["Hej verden"],
+    )
+
+    cli.main(
+        [
+            "--checkpoint-path",
+            str(tmp_path / "model"),
+            "--model-arch",
+            "300m_v2",
+            "--subset",
+            "read_aloud",
+            "--min-seconds",
+            "0.75",
+            "--max-seconds",
+            "9.5",
+            "--output-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert seen_loader_kwargs["min_seconds"] == 0.75
+    assert seen_loader_kwargs["max_seconds"] == 9.5
+    score_payload = json.loads((tmp_path / "out" / "scores.json").read_text(encoding="utf-8"))
+    assert score_payload["metadata"]["min_seconds"] == 0.75
+    assert score_payload["metadata"]["max_seconds"] == 9.5
 
 
 def test_benchmark_cli_rejects_beam_options_with_greedy_decoder() -> None:

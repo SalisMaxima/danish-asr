@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from fairseq2.nn.batch_layout import BatchLayout
 from loguru import logger
 
 from danish_asr.lm import (
@@ -97,6 +96,8 @@ def _decode_batch(
     beam_width: int,
     removable_tokens: set[str],
 ) -> list[DecodeResult]:
+    from fairseq2.nn.batch_layout import BatchLayout
+
     audio_tensors = list(pipeline._build_audio_wavform_pipeline(audio_payloads).and_return())
     batch = pipeline._create_batch_simple([(audio_tensor, None) for audio_tensor in audio_tensors])
     batch_layout = BatchLayout(
@@ -233,6 +234,14 @@ def main() -> None:
                 removable_tokens=removable_tokens,
             )
         )
+
+    if not results:
+        msg = (
+            f"Decoding produced zero results for split={resolved['dataset_split']!r} "
+            f"at {resolved['dataset_root']!r}. Verify that the parquet data exists."
+        )
+        logger.error(msg)
+        raise RuntimeError(msg)
 
     predictions, references = collate_decode_records(results)
     predictions_path = output_dir / "predictions.txt"

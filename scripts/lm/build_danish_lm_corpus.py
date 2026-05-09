@@ -55,6 +55,7 @@ def main() -> None:
             version=config["name"],
             cache_dir=source.get("cache_dir"),
             streaming=source.get("streaming", True),
+            exclude_streaming=source.get("exclude_streaming", True),
             exclude_datasets_config=source["exclude_datasets"],
         )
     else:
