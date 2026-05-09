@@ -122,7 +122,7 @@ def validate_manifest(
     models = _selected_models(manifest, model_labels)
 
     if require_imports:
-        imports = ["fairseq2", "omnilingual_asr", "pyctcdecode", "kenlm", "tensorboard", "pyarrow", "torch"]
+        imports = ["fairseq2", "omnilingual_asr", "pyctcdecode", "kenlm", "pyarrow", "torch"]
         if method in {"all", "coral"}:
             imports.append("datasets")
         errors.extend(_import_modules(imports))
