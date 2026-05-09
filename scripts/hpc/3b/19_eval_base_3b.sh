@@ -13,77 +13,78 @@
 #BSUB -o /work3/s204696/logs/lsf/eval_base_3b_%J.out
 #BSUB -e /work3/s204696/logs/lsf/eval_base_3b_%J.err
 #
-# Zero-shot evaluation of pretrained omniASR_CTC_3B_v2 on 3 test splits.
-# No checkpoint needed — model loaded from fairseq2 asset registry.
-# Walltime 4:00 covers 3 sequential splits on A100-80GB.
+# Zero-shot greedy evaluation of pretrained omniASR_CTC_3B_v2 on 3 test splits.
+# Uses the parquet harness (decode_ctc_with_lm.py) so per-corpus subset WER is
+# correct — the fairseq2 recipe evaluates on the full combined set regardless of
+# the split name suffix or dataset_summary_path TSV.
 #
 # Usage:
 #   bsub < scripts/hpc/3b/19_eval_base_3b.sh
-#
-# Single-split override:
-#   EVAL_CONFIG=configs/fairseq2/3b/ctc-eval-base-3b-read-aloud.yaml \
-#       bsub < scripts/hpc/3b/19_eval_base_3b.sh
 
 set -euo pipefail
 
 source "${DANISH_ASR_PROJECT_DIR:-"$HOME/danish_asr"}/scripts/hpc/env.sh"
 setup_omniasr
 
-EVAL_OUT_DIR="${EVAL_OUT_DIR:-/work3/$USER/outputs/omniasr_base_3b_eval}"
-if ! mkdir -p "$EVAL_OUT_DIR" 2>/dev/null; then
-    echo "ERROR: Cannot create eval workspace: $EVAL_OUT_DIR" >&2
-    echo "ERROR: Check /work3 quota with getquota_work3.sh" >&2
+CHECKPOINT="/work3/$USER/fairseq2_cache/0a31b71a234e317bd6f84e33/omniASR-CTC-3B-v2.pt"
+DATASET_ROOT="/work3/$USER/data/parquet/version=0"
+OUTPUT_ROOT="${OUTPUT_ROOT:-/work3/$USER/outputs/ctc_zero_shot}"
+BATCH_SIZE="${BATCH_SIZE:-1}"
+DTYPE="${DTYPE:-bfloat16}"
+OVERWRITE="${OVERWRITE:-false}"
+
+if [[ ! -f "$CHECKPOINT" ]]; then
+    echo "ERROR: Checkpoint not found: $CHECKPOINT" >&2
+    echo "ERROR: Re-run a zero-shot eval to repopulate the fairseq2 cache, or set CHECKPOINT=<path>." >&2
     exit 1
 fi
 
-echo "=== Phase 10C: 3B Base (Zero-Shot) Evaluation ==="
-echo "Eval workspace: $EVAL_OUT_DIR"
-echo "Started:        $(date)"
-echo "Node:           $(hostname)"
+echo "=== 3B Base (Zero-Shot) Greedy Evaluation ==="
+echo "Checkpoint:  $CHECKPOINT"
+echo "Output root: $OUTPUT_ROOT"
+echo "Started:     $(date)"
+echo "Node:        $(hostname)"
 nvidia-smi
-
-# Generate per-corpus subset TSVs so the per-split configs can use valid_split: "test"
-# with a corpus-filtered TSV. The "test_<corpus>" split-name suffix is silently ignored
-# by the wav2vec2_asr recipe and falls back to the full combined test set.
-MAIN_TSV="data/parquet/version=0/language_distribution_0.tsv"
-{ head -1 "$MAIN_TSV"; awk -F'\t' 'NR>1 && $1 == "coral_v3_read_aloud"' "$MAIN_TSV"; } \
-    > "data/parquet/version=0/language_distribution_read_aloud.tsv"
-{ head -1 "$MAIN_TSV"; awk -F'\t' 'NR>1 && $1 == "coral_v3_conversation"' "$MAIN_TSV"; } \
-    > "data/parquet/version=0/language_distribution_conversation.tsv"
-echo "Generated per-corpus subset TSVs from $MAIN_TSV"
 
 had_failures=0
 
-split_tag() {
-    case "$1" in
-        *read-aloud*)   echo "read_aloud" ;;
-        *conversation*) echo "conversation" ;;
-        *)              echo "combined" ;;
-    esac
-}
+run_split() {
+    local split_label="$1"
+    local dataset_split="$2"
+    local run_dir="$OUTPUT_ROOT/3b_base/$split_label/greedy"
 
-CONFIGS=(
-    "configs/fairseq2/3b/ctc-eval-base-3b.yaml"
-    "configs/fairseq2/3b/ctc-eval-base-3b-read-aloud.yaml"
-    "configs/fairseq2/3b/ctc-eval-base-3b-conversation.yaml"
-)
-
-for i in "${!CONFIGS[@]}"; do
-    CONFIG="${EVAL_CONFIG:-${CONFIGS[$i]}}"
-    TAGS="base,3b,zero-shot,test,$(split_tag "$CONFIG")"
-    echo ""
-    echo "--- Split $((i+1))/3: $CONFIG ---"
-
-    if ! python scripts/hpc/run_eval.py \
-        --checkpoint-dir "$EVAL_OUT_DIR" \
-        --config "$CONFIG" \
-        --wandb-tags "$TAGS"; then
-        echo "ERROR: Eval failed for $CONFIG" >&2
-        had_failures=1
+    if [[ -f "$run_dir/SUCCESS" && "$OVERWRITE" != "true" ]]; then
+        echo "Skipping completed split: $split_label"
+        return 0
     fi
 
-    if [ -n "${EVAL_CONFIG:-}" ]; then break; fi
-done
+    mkdir -p "$run_dir"
+    rm -f "$run_dir/SUCCESS" "$run_dir/FAILED"
+
+    echo ""
+    echo "--- Split: $split_label ($dataset_split) ---"
+    if python scripts/decode_ctc_with_lm.py \
+        --checkpoint-path "$CHECKPOINT" \
+        --model-arch 3b_v2 \
+        --dataset-root "$DATASET_ROOT" \
+        --dataset-split "$dataset_split" \
+        --decoder greedy \
+        --batch-size "$BATCH_SIZE" \
+        --dtype "$DTYPE" \
+        --output-dir "$run_dir" \
+        > "$run_dir/run.log" 2>&1; then
+        date > "$run_dir/SUCCESS"
+    else
+        echo "$?" > "$run_dir/FAILED"
+        echo "ERROR: Eval failed for $split_label" >&2
+        tail -40 "$run_dir/run.log" >&2 || true
+        had_failures=1
+    fi
+}
+
+run_split combined             test
+run_split read_aloud           test_coral_v3_read_aloud
+run_split conversation         test_coral_v3_conversation
 
 echo ""
 echo "Finished: $(date)"
