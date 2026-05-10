@@ -42,15 +42,9 @@ echo "Started:        $(date)"
 echo "Node:           $(hostname)"
 nvidia-smi
 
-# Generate per-corpus subset TSVs so the per-split configs can use valid_split: "test"
-# with a corpus-filtered TSV. The "test_<corpus>" split-name suffix causes an immediate
-# exit for wav2vec2_llama model families and is not used here.
-MAIN_TSV="data/parquet/version=0/language_distribution_0.tsv"
-{ head -1 "$MAIN_TSV"; awk -F'\t' 'NR>1 && $1 == "coral_v3_read_aloud"' "$MAIN_TSV"; } \
-    > "data/parquet/version=0/language_distribution_read_aloud.tsv"
-{ head -1 "$MAIN_TSV"; awk -F'\t' 'NR>1 && $1 == "coral_v3_conversation"' "$MAIN_TSV"; } \
-    > "data/parquet/version=0/language_distribution_conversation.tsv"
-echo "Generated per-corpus subset TSVs from $MAIN_TSV"
+PREPARED_CONFIG_DIR="$EVAL_OUT_DIR/prepared_configs"
+SUBSET_ROOT_PARENT="$EVAL_OUT_DIR/parquet_subsets"
+mkdir -p "$PREPARED_CONFIG_DIR" "$SUBSET_ROOT_PARENT"
 
 had_failures=0
 
@@ -62,6 +56,14 @@ split_tag() {
     esac
 }
 
+subset_corpus() {
+    case "$1" in
+        *read-aloud*)   echo "coral_v3_read_aloud" ;;
+        *conversation*) echo "coral_v3_conversation" ;;
+        *)              echo "" ;;
+    esac
+}
+
 CONFIGS=(
     "configs/fairseq2/llm_1b/llm-eval-base-1b.yaml"
     "configs/fairseq2/llm_1b/llm-eval-base-1b-read-aloud.yaml"
@@ -70,13 +72,26 @@ CONFIGS=(
 
 for i in "${!CONFIGS[@]}"; do
     CONFIG="${EVAL_CONFIG:-${CONFIGS[$i]}}"
-    TAGS="llm_1b_v2,base,zero-shot,eval,test,$(split_tag "$CONFIG")"
+    SPLIT_TAG="$(split_tag "$CONFIG")"
+    CORPUS="$(subset_corpus "$CONFIG")"
+    PREPARED_CONFIG="$PREPARED_CONFIG_DIR/$(basename "$CONFIG")"
+    TAGS="llm_1b_v2,base,zero-shot,eval,test,$SPLIT_TAG"
     echo ""
     echo "--- Split $((i+1))/3: $CONFIG ---"
 
+    PREPARE_ARGS=(
+        --config "$CONFIG"
+        --output-config "$PREPARED_CONFIG"
+        --subset-root-parent "$SUBSET_ROOT_PARENT"
+    )
+    if [ -n "$CORPUS" ]; then
+        PREPARE_ARGS+=(--subset-corpus "$CORPUS")
+    fi
+    python scripts/hpc/prepare_parquet_subset_eval.py "${PREPARE_ARGS[@]}"
+
     if ! python scripts/hpc/run_eval.py \
         --checkpoint-dir "$EVAL_OUT_DIR" \
-        --config "$CONFIG" \
+        --config "$PREPARED_CONFIG" \
         --wandb-project danish-asr-llm-v2 \
         --wandb-tags "$TAGS"; then
         echo "ERROR: Eval failed for $CONFIG" >&2
