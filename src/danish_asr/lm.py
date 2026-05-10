@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import unicodedata
 from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -466,12 +467,21 @@ def _get_cached_tokenizer_path(tokenizer_name: str) -> Path | None:
     tokenizer_uri = card.field("tokenizer").as_uri()
     model_name = Path(tokenizer_uri.path).name
 
-    candidate_roots = [
-        get_project_fairseq2_cache_dir() / "assets",
-        Path.home() / ".cache" / "fairseq2" / "assets",
-    ]
+    candidate_roots: list[Path] = []
+    if fairseq2_cache_dir := os.environ.get("FAIRSEQ2_CACHE_DIR"):
+        candidate_roots.append(Path(fairseq2_cache_dir).expanduser() / "assets")
+    candidate_roots.extend(
+        [
+            get_project_fairseq2_cache_dir() / "assets",
+            Path.home() / ".cache" / "fairseq2" / "assets",
+        ]
+    )
 
+    seen_roots: set[Path] = set()
     for root in candidate_roots:
+        if root in seen_roots:
+            continue
+        seen_roots.add(root)
         if not root.exists():
             continue
 

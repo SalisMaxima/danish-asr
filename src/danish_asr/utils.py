@@ -34,18 +34,19 @@ def get_project_fairseq2_cache_dir() -> Path:
 
 
 def configure_project_cache_environment() -> None:
-    """Pin model and dataset caches to the project drive.
+    """Pin model and dataset caches to configured cache directories.
 
-    This keeps large Hugging Face and Torch assets out of the user's home/root
-    filesystem, which is too small for CoRal and model checkpoints.
+    Existing environment variables win so HPC jobs can place large assets on
+    scratch storage. When unset, default to project-local cache directories to
+    keep assets out of the user's home/root filesystem.
     """
-    hf_home = get_project_hf_cache_dir()
-    hub_cache = hf_home / "hub"
-    datasets_cache = hf_home / "datasets"
-    torch_home = _PROJECT_ROOT / ".cache" / "torch"
-    fairseq2_cache = get_project_fairseq2_cache_dir()
+    hf_home = Path(os.environ.get("HF_HOME", get_project_hf_cache_dir())).expanduser()
+    hub_cache = Path(os.environ.get("HUGGINGFACE_HUB_CACHE", hf_home / "hub")).expanduser()
+    datasets_cache = Path(os.environ.get("HF_DATASETS_CACHE", hf_home / "datasets")).expanduser()
+    torch_home = Path(os.environ.get("TORCH_HOME", _PROJECT_ROOT / ".cache" / "torch")).expanduser()
+    fairseq2_cache = Path(os.environ.get("FAIRSEQ2_CACHE_DIR", get_project_fairseq2_cache_dir())).expanduser()
     fairseq2_assets = fairseq2_cache / "assets"
-    tmp_dir = _PROJECT_ROOT / ".cache" / "tmp"
+    tmp_dir = Path(os.environ.get("TMPDIR", _PROJECT_ROOT / ".cache" / "tmp")).expanduser()
 
     for directory in (hf_home, hub_cache, datasets_cache, torch_home, fairseq2_cache, fairseq2_assets, tmp_dir):
         directory.mkdir(parents=True, exist_ok=True)
