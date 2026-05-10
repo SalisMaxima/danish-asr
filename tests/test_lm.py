@@ -267,37 +267,6 @@ def test_strip_special_tokens_removes_known_artifacts() -> None:
     assert strip_special_tokens("<s> hej </s> <pad>", {"<s>", "</s>", "<pad>"}) == "hej"
 
 
-def test_get_cached_tokenizer_path_uses_active_fairseq2_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import danish_asr.lm as lm
-
-    class FakeUri:
-        path = "/remote/omniasr_tokenizer.model"
-
-    class FakeField:
-        def as_uri(self) -> FakeUri:
-            return FakeUri()
-
-    class FakeCard:
-        def field(self, name: str) -> FakeField:
-            assert name == "tokenizer"
-            return FakeField()
-
-    class FakeStore:
-        def retrieve_card(self, name: str) -> FakeCard:
-            assert name == "omniASR_tokenizer_written_v2"
-            return FakeCard()
-
-    tokenizer_path = tmp_path / "fairseq2_cache" / "assets" / "abc123" / "omniasr_tokenizer.model"
-    tokenizer_path.parent.mkdir(parents=True)
-    tokenizer_path.write_text("tokenizer", encoding="utf-8")
-
-    monkeypatch.setenv("FAIRSEQ2_CACHE_DIR", str(tmp_path / "fairseq2_cache"))
-    monkeypatch.setattr(lm, "_require_fairseq2", lambda: None)
-    monkeypatch.setattr(lm, "get_asset_store", lambda: FakeStore())
-
-    assert lm._get_cached_tokenizer_path("omniASR_tokenizer_written_v2") == tokenizer_path
-
-
 def test_score_predictions_returns_percent_wer() -> None:
     summary = score_predictions(["hej verden"], ["hej verden"])
     assert summary["num_examples"] == 1

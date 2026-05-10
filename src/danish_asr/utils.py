@@ -33,6 +33,19 @@ def get_project_fairseq2_cache_dir() -> Path:
     return _PROJECT_ROOT / ".cache" / "fairseq2"
 
 
+def _get_env_path(name: str, default: str | Path) -> Path:
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return Path(default).expanduser()
+    return Path(value).expanduser()
+
+
+def _normalize_fairseq2_cache_dir(path: Path) -> Path:
+    if path.name == "assets":
+        return path.parent
+    return path
+
+
 def configure_project_cache_environment() -> None:
     """Pin model and dataset caches to configured cache directories.
 
@@ -40,13 +53,15 @@ def configure_project_cache_environment() -> None:
     scratch storage. When unset, default to project-local cache directories to
     keep assets out of the user's home/root filesystem.
     """
-    hf_home = Path(os.environ.get("HF_HOME", get_project_hf_cache_dir())).expanduser()
-    hub_cache = Path(os.environ.get("HUGGINGFACE_HUB_CACHE", hf_home / "hub")).expanduser()
-    datasets_cache = Path(os.environ.get("HF_DATASETS_CACHE", hf_home / "datasets")).expanduser()
-    torch_home = Path(os.environ.get("TORCH_HOME", _PROJECT_ROOT / ".cache" / "torch")).expanduser()
-    fairseq2_cache = Path(os.environ.get("FAIRSEQ2_CACHE_DIR", get_project_fairseq2_cache_dir())).expanduser()
+    hf_home = _get_env_path("HF_HOME", get_project_hf_cache_dir())
+    hub_cache = _get_env_path("HUGGINGFACE_HUB_CACHE", hf_home / "hub")
+    datasets_cache = _get_env_path("HF_DATASETS_CACHE", hf_home / "datasets")
+    torch_home = _get_env_path("TORCH_HOME", _PROJECT_ROOT / ".cache" / "torch")
+    fairseq2_cache = _normalize_fairseq2_cache_dir(
+        _get_env_path("FAIRSEQ2_CACHE_DIR", get_project_fairseq2_cache_dir())
+    )
     fairseq2_assets = fairseq2_cache / "assets"
-    tmp_dir = Path(os.environ.get("TMPDIR", _PROJECT_ROOT / ".cache" / "tmp")).expanduser()
+    tmp_dir = _get_env_path("TMPDIR", _PROJECT_ROOT / ".cache" / "tmp")
 
     for directory in (hf_home, hub_cache, datasets_cache, torch_home, fairseq2_cache, fairseq2_assets, tmp_dir):
         directory.mkdir(parents=True, exist_ok=True)
