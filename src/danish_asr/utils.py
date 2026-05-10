@@ -33,21 +33,46 @@ def get_project_fairseq2_cache_dir() -> Path:
     return _PROJECT_ROOT / ".cache" / "fairseq2"
 
 
+def _get_env_path(name: str, default: str | Path) -> Path:
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return Path(default).expanduser()
+    return Path(value).expanduser()
+
+
+def _normalize_fairseq2_cache_dir(path: Path) -> Path:
+    if path.name == "assets":
+        return path.parent
+    return path
+
+
 def configure_project_cache_environment() -> None:
-    """Pin model and dataset caches to the project drive.
+    """Pin model and dataset caches to configured cache directories.
 
-    This keeps large Hugging Face and Torch assets out of the user's home/root
-    filesystem, which is too small for CoRal and model checkpoints.
+    Existing environment variables win so HPC jobs can place large assets on
+    scratch storage. When unset, default to project-local cache directories to
+    keep assets out of the user's home/root filesystem.
     """
-    hf_home = get_project_hf_cache_dir()
-    hub_cache = hf_home / "hub"
-    datasets_cache = hf_home / "datasets"
-    torch_home = _PROJECT_ROOT / ".cache" / "torch"
-    fairseq2_cache = get_project_fairseq2_cache_dir()
+    hf_home = _get_env_path("HF_HOME", get_project_hf_cache_dir())
+    hub_cache = _get_env_path("HUGGINGFACE_HUB_CACHE", hf_home / "hub")
+    datasets_cache = _get_env_path("HF_DATASETS_CACHE", hf_home / "datasets")
+    torch_home = _get_env_path("TORCH_HOME", _PROJECT_ROOT / ".cache" / "torch")
+    fairseq2_cache = _normalize_fairseq2_cache_dir(
+        _get_env_path("FAIRSEQ2_CACHE_DIR", get_project_fairseq2_cache_dir())
+    )
     fairseq2_assets = fairseq2_cache / "assets"
-    tmp_dir = _PROJECT_ROOT / ".cache" / "tmp"
+    tmp_dir = _get_env_path("TMPDIR", _PROJECT_ROOT / ".cache" / "tmp")
 
-    for directory in (hf_home, hub_cache, datasets_cache, torch_home, fairseq2_cache, fairseq2_assets, tmp_dir):
+    cache_dirs = (
+        hf_home,
+        hub_cache,
+        datasets_cache,
+        torch_home,
+        fairseq2_cache,
+        fairseq2_assets,
+        tmp_dir,
+    )
+    for directory in cache_dirs:
         directory.mkdir(parents=True, exist_ok=True)
 
     os.environ["HF_HOME"] = str(hf_home)
