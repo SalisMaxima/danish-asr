@@ -8,6 +8,17 @@ import yaml
 from scripts.hpc.prepare_parquet_subset_eval import prepare_config
 
 
+@pytest.fixture
+def symlink_supported(tmp_path: Path) -> None:
+    source = tmp_path / "symlink-source"
+    target = tmp_path / "symlink-target"
+    source.mkdir()
+    try:
+        target.symlink_to(source, target_is_directory=True)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"directory symlinks are not supported in this environment: {exc}")
+
+
 def _write_config(path: Path, summary_path: Path) -> None:
     path.write_text(
         yaml.safe_dump(
@@ -27,7 +38,9 @@ def _write_config(path: Path, summary_path: Path) -> None:
     )
 
 
-def test_prepare_config_writes_one_corpus_parquet_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_prepare_config_writes_one_corpus_parquet_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, symlink_supported: None
+) -> None:
     monkeypatch.chdir(tmp_path)
     data_root = tmp_path / "data" / "parquet" / "version=0"
     (data_root / "corpus=coral_v3_read_aloud").mkdir(parents=True)

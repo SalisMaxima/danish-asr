@@ -23,7 +23,10 @@ def test_configure_project_cache_environment_preserves_existing_cache_dirs(tmp_p
     assert tmp_dir.is_dir()
 
 
-def test_configure_project_cache_environment_treats_blank_env_vars_as_unset(monkeypatch) -> None:
+def test_configure_project_cache_environment_treats_blank_env_vars_as_unset(tmp_path: Path, monkeypatch) -> None:
+    import danish_asr.utils as utils
+
+    monkeypatch.setattr(utils, "_PROJECT_ROOT", tmp_path)
     monkeypatch.setenv("HF_HOME", " ")
     monkeypatch.setenv("FAIRSEQ2_CACHE_DIR", "")
 

@@ -35,7 +35,14 @@ def _safe_symlink(source: Path, target: Path) -> None:
         msg = f"Refusing to replace non-symlink path: {target}"
         raise FileExistsError(msg)
 
-    target.symlink_to(source, target_is_directory=True)
+    try:
+        target.symlink_to(source, target_is_directory=True)
+    except OSError as exc:
+        msg = (
+            f"Failed to create subset corpus symlink {target} -> {source}. "
+            "This helper is intended for Linux HPC filesystems with symlink support."
+        )
+        raise OSError(msg) from exc
 
 
 def _write_filtered_summary(source_summary: Path, output_summary: Path, corpus: str) -> None:

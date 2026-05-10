@@ -471,7 +471,8 @@ def _get_cached_tokenizer_path(tokenizer_name: str) -> Path | None:
     fairseq2_cache_dir = os.environ.get("FAIRSEQ2_CACHE_DIR")
     if fairseq2_cache_dir is not None and fairseq2_cache_dir.strip():
         cache_path = Path(fairseq2_cache_dir).expanduser()
-        candidate_roots.append(cache_path if cache_path.name == "assets" else cache_path / "assets")
+        cache_assets_path = cache_path if cache_path.name == "assets" else cache_path / "assets"
+        candidate_roots.append(cache_assets_path)
     candidate_roots.extend(
         [
             get_project_fairseq2_cache_dir() / "assets",

@@ -63,7 +63,16 @@ def configure_project_cache_environment() -> None:
     fairseq2_assets = fairseq2_cache / "assets"
     tmp_dir = _get_env_path("TMPDIR", _PROJECT_ROOT / ".cache" / "tmp")
 
-    for directory in (hf_home, hub_cache, datasets_cache, torch_home, fairseq2_cache, fairseq2_assets, tmp_dir):
+    cache_dirs = (
+        hf_home,
+        hub_cache,
+        datasets_cache,
+        torch_home,
+        fairseq2_cache,
+        fairseq2_assets,
+        tmp_dir,
+    )
+    for directory in cache_dirs:
         directory.mkdir(parents=True, exist_ok=True)
 
     os.environ["HF_HOME"] = str(hf_home)

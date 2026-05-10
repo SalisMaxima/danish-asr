@@ -69,7 +69,9 @@ def test_get_cached_tokenizer_path_ignores_blank_env(
     import danish_asr.lm as lm
 
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
     monkeypatch.setenv("FAIRSEQ2_CACHE_DIR", " ")
+    monkeypatch.setattr(lm, "get_project_fairseq2_cache_dir", lambda: tmp_path / "project_fairseq2")
 
     assert lm._get_cached_tokenizer_path("omniASR_tokenizer_written_v2") is None
     assert not (tmp_path / "assets").exists()
