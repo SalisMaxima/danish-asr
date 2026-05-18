@@ -90,8 +90,12 @@ def prepare_config(
     output_config: Path,
     subset_root_parent: Path,
     subset_corpus: str | None,
+    model_path: str | Path | None = None,
 ) -> Path:
     config = yaml.safe_load(source_config.read_text(encoding="utf-8"))
+    if model_path is not None:
+        config.setdefault("model", {})["path"] = str(_resolve_project_path(model_path))
+
     storage_config = config["dataset"]["mixture_parquet_storage_config"]
     configured_summary = _resolve_project_path(storage_config["dataset_summary_path"])
 
@@ -131,6 +135,7 @@ def main() -> None:
     parser.add_argument("--output-config", type=Path, required=True)
     parser.add_argument("--subset-root-parent", type=Path, required=True)
     parser.add_argument("--subset-corpus", default=None)
+    parser.add_argument("--model-path", type=Path, default=None)
     parser.add_argument("--copy-only", action="store_true")
     args = parser.parse_args()
 
@@ -149,6 +154,7 @@ def main() -> None:
         output_config=args.output_config,
         subset_root_parent=args.subset_root_parent,
         subset_corpus=args.subset_corpus,
+        model_path=args.model_path,
     )
     print(output_config)
 

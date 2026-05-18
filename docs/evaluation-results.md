@@ -7,10 +7,13 @@ The current `read_aloud` / `conversation` eval configs are still marked as poten
 misleading in this repo's experiment notes, so the subset-tagged rows below should be
 treated as provisional until eval filtering is fully verified.
 
-**LLM base eval note:** the May 9, 2026 `omniASR_LLM_300M_v2` split-tagged base
-runs (`peachy-dragon-39`, `jolly-planet-40`) processed the same 14,442 examples
-as the combined run (`curious-snow-38`), so only the combined score is recorded
-below. Do not treat those split-tagged W&B scores as subset results.
+**LLM base eval note:** the pre-fix May 9, 2026 `omniASR_LLM_300M_v2`
+split-tagged base runs (`peachy-dragon-39`, `jolly-planet-40`) processed the
+same 14,442 examples as the combined run (`curious-snow-38`), so only the
+combined score is recorded below. Do not treat those split-tagged W&B scores as
+subset results. The May 10, 2026 `omniASR_LLM_1B_v2` combined run
+(`olive-wildflower-41`) finished before subset-root filtering was deployed; its
+combined score is valid, but any pre-fix split-tagged follow-ons are not.
 
 ## Combined Test Results
 
@@ -25,7 +28,7 @@ Alexandra-aligned CoRal-style CER benchmark below.
 | `omniASR_CTC_300M_v2` | finetuned E6 | 50k | `scripts/hpc/300m/14_train_e6.sh` | `configs/fairseq2/300m/ctc-finetune-hpc-e6.yaml` | `scripts/hpc/300m/21_eval_e6_full.sh` | `configs/fairseq2/300m/ctc-eval-e6.yaml` | **30.73%** | `balmy-vortex-87` | lr=`5e-5`, shuffle=`1000` |
 | `omniASR_LLM_300M_v2` | finetuned E1 | 20k | `scripts/hpc/llm_300m/14_train_e1.sh` | `configs/fairseq2/llm_300m/llm-finetune-hpc-e1.yaml` | `scripts/hpc/llm_300m/20_eval_e1.sh` | `configs/fairseq2/llm_300m/llm-eval-e1.yaml` | **20.98%** | `crimson-paper-20` | autoregressive LLM decoder |
 | `omniASR_CTC_1B_v2` | base (zero-shot) | — | — | — | `scripts/hpc/1b/20_eval_base_1b.sh` | `configs/fairseq2/1b/ctc-eval-base.yaml` | **55.39%** | `true-sound-81` | pretrained model, no finetuning |
-| `omniASR_LLM_1B_v2` | base (zero-shot) | — | — | — | `scripts/hpc/llm_1b/19_eval_base_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-base-1b.yaml` | pending | pending | pretrained model, no finetuning |
+| `omniASR_LLM_1B_v2` | base (zero-shot) | — | — | — | `scripts/hpc/llm_1b/19_eval_base_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-base-1b.yaml` | **48.79%** | `olive-wildflower-41` | pretrained model, no finetuning; W&B run `0vp66nud` |
 | `omniASR_CTC_1B_v2` | finetuned E6-1B | 50k | `scripts/hpc/1b/14_train_e6_1b.sh` | `configs/fairseq2/1b/ctc-finetune-hpc-e6-1b.yaml` | `scripts/hpc/1b/21_eval_e6_1b.sh` | `configs/fairseq2/1b/ctc-eval-e6-1b.yaml` | **23.43%** | `deep-fire-90` | lr=`5e-5`, shuffle=`1000` |
 | `omniASR_LLM_1B_v2` | finetuned E1 | 15k | `scripts/hpc/llm_1b/14_train_e1_1b.sh` | `configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b-15k.yaml` | `scripts/hpc/llm_1b/20_eval_e1_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-e1-1b-15k.yaml` | **17.83%** | `happy-universe-21` | autoregressive LLM decoder |
 | `omniASR_CTC_3B_v2` | base (zero-shot) | — | — | — | `scripts/hpc/3b/19_eval_base_3b.sh` | `configs/fairseq2/3b/ctc-eval-base-3b.yaml` | **52.87%** | `v7yi0pk2` | pretrained model, no finetuning; rerun on DTU HPC on 2026-04-22 |
