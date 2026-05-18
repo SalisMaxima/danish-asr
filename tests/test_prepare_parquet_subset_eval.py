@@ -92,3 +92,22 @@ def test_prepare_config_combined_preserves_configured_summary(tmp_path: Path) ->
 
     prepared = yaml.safe_load(output_config.read_text(encoding="utf-8"))
     assert Path(prepared["dataset"]["mixture_parquet_storage_config"]["dataset_summary_path"]) == summary_path
+
+
+def test_prepare_config_can_pin_explicit_model_path(tmp_path: Path) -> None:
+    source_config = tmp_path / "config.yaml"
+    output_config = tmp_path / "prepared.yaml"
+    summary_path = tmp_path / "data" / "parquet" / "version=0" / "language_distribution_0.tsv"
+    model_path = tmp_path / "cache" / "omniASR-LLM-1B-v2.pt"
+    _write_config(source_config, summary_path)
+
+    prepare_config(
+        source_config=source_config,
+        output_config=output_config,
+        subset_root_parent=tmp_path / "subsets",
+        subset_corpus=None,
+        model_path=model_path,
+    )
+
+    prepared = yaml.safe_load(output_config.read_text(encoding="utf-8"))
+    assert Path(prepared["model"]["path"]) == model_path

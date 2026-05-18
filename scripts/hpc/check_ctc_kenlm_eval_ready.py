@@ -94,6 +94,127 @@ def _selected_models(manifest: dict[str, Any], labels: set[str] | None) -> list[
     return selected
 
 
+def _nearest_existing_parent(path: Path) -> Path | None:
+    candidate = path if path.exists() else path.parent
+    while not candidate.exists():
+        if candidate == candidate.parent:
+            return None
+        candidate = candidate.parent
+    return candidate
+
+
+def _writable_path_errors(paths: Iterable[str | Path]) -> list[str]:
+    errors: list[str] = []
+    for raw_path in paths:
+        path = Path(raw_path)
+        existing_parent = _nearest_existing_parent(path)
+        if existing_parent is None:
+            errors.append(f"No existing parent directory for output path: {path}")
+            continue
+        if not os.access(existing_parent, os.W_OK | os.X_OK):
+            errors.append(f"Output path parent is not writable/searchable: {existing_parent} (for {path})")
+    return errors
+
+
+def _selected_output_roots(manifest: dict[str, Any], method: str) -> list[str]:
+    output_roots = manifest["output_roots"]
+    roots: list[str] = []
+    if method in {"all", "my"}:
+        roots.append(str(output_roots["my_method"]))
+    if method in {"all", "coral"}:
+        roots.append(str(output_roots["coral_method"]))
+    roots.append(str(output_roots["results"]))
+    return roots
+
+
+def _format_exists(path: Path) -> str:
+    return "exists" if path.exists() else "missing"
+
+
+def _fairseq2_cache_roots() -> list[Path]:
+    roots: list[Path] = []
+    fairseq2_cache_dir = os.environ.get("FAIRSEQ2_CACHE_DIR")
+    if fairseq2_cache_dir is not None and fairseq2_cache_dir.strip():
+        cache_path = Path(fairseq2_cache_dir).expanduser()
+        if cache_path.name == "assets":
+            roots.extend([cache_path, cache_path.parent])
+        else:
+            roots.extend([cache_path, cache_path / "assets"])
+    roots.extend([Path.home() / ".cache" / "fairseq2", Path.home() / ".cache" / "fairseq2" / "assets"])
+
+    deduped: list[Path] = []
+    seen: set[Path] = set()
+    for root in roots:
+        if root in seen:
+            continue
+        seen.add(root)
+        deduped.append(root)
+    return deduped
+
+
+def _resolve_tokenizer_model_path(tokenizer: dict[str, Any]) -> tuple[Path | None, str | None]:
+    explicit_path = tokenizer.get("model_path")
+    if explicit_path:
+        path = Path(str(explicit_path)).expanduser()
+        if path.is_file():
+            return path, None
+        return None, f"Tokenizer model_path not found: {path}"
+
+    tokenizer_name = str(tokenizer["name"])
+    try:
+        from danish_asr.lm import _get_cached_tokenizer_path
+
+        path = _get_cached_tokenizer_path(tokenizer_name)
+    except Exception as ex:  # pragma: no cover - exact fairseq2 failures are environment-specific
+        return None, f"Cannot resolve cached tokenizer for {tokenizer_name}: {ex}"
+
+    if path is not None:
+        return path, None
+
+    roots = ", ".join(f"{root} ({_format_exists(root)})" for root in _fairseq2_cache_roots())
+    return (
+        None,
+        f"Cached tokenizer not found for {tokenizer_name}; checked FAIRSEQ2 cache roots: {roots}. "
+        "Pre-download the asset or set TOKENIZER_MODEL_PATH/manifest tokenizer.model_path explicitly.",
+    )
+
+
+def build_diagnostics(
+    manifest: dict[str, Any],
+    *,
+    method: str,
+    model_labels: set[str] | None = None,
+    require_tokenizer: bool = True,
+) -> list[str]:
+    """Return human-readable diagnostics for paths and cache layout."""
+    artifacts = manifest["artifacts"]
+    tokenizer = manifest["tokenizer"]
+    models = _selected_models(manifest, model_labels)
+
+    lines = [
+        f"method: {method}",
+        f"kenlm_binary: {artifacts['kenlm_binary']} ({_format_exists(Path(artifacts['kenlm_binary']))})",
+        f"parquet_root: {artifacts['parquet_root']} ({_format_exists(Path(artifacts['parquet_root']))})",
+        f"hf_cache_dir: {artifacts['hf_cache_dir']} ({_format_exists(Path(artifacts['hf_cache_dir']))})",
+        "output_roots: " + ", ".join(_selected_output_roots(manifest, method)),
+        "fairseq2_cache_roots: " + ", ".join(f"{root} ({_format_exists(root)})" for root in _fairseq2_cache_roots()),
+        "models: "
+        + ", ".join(
+            f"{model['label']}={model['checkpoint_path']} ({_format_exists(Path(model['checkpoint_path']))})"
+            for model in models
+        ),
+    ]
+
+    if require_tokenizer:
+        tokenizer_path, tokenizer_error = _resolve_tokenizer_model_path(tokenizer)
+        if tokenizer_path is not None:
+            lines.append(f"tokenizer_model: {tokenizer_path} (exists)")
+        elif tokenizer_error is not None:
+            lines.append(f"tokenizer_model: unresolved ({tokenizer_error})")
+
+    return lines
+
+
 def _print_quota() -> None:
     quota_bin = shutil.which("getquota_work3.sh")
     if quota_bin is None:
@@ -115,11 +236,16 @@ def validate_manifest(
     require_imports: bool = True,
     require_cuda: bool = True,
     require_kenlm: bool = True,
+    require_tokenizer: bool | None = None,
+    require_output_roots: bool = True,
 ) -> list[str]:
     """Return preflight errors for the requested eval method."""
     errors: list[str] = []
     artifacts = manifest["artifacts"]
+    tokenizer = manifest["tokenizer"]
     models = _selected_models(manifest, model_labels)
+    if require_tokenizer is None:
+        require_tokenizer = require_imports
 
     if require_imports:
         imports = ["fairseq2", "omnilingual_asr", "pyctcdecode", "kenlm", "pyarrow", "torch"]
@@ -139,9 +265,17 @@ def validate_manifest(
     if require_kenlm and not Path(artifacts["kenlm_binary"]).is_file():
         errors.append(f"KenLM binary not found: {artifacts['kenlm_binary']}")
 
+    if require_tokenizer:
+        tokenizer_path, tokenizer_error = _resolve_tokenizer_model_path(tokenizer)
+        if tokenizer_path is None and tokenizer_error is not None:
+            errors.append(tokenizer_error)
+
     for model in models:
         if not _checkpoint_exists(model["checkpoint_path"]):
             errors.append(f"Checkpoint not found for {model['label']}: {model['checkpoint_path']}")
+
+    if require_output_roots:
+        errors.extend(_writable_path_errors(_selected_output_roots(manifest, method)))
 
     if method in {"all", "my"}:
         dataset_root = artifacts["parquet_root"]
@@ -214,8 +348,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--models", default="", help="Comma-separated model labels to validate.")
     parser.add_argument("--skip-imports", action="store_true")
     parser.add_argument("--skip-cuda", action="store_true")
+    parser.add_argument("--skip-tokenizer", action="store_true")
+    parser.add_argument("--skip-output-roots", action="store_true")
     parser.add_argument("--allow-missing-kenlm", action="store_true")
     parser.add_argument("--print-quota", action="store_true")
+    parser.add_argument("--quiet-diagnostics", action="store_true")
     parser.add_argument("--emit", choices=("models", "my-splits", "coral-subsets", "shell"), default=None)
     return parser.parse_args(argv)
 
@@ -241,6 +378,17 @@ def main(argv: list[str] | None = None) -> int:
         _print_quota()
 
     model_labels = {label for label in args.models.split(",") if label} or None
+    if not args.quiet_diagnostics:
+        print("=== CTC + KenLM eval preflight diagnostics ===")
+        for line in build_diagnostics(
+            manifest,
+            method=args.method,
+            model_labels=model_labels,
+            require_tokenizer=not args.skip_tokenizer and not args.skip_imports,
+        ):
+            print(line)
+        print("=============================================")
+
     errors = validate_manifest(
         manifest,
         method=args.method,
@@ -248,6 +396,8 @@ def main(argv: list[str] | None = None) -> int:
         require_imports=not args.skip_imports,
         require_cuda=not args.skip_cuda,
         require_kenlm=not args.allow_missing_kenlm,
+        require_tokenizer=not args.skip_tokenizer and not args.skip_imports,
+        require_output_roots=not args.skip_output_roots,
     )
     if errors:
         print("CTC + KenLM eval preflight failed:", file=sys.stderr)

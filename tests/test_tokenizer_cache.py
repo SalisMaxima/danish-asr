@@ -39,7 +39,7 @@ def test_get_cached_tokenizer_path_uses_active_fairseq2_cache(
 ) -> None:
     import danish_asr.lm as lm
 
-    tokenizer_path = tmp_path / "fairseq2_cache" / "assets" / "abc123" / "omniasr_tokenizer.model"
+    tokenizer_path = tmp_path / "fairseq2_cache" / "abc123" / "omniasr_tokenizer.model"
     tokenizer_path.parent.mkdir(parents=True)
     tokenizer_path.write_text("tokenizer", encoding="utf-8")
 
