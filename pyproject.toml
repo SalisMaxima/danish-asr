@@ -47,7 +47,7 @@ omni = [
     "tensorboard>=2.20.0",
 ]
 dev = [
-    "coverage>=7.13.5",
+    "coverage>=7.14.0",
     "invoke>=3.0.3",
     "zensical>=0.0.42,<0.1.0",
     "pre-commit>=4.6.0",
