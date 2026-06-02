@@ -120,6 +120,21 @@ section with published Røst anchors:
 The omniASR rows are intentionally left as `pending` until the matrix runner has
 been executed on DTU HPC.
 
+## Current HPC Status
+
+The benchmark path has been submitted on DTU HPC, but the submitted jobs exited
+before producing benchmark scores.
+
+| Date | Job ID | Job name | Script / mode | Outcome | Logs |
+|---|---:|---|---|---|---|
+| 2026-05-11 | `28394153` | `ctc_kenlm_my_method` | `scripts/hpc/benchmark_ctc_kenlm_my_method.sh` | exit code `1` after about `62s` | `/work3/s204696/logs/lsf/ctc_kenlm_my_method_28394153.{out,err}` |
+| 2026-05-11 | `28394154` | `coral_ctc_alexandra_matrix` | `scripts/hpc/benchmark_coral_style_alexandra_matrix.sh` | exit code `1` after about `30s` | `/work3/s204696/logs/lsf/coral_ctc_alexandra_matrix_28394154.{out,err}` |
+| 2026-05-18 | `28452248` | `ctc_smoke_greedy` | `scripts/hpc/benchmark_ctc_kenlm_my_method.sh` smoke/greedy attempt | exit code `1` after about `10m` | `/work3/s204696/logs/lsf/ctc_kenlm_my_method_28452248.{out,err}` |
+
+Next action: inspect the `.err` and `.out` files above, fix the benchmark
+preflight/runtime issue, then rerun the smoke job before spending another full
+matrix allocation.
+
 ## How To Run
 
 Build the Alexandra-proxy KenLM artifact if it is not already present:

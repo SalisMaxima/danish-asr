@@ -51,6 +51,41 @@ Outputs required for each model, subset, and decoder row:
 - `references.txt`
 - `by_group.csv`
 
+### Step 0.1a - Fix failed benchmark submissions before rerunning full matrix
+
+Known attempts have already failed before producing benchmark scores:
+
+| Date | Job ID | Job name | Outcome | Logs |
+|---|---:|---|---|---|
+| 2026-05-11 | `28394153` | `ctc_kenlm_my_method` | exit code `1` after about `62s` | `/work3/s204696/logs/lsf/ctc_kenlm_my_method_28394153.{out,err}` |
+| 2026-05-11 | `28394154` | `coral_ctc_alexandra_matrix` | exit code `1` after about `30s` | `/work3/s204696/logs/lsf/coral_ctc_alexandra_matrix_28394154.{out,err}` |
+| 2026-05-18 | `28452248` | `ctc_smoke_greedy` | exit code `1` after about `10m` | `/work3/s204696/logs/lsf/ctc_kenlm_my_method_28452248.{out,err}` |
+
+Recovery sequence:
+
+1. Inspect the `.err` files above first, then `.out`.
+2. Write the root cause into `docs/coral-style-benchmark.md`.
+3. Verify manifest expansion and artifacts on the login node:
+   ```bash
+   python scripts/hpc/check_ctc_kenlm_eval_ready.py \
+     --manifest configs/eval/ctc_kenlm_finetuned_hpc.yaml \
+     --method coral \
+     --skip-cuda \
+     --print-quota
+   ```
+4. Submit only smoke jobs until they produce the required output artifacts:
+   ```bash
+   bash scripts/hpc/submit_ctc_kenlm_eval.sh my-smoke
+   bash scripts/hpc/submit_ctc_kenlm_eval.sh coral-smoke
+   ```
+5. If preflight passes but BSUB still fails, reduce to a single greedy smoke
+   run with `MAX_SAMPLES=5`, `DECODERS=greedy`, and `OVERWRITE=true`.
+6. Submit `coral-full` only after smoke creates `scores.json`, `records.jsonl`,
+   `predictions.txt`, `references.txt`, and `by_group.csv`.
+
+Do not advance to Step 0.2 while the CoRal-style rows are still blocked by
+failed LSF jobs.
+
 ### Step 0.2 - Fill the CoRal-style CER table
 
 Update `docs/evaluation-results.md` with real values for:

@@ -7,10 +7,11 @@ The current `read_aloud` / `conversation` eval configs are still marked as poten
 misleading in this repo's experiment notes, so the subset-tagged rows below should be
 treated as provisional until eval filtering is fully verified.
 
-**LLM base eval note:** the May 9, 2026 `omniASR_LLM_300M_v2` split-tagged base
-runs (`peachy-dragon-39`, `jolly-planet-40`) processed the same 14,442 examples
-as the combined run (`curious-snow-38`), so only the combined score is recorded
-below. Do not treat those split-tagged W&B scores as subset results.
+**LLM base eval note:** the May 10-11, 2026 `omniASR_LLM_300M_v2` and
+`omniASR_LLM_1B_v2` base reruns finished in W&B and are recorded below. The
+split-tagged base rows still exactly match their combined WERs (`53.672%` for
+300M, `48.794%` for 1B), so treat those split-tagged W&B scores as provisional
+until the effective subset filtering is audited end-to-end.
 
 ## Combined Test Results
 
@@ -25,7 +26,7 @@ Alexandra-aligned CoRal-style CER benchmark below.
 | `omniASR_CTC_300M_v2` | finetuned E6 | 50k | `scripts/hpc/300m/14_train_e6.sh` | `configs/fairseq2/300m/ctc-finetune-hpc-e6.yaml` | `scripts/hpc/300m/21_eval_e6_full.sh` | `configs/fairseq2/300m/ctc-eval-e6.yaml` | **30.73%** | `balmy-vortex-87` | lr=`5e-5`, shuffle=`1000` |
 | `omniASR_LLM_300M_v2` | finetuned E1 | 20k | `scripts/hpc/llm_300m/14_train_e1.sh` | `configs/fairseq2/llm_300m/llm-finetune-hpc-e1.yaml` | `scripts/hpc/llm_300m/20_eval_e1.sh` | `configs/fairseq2/llm_300m/llm-eval-e1.yaml` | **20.98%** | `crimson-paper-20` | autoregressive LLM decoder |
 | `omniASR_CTC_1B_v2` | base (zero-shot) | — | — | — | `scripts/hpc/1b/20_eval_base_1b.sh` | `configs/fairseq2/1b/ctc-eval-base.yaml` | **55.39%** | `true-sound-81` | pretrained model, no finetuning |
-| `omniASR_LLM_1B_v2` | base (zero-shot) | — | — | — | `scripts/hpc/llm_1b/19_eval_base_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-base-1b.yaml` | pending | pending | pretrained model, no finetuning |
+| `omniASR_LLM_1B_v2` | base (zero-shot) | — | — | — | `scripts/hpc/llm_1b/19_eval_base_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-base-1b.yaml` | **48.79%** | `sleek-cosmos-46` | pretrained model, no finetuning; W&B run `v8uxcxen` |
 | `omniASR_CTC_1B_v2` | finetuned E6-1B | 50k | `scripts/hpc/1b/14_train_e6_1b.sh` | `configs/fairseq2/1b/ctc-finetune-hpc-e6-1b.yaml` | `scripts/hpc/1b/21_eval_e6_1b.sh` | `configs/fairseq2/1b/ctc-eval-e6-1b.yaml` | **23.43%** | `deep-fire-90` | lr=`5e-5`, shuffle=`1000` |
 | `omniASR_LLM_1B_v2` | finetuned E1 | 15k | `scripts/hpc/llm_1b/14_train_e1_1b.sh` | `configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b-15k.yaml` | `scripts/hpc/llm_1b/20_eval_e1_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-e1-1b-15k.yaml` | **17.83%** | `happy-universe-21` | autoregressive LLM decoder |
 | `omniASR_CTC_3B_v2` | base (zero-shot) | — | — | — | `scripts/hpc/3b/19_eval_base_3b.sh` | `configs/fairseq2/3b/ctc-eval-base-3b.yaml` | **52.87%** | `v7yi0pk2` | pretrained model, no finetuning; rerun on DTU HPC on 2026-04-22 |
@@ -46,6 +47,18 @@ The published reference rows are copied from the Røst v3 model cards. The
 omniASR rows are still marked `pending` until the local harness is run on DTU
 HPC. So the WER-only table above should not be compared directly to these
 CoRal-style CER numbers.
+
+**Latest benchmark job status:** the CoRal-style CTC/KenLM jobs were submitted,
+but no benchmark scores have landed yet. `coral_ctc_alexandra_matrix`
+(`28394154`) exited with code `1` after about `30s` on May 11, 2026. The
+single-method runner `ctc_kenlm_my_method` (`28394153`) also exited with code
+`1` after about `62s` on May 11, 2026, and the later smoke run
+`ctc_smoke_greedy` (`28452248`) exited with code `1` after about `10m` on
+May 18, 2026. Inspect the matching LSF logs under
+`/work3/s204696/logs/lsf/` before resubmitting:
+`coral_ctc_alexandra_matrix_28394154.{out,err}`,
+`ctc_kenlm_my_method_28394153.{out,err}`, and
+`ctc_kenlm_my_method_28452248.{out,err}`.
 
 | Model | Source | Params | Decoder | Read-aloud CER | Read-aloud WER | Conversation CER | Conversation WER | Notes |
 |---|---|---:|---|---:|---:|---:|---:|---|
@@ -85,6 +98,14 @@ bsub < scripts/hpc/build_kenlm.sh
 Each run writes `predictions.txt`, `references.txt`, `records.jsonl`,
 `scores.json`, and `by_group.csv` under
 `/work3/$USER/outputs/coral_style_benchmark_alexandra/<model>/<subset>/<decoder>/`.
+
+Before rerunning, inspect the latest failed LSF logs:
+
+```bash
+less /work3/s204696/logs/lsf/coral_ctc_alexandra_matrix_28394154.err
+less /work3/s204696/logs/lsf/ctc_kenlm_my_method_28394153.err
+less /work3/s204696/logs/lsf/ctc_kenlm_my_method_28452248.err
+```
 
 ### Lessons from Alexandra's Setup
 
@@ -131,21 +152,23 @@ remains harder.
 These runs are useful for directional analysis, but they should not yet be treated as
 final benchmark evidence until split-aware eval filtering is confirmed. The eval
 configs here are split-filtered variants of the same fairseq2 eval recipes above.
+The LLM base split rows are especially suspicious because their WERs exactly
+match the corresponding combined rows.
 
 | Model | Training | Eval tag | Train script | Train config | Eval script | Eval config | Test WER | W&B run |
 |---|---|---|---|---|---|---|---:|---|
 | `omniASR_CTC_300M_v2` | base (zero-shot) | `read_aloud` | — | — | `scripts/hpc/300m/20_eval_base.sh` | `configs/fairseq2/300m/ctc-eval-base-read-aloud.yaml` | **66.99%** | `peachy-breeze-76` |
 | `omniASR_CTC_300M_v2` | base (zero-shot) | `conversation` | — | — | `scripts/hpc/300m/20_eval_base.sh` | `configs/fairseq2/300m/ctc-eval-base-conversation.yaml` | **69.67%** | `resilient-shadow-77` |
-| `omniASR_LLM_300M_v2` | base (zero-shot) | `read_aloud` | — | — | `scripts/hpc/llm_300m/19_eval_base.sh` | `configs/fairseq2/llm_300m/llm-eval-base-read-aloud.yaml` | pending | pending |
-| `omniASR_LLM_300M_v2` | base (zero-shot) | `conversation` | — | — | `scripts/hpc/llm_300m/19_eval_base.sh` | `configs/fairseq2/llm_300m/llm-eval-base-conversation.yaml` | pending | pending |
+| `omniASR_LLM_300M_v2` | base (zero-shot) | `read_aloud` | — | — | `scripts/hpc/llm_300m/19_eval_base.sh` | `configs/fairseq2/llm_300m/llm-eval-base-read-aloud.yaml` | **53.67%** | `giddy-oath-44` |
+| `omniASR_LLM_300M_v2` | base (zero-shot) | `conversation` | — | — | `scripts/hpc/llm_300m/19_eval_base.sh` | `configs/fairseq2/llm_300m/llm-eval-base-conversation.yaml` | **53.67%** | `tough-cosmos-45` |
 | `omniASR_CTC_300M_v2` | finetuned E6 | `read_aloud` | `scripts/hpc/300m/14_train_e6.sh` | `configs/fairseq2/300m/ctc-finetune-hpc-e6.yaml` | `scripts/hpc/300m/21_eval_e6_full.sh` | `configs/fairseq2/300m/ctc-eval-e6-read-aloud.yaml` | **28.63%** | `glamorous-shape-88` |
 | `omniASR_CTC_300M_v2` | finetuned E6 | `conversation` | `scripts/hpc/300m/14_train_e6.sh` | `configs/fairseq2/300m/ctc-finetune-hpc-e6.yaml` | `scripts/hpc/300m/21_eval_e6_full.sh` | `configs/fairseq2/300m/ctc-eval-e6-conversation.yaml` | **33.37%** | `dainty-feather-89` |
 | `omniASR_LLM_300M_v2` | finetuned E1 | `read_aloud` | `scripts/hpc/llm_300m/14_train_e1.sh` | `configs/fairseq2/llm_300m/llm-finetune-hpc-e1.yaml` | `scripts/hpc/llm_300m/20_eval_e1.sh` | `configs/fairseq2/llm_300m/llm-eval-e1-read-aloud.yaml` | **16.93%** | `vocal-surf-23` |
 | `omniASR_LLM_300M_v2` | finetuned E1 | `conversation` | `scripts/hpc/llm_300m/14_train_e1.sh` | `configs/fairseq2/llm_300m/llm-finetune-hpc-e1.yaml` | `scripts/hpc/llm_300m/20_eval_e1.sh` | `configs/fairseq2/llm_300m/llm-eval-e1-conversation.yaml` | **26.00%** | `good-energy-25` |
 | `omniASR_CTC_1B_v2` | base (zero-shot) | `read_aloud` | — | — | `scripts/hpc/1b/20_eval_base_1b.sh` | `configs/fairseq2/1b/ctc-eval-base-read-aloud.yaml` | **54.57%** | `worldly-surf-82` |
 | `omniASR_CTC_1B_v2` | base (zero-shot) | `conversation` | — | — | `scripts/hpc/1b/20_eval_base_1b.sh` | `configs/fairseq2/1b/ctc-eval-base-conversation.yaml` | **56.42%** | `charmed-rain-83` |
-| `omniASR_LLM_1B_v2` | base (zero-shot) | `read_aloud` | — | — | `scripts/hpc/llm_1b/19_eval_base_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-base-1b-read-aloud.yaml` | pending | pending |
-| `omniASR_LLM_1B_v2` | base (zero-shot) | `conversation` | — | — | `scripts/hpc/llm_1b/19_eval_base_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-base-1b-conversation.yaml` | pending | pending |
+| `omniASR_LLM_1B_v2` | base (zero-shot) | `read_aloud` | — | — | `scripts/hpc/llm_1b/19_eval_base_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-base-1b-read-aloud.yaml` | **48.79%** | `snowy-puddle-47` |
+| `omniASR_LLM_1B_v2` | base (zero-shot) | `conversation` | — | — | `scripts/hpc/llm_1b/19_eval_base_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-base-1b-conversation.yaml` | **48.79%** | `upbeat-waterfall-48` |
 | `omniASR_CTC_1B_v2` | finetuned E6-1B | `read_aloud` | `scripts/hpc/1b/14_train_e6_1b.sh` | `configs/fairseq2/1b/ctc-finetune-hpc-e6-1b.yaml` | `scripts/hpc/1b/21_eval_e6_1b.sh` | `configs/fairseq2/1b/ctc-eval-e6-1b-read-aloud.yaml` | **20.98%** | `upbeat-tree-91` |
 | `omniASR_CTC_1B_v2` | finetuned E6-1B | `conversation` | `scripts/hpc/1b/14_train_e6_1b.sh` | `configs/fairseq2/1b/ctc-finetune-hpc-e6-1b.yaml` | `scripts/hpc/1b/21_eval_e6_1b.sh` | `configs/fairseq2/1b/ctc-eval-e6-1b-conversation.yaml` | **26.49%** | `silvery-durian-92` |
 | `omniASR_LLM_1B_v2` | finetuned E1 | `read_aloud` | `scripts/hpc/llm_1b/14_train_e1_1b.sh` | `configs/fairseq2/llm_1b/llm-finetune-hpc-e1-1b-15k.yaml` | `scripts/hpc/llm_1b/20_eval_e1_1b.sh` | `configs/fairseq2/llm_1b/llm-eval-e1-1b-15k-read-aloud.yaml` | **13.68%** | `grateful-music-22` |
@@ -162,6 +185,8 @@ configs here are split-filtered variants of the same fairseq2 eval recipes above
 - Conversation remains harder than read-aloud in the current split-tagged runs.
 - `3B` follows the same pattern: base `52.87%` -> finetuned `23.06%`, with `read_aloud` easier (`20.16%`) than `conversation` (`26.69%`).
 - The LLM V2 track is now strongest on the old fairseq2 eval path: `300M E1 20k` reaches `20.98%`, and `1B E1 15k` reaches `17.83%`.
+- The LLM V2 zero-shot baselines are now complete on the combined path: `300M`
+  starts at `53.67%`, while `1B` starts at `48.79%`.
 - `LLM 1B E1 15k` is the current best combined-test result, improving on `CTC 3B E6-3B 30k` by `5.23pp` (`23.06%` -> `17.83%`).
 
 ## CTC Decoding Comparison

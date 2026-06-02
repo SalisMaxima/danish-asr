@@ -421,6 +421,70 @@ What to do next:
 
 ---
 
+## Phase 11: Fix CoRal-Style CTC/KenLM Benchmark Blocker
+
+**Current status:** this is the next evaluation blocker before making any new
+claims against Røst/Alexandra CER numbers. The CoRal-style CTC/KenLM benchmark
+jobs were submitted, but all known attempts exited with code `1` before
+producing scores:
+
+| Date | Job ID | Job name | Outcome | Logs |
+|---|---:|---|---|---|
+| 2026-05-11 | `28394153` | `ctc_kenlm_my_method` | exit code `1` after about `62s` | `/work3/s204696/logs/lsf/ctc_kenlm_my_method_28394153.{out,err}` |
+| 2026-05-11 | `28394154` | `coral_ctc_alexandra_matrix` | exit code `1` after about `30s` | `/work3/s204696/logs/lsf/coral_ctc_alexandra_matrix_28394154.{out,err}` |
+| 2026-05-18 | `28452248` | `ctc_smoke_greedy` | exit code `1` after about `10m` | `/work3/s204696/logs/lsf/ctc_kenlm_my_method_28452248.{out,err}` |
+
+### 11A — Inspect the failed LSF logs
+
+On DTU HPC, inspect stderr first, then stdout if needed:
+
+```bash
+less /work3/s204696/logs/lsf/coral_ctc_alexandra_matrix_28394154.err
+less /work3/s204696/logs/lsf/ctc_kenlm_my_method_28394153.err
+less /work3/s204696/logs/lsf/ctc_kenlm_my_method_28452248.err
+```
+
+Record the root cause in `docs/coral-style-benchmark.md` before changing
+another variable. Likely buckets to rule in/out: missing KenLM artifact, missing
+checkpoint path, missing tokenizer model, bad manifest expansion, HF cache path,
+CUDA/preflight import failure, or an output directory/quota problem.
+
+### 11B — Re-run preflight from the login node
+
+Run the unified preflight helper before submitting more GPU work:
+
+```bash
+bash scripts/hpc/submit_ctc_kenlm_eval.sh my-smoke
+bash scripts/hpc/submit_ctc_kenlm_eval.sh coral-smoke
+```
+
+If preflight fails on the login node, fix that first. If preflight passes but
+the BSUB job fails, inspect the new job logs and reduce the job to a single
+greedy smoke run with `MAX_SAMPLES=5`, `DECODERS=greedy`, and
+`OVERWRITE=true`.
+
+### 11C — Acceptance criteria before full matrix
+
+Only submit the full matrix after a smoke job produces:
+
+- `scores.json`
+- `records.jsonl`
+- `predictions.txt`
+- `references.txt`
+- `by_group.csv`
+
+Once the smoke succeeds, run:
+
+```bash
+bash scripts/hpc/submit_ctc_kenlm_eval.sh coral-full
+```
+
+Then fill the CoRal-style CER rows in `docs/evaluation-results.md`. Until this
+phase is complete, keep the CoRal-style CTC rows marked `pending` and avoid new
+training decisions based on the public CER target.
+
+---
+
 ## Decision Tree
 
 ```
@@ -443,7 +507,8 @@ Key finding: shuffle_window=1000 (E6) = biggest single improvement (3pp over E3)
     — 0.42pp better than 1B E6 on dev, but 59.1h on A100-80GB.
     — Best WER at step 29k; step 30k is flat (24.789%) → likely near plateau.
 
-Next: evaluate finetuned 3B on the combined test split, then only resume 3B to 50k if it beats 1B by a meaningful margin.
+Next: fix the failed CoRal-style CTC/KenLM benchmark smoke jobs, then evaluate
+public-comparison CER before spending more large-model training time.
 ```
 
 ---
