@@ -13,8 +13,9 @@
 #BSUB -e /work3/s204696/logs/lsf/eval_llm_300m_base_%J.err
 #
 # Zero-shot evaluation of pretrained omniASR_LLM_300M_v2 on 3 test splits
-# using the same old fairseq2 evaluation path as the finetuned LLM V2 runs.
-# No checkpoint path is needed; fairseq2 loads the pretrained asset by model.name.
+# using the same fairseq2 evaluation path as the finetuned LLM V2 runs.
+# The script resolves the cached pretrained asset to an explicit model.path so
+# fairseq2 cannot silently reuse a model.name-only combined score.
 #
 # Usage:
 #   bsub < scripts/hpc/llm_300m/19_eval_base.sh
@@ -40,6 +41,20 @@ echo "Eval workspace: $EVAL_OUT_DIR"
 echo "Started:        $(date)"
 echo "Node:           $(hostname)"
 nvidia-smi
+
+BASE_MODEL_PATH="${BASE_MODEL_PATH:-}"
+if [ -z "$BASE_MODEL_PATH" ]; then
+    BASE_MODEL_PATH="$(python scripts/hpc/resolve_fairseq2_asset_path.py \
+        --asset omniASR_LLM_300M_v2 \
+        --field checkpoint \
+        --require-existing)"
+fi
+if [ ! -e "$BASE_MODEL_PATH" ]; then
+    echo "ERROR: Cached base model path not found: $BASE_MODEL_PATH" >&2
+    echo "ERROR: Pre-download omniASR_LLM_300M_v2, or set BASE_MODEL_PATH=<cached checkpoint path>." >&2
+    exit 1
+fi
+echo "Base model path: $BASE_MODEL_PATH"
 
 PREPARED_CONFIG_DIR="$EVAL_OUT_DIR/prepared_configs"
 SUBSET_ROOT_PARENT="$EVAL_OUT_DIR/parquet_subsets"
@@ -82,6 +97,7 @@ for i in "${!CONFIGS[@]}"; do
         --config "$CONFIG"
         --output-config "$PREPARED_CONFIG"
         --subset-root-parent "$SUBSET_ROOT_PARENT"
+        --model-path "$BASE_MODEL_PATH"
     )
     if [ -n "$CORPUS" ]; then
         PREPARE_ARGS+=(--subset-corpus "$CORPUS")

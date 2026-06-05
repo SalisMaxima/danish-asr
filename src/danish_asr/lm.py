@@ -471,11 +471,17 @@ def _get_cached_tokenizer_path(tokenizer_name: str) -> Path | None:
     fairseq2_cache_dir = os.environ.get("FAIRSEQ2_CACHE_DIR")
     if fairseq2_cache_dir is not None and fairseq2_cache_dir.strip():
         cache_path = Path(fairseq2_cache_dir).expanduser()
-        cache_assets_path = cache_path if cache_path.name == "assets" else cache_path / "assets"
-        candidate_roots.append(cache_assets_path)
+        if cache_path.name == "assets":
+            candidate_roots.append(cache_path)
+            candidate_roots.append(cache_path.parent)
+        else:
+            candidate_roots.append(cache_path)
+            candidate_roots.append(cache_path / "assets")
     candidate_roots.extend(
         [
+            get_project_fairseq2_cache_dir(),
             get_project_fairseq2_cache_dir() / "assets",
+            Path.home() / ".cache" / "fairseq2",
             Path.home() / ".cache" / "fairseq2" / "assets",
         ]
     )
@@ -488,7 +494,19 @@ def _get_cached_tokenizer_path(tokenizer_name: str) -> Path | None:
         if not root.exists():
             continue
 
-        matches = sorted(root.glob(f"*/{model_name}"))
+        direct_match = root / model_name
+        if direct_match.is_file():
+            return direct_match
+
+        for match in sorted(root.glob(f"*/{model_name}")):
+            if match.is_file():
+                return match
+
+        for match in sorted(root.glob(f"assets/*/{model_name}")):
+            if match.is_file():
+                return match
+
+        matches = sorted(root.rglob(model_name))
         if matches:
             return matches[0]
 

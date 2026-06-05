@@ -5,6 +5,7 @@ from pathlib import Path
 
 from scripts.hpc.check_ctc_kenlm_eval_ready import (
     _checkpoint_exists,
+    build_diagnostics,
     load_manifest,
     validate_manifest,
 )
@@ -89,6 +90,38 @@ def test_preflight_reports_missing_checkpoint(tmp_path: Path, monkeypatch) -> No
     )
 
     assert any("Checkpoint not found" in error for error in errors)
+
+
+def test_preflight_reports_missing_explicit_tokenizer(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USER", os.environ.get("USER", "s204696"))
+    manifest_path = tmp_path / "manifest.yaml"
+    _write_manifest(manifest_path, tmp_path)
+    manifest = load_manifest(manifest_path)
+    manifest["tokenizer"]["model_path"] = str(tmp_path / "missing_tokenizer.model")
+
+    errors = validate_manifest(
+        manifest,
+        method="my",
+        require_imports=False,
+        require_cuda=False,
+        require_kenlm=True,
+        require_tokenizer=True,
+    )
+
+    assert any("Tokenizer model_path not found" in error for error in errors)
+
+
+def test_preflight_diagnostics_include_cache_and_output_roots(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("USER", os.environ.get("USER", "s204696"))
+    monkeypatch.setenv("FAIRSEQ2_CACHE_DIR", str(tmp_path / "fairseq2_cache"))
+    manifest_path = tmp_path / "manifest.yaml"
+    _write_manifest(manifest_path, tmp_path)
+    manifest = load_manifest(manifest_path)
+
+    diagnostics = build_diagnostics(manifest, method="my", require_tokenizer=False)
+
+    assert any("fairseq2_cache_roots:" in line for line in diagnostics)
+    assert any("output_roots:" in line for line in diagnostics)
 
 
 def test_collect_results_reads_plain_and_coral_scores(tmp_path: Path) -> None:
