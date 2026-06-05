@@ -48,6 +48,24 @@ def test_get_cached_tokenizer_path_uses_active_fairseq2_cache(
     assert lm._get_cached_tokenizer_path("omniASR_tokenizer_written_v2") == tokenizer_path
 
 
+def test_get_cached_tokenizer_path_prefers_known_layout_without_recursive_scan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fake_fairseq2_store: None
+) -> None:
+    import danish_asr.lm as lm
+
+    tokenizer_path = tmp_path / "fairseq2_cache" / "abc123" / "omniasr_tokenizer.model"
+    tokenizer_path.parent.mkdir(parents=True)
+    tokenizer_path.write_text("tokenizer", encoding="utf-8")
+
+    def fail_rglob(self: Path, pattern: str) -> None:
+        raise AssertionError(f"unexpected recursive scan of {self} for {pattern}")
+
+    monkeypatch.setenv("FAIRSEQ2_CACHE_DIR", str(tmp_path / "fairseq2_cache"))
+    monkeypatch.setattr(Path, "rglob", fail_rglob)
+
+    assert lm._get_cached_tokenizer_path("omniASR_tokenizer_written_v2") == tokenizer_path
+
+
 def test_get_cached_tokenizer_path_accepts_assets_dir_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fake_fairseq2_store: None
 ) -> None:

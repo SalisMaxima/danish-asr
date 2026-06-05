@@ -34,3 +34,11 @@ def test_resolve_cached_asset_uri_accepts_file_uri(tmp_path: Path) -> None:
     model_path.write_bytes(b"model")
 
     assert resolve_cached_asset_uri(model_path.as_uri(), tmp_path) == model_path
+
+
+def test_resolve_cached_asset_uri_accepts_localhost_file_uri(tmp_path: Path) -> None:
+    model_path = tmp_path / "model with spaces.pt"
+    model_path.write_bytes(b"model")
+    uri = model_path.as_uri().replace("file://", "file://localhost", 1)
+
+    assert resolve_cached_asset_uri(uri, tmp_path) == model_path
