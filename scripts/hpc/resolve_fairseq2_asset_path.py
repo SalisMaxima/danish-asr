@@ -14,6 +14,7 @@ import sys
 from hashlib import sha1
 from pathlib import Path
 from urllib.parse import unquote, urlparse
+from urllib.request import url2pathname
 
 from danish_asr.utils import configure_project_cache_environment, get_project_fairseq2_cache_dir
 
@@ -49,7 +50,9 @@ def resolve_cached_asset_uri(uri: str, cache_dir: str | Path) -> Path | None:
     """Resolve a cached fairseq2 asset URI without triggering a download."""
     normalised_uri, params = _normalise_uri(uri)
     if normalised_uri.startswith("file://"):
-        return Path(unquote(normalised_uri[7:]))
+        parsed_uri = urlparse(normalised_uri)
+        uri_path = f"//{parsed_uri.netloc}{parsed_uri.path}" if parsed_uri.netloc else parsed_uri.path
+        return Path(url2pathname(uri_path))
 
     asset_dir = cache_dir_for_uri(normalised_uri, cache_dir)
     if not asset_dir.exists():

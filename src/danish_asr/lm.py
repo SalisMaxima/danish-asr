@@ -494,6 +494,18 @@ def _get_cached_tokenizer_path(tokenizer_name: str) -> Path | None:
         if not root.exists():
             continue
 
+        direct_match = root / model_name
+        if direct_match.is_file():
+            return direct_match
+
+        for match in sorted(root.glob(f"*/{model_name}")):
+            if match.is_file():
+                return match
+
+        for match in sorted(root.glob(f"assets/*/{model_name}")):
+            if match.is_file():
+                return match
+
         matches = sorted(root.rglob(model_name))
         if matches:
             return matches[0]
