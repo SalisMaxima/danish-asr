@@ -486,6 +486,7 @@ def _get_cached_tokenizer_path(tokenizer_name: str) -> Path | None:
         ]
     )
 
+    existing_roots: list[Path] = []
     seen_roots: set[Path] = set()
     for root in candidate_roots:
         if root in seen_roots:
@@ -493,20 +494,24 @@ def _get_cached_tokenizer_path(tokenizer_name: str) -> Path | None:
         seen_roots.add(root)
         if not root.exists():
             continue
+        existing_roots.append(root)
 
-        direct_match = root / model_name
-        if direct_match.is_file():
-            return direct_match
+    known_layout_candidates: list[Path] = []
+    for root in existing_roots:
+        known_layout_candidates.append(root / model_name)
+        known_layout_candidates.extend(sorted(root.glob(f"*/{model_name}")))
+        known_layout_candidates.extend(sorted(root.glob(f"assets/*/{model_name}")))
 
-        for match in sorted(root.glob(f"*/{model_name}")):
-            if match.is_file():
-                return match
+    seen_candidates: set[Path] = set()
+    for candidate in known_layout_candidates:
+        if candidate in seen_candidates:
+            continue
+        seen_candidates.add(candidate)
+        if candidate.is_file():
+            return candidate
 
-        for match in sorted(root.glob(f"assets/*/{model_name}")):
-            if match.is_file():
-                return match
-
-        matches = sorted(root.rglob(model_name))
+    for root in existing_roots:
+        matches = sorted(path for path in root.rglob(model_name) if path.is_file())
         if matches:
             return matches[0]
 

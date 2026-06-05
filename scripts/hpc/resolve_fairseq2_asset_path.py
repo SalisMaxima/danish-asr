@@ -50,9 +50,11 @@ def resolve_cached_asset_uri(uri: str, cache_dir: str | Path) -> Path | None:
     """Resolve a cached fairseq2 asset URI without triggering a download."""
     normalised_uri, params = _normalise_uri(uri)
     if normalised_uri.startswith("file://"):
-        parsed_uri = urlparse(normalised_uri)
-        uri_path = f"//{parsed_uri.netloc}{parsed_uri.path}" if parsed_uri.netloc else parsed_uri.path
-        return Path(url2pathname(uri_path))
+        parsed = urlparse(normalised_uri)
+        path = parsed.path
+        if parsed.netloc and parsed.netloc != "localhost":
+            path = f"//{parsed.netloc}{path}"
+        return Path(url2pathname(path))
 
     asset_dir = cache_dir_for_uri(normalised_uri, cache_dir)
     if not asset_dir.exists():
