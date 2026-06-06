@@ -1,16 +1,16 @@
-# Graph Report - danish_asr  (2026-06-05)
+# Graph Report - danish_asr  (2026-06-06)
 
 ## Corpus Check
-- 174 files · ~95,357 words
+- 174 files · ~95,358 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3712 nodes · 5886 edges · 448 communities (228 shown, 220 thin omitted)
+- 3715 nodes · 5890 edges · 453 communities (232 shown, 221 thin omitted)
 - Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 575 edges (avg confidence: 0.74)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c8101409`
+- Built from commit: `46882e22`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -424,6 +424,11 @@
 - [[_COMMUNITY_Community 445|Community 445]]
 - [[_COMMUNITY_Community 446|Community 446]]
 - [[_COMMUNITY_Community 447|Community 447]]
+- [[_COMMUNITY_Community 448|Community 448]]
+- [[_COMMUNITY_Community 449|Community 449]]
+- [[_COMMUNITY_Community 450|Community 450]]
+- [[_COMMUNITY_Community 451|Community 451]]
+- [[_COMMUNITY_Community 452|Community 452]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `PreprocessedCoRalDataset` - 69 edges
@@ -449,19 +454,19 @@
 - `PreprocessedCoRalDataset` --uses--> `Shared infrastructure for HF baseline training scripts (Wav2Vec2, Whisper).`  [INFERRED]
   src/danish_asr/data.py → scripts/hpc/train_common.py
 
-## Communities (448 total, 220 thin omitted)
+## Communities (453 total, 221 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
-Nodes (61): Ae(), ai(), ap(), Bc(), Ca(), ci(), constructor(), di() (+53 more)
+Nodes (66): a(), Ae(), ap(), Bc(), Br(), Bt(), Ca(), constructor() (+58 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.03
 Nodes (50): __Pyx_CalculateMetaclass(), __Pyx_call_destructor(), __Pyx_check_single_interpreter(), __Pyx_copy_spec_to_module(), __Pyx__Coroutine_New(), __Pyx__Coroutine_NewInit(), __Pyx_Coroutine_traverse(), __Pyx_Coroutine_traverse_excstate() (+42 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.14
-Nodes (33): Any, build_hf_text_lm_corpus(), build_lm_corpus_from_parquet(), CorpusStats, _dataset_name(), _hash_text(), infer_split_from_eval_config(), iter_fairseq2_rows() (+25 more)
+Cohesion: 0.15
+Nodes (30): Any, build_hf_text_lm_corpus(), build_lm_corpus_from_parquet(), CorpusStats, _dataset_name(), _hash_text(), infer_split_from_eval_config(), iter_fairseq2_rows() (+22 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.14
@@ -469,11 +474,11 @@ Nodes (16): CoRalDataset, CoRal Danish speech dataset wrapper.      Wraps Huggin
 
 ### Community 4 - "Community 4"
 Cohesion: 0.11
-Nodes (30): log_gpu_info(), Shared infrastructure for HPC scripts: logging, paths, environment helpers., Log torch CUDA availability, device names, and VRAM., Set HF_HOME, FAIRSEQ2_CACHE_DIR, TMPDIR for HPC jobs., setup_hpc_environment(), build_datasets(), CTCDataCollator, finish_wandb() (+22 more)
+Nodes (28): Shared infrastructure for HPC scripts: logging, paths, environment helpers., Set HF_HOME, FAIRSEQ2_CACHE_DIR, TMPDIR for HPC jobs., setup_hpc_environment(), build_datasets(), CTCDataCollator, finish_wandb(), init_wandb(), load_config() (+20 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.09
-Nodes (19): Run(), AdvanceOrThrow(), Close(), CreateOrThrow(), EndOfFileException(), ErsatzPRead(), ErsatzPWrite(), GuardLarge() (+11 more)
+Cohesion: 0.11
+Nodes (16): Run(), AdvanceOrThrow(), Close(), ErsatzPRead(), ErsatzPWrite(), GuardLarge(), InternalSeek(), PartialRead() (+8 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.19
@@ -489,19 +494,19 @@ Nodes (37): BignumDtoa(), BignumToFixed(), EstimatePower(), FixupMultiply10(), G
 
 ### Community 9 - "Community 9"
 Cohesion: 0.06
-Nodes (62): A(), add(), At(), be(), Bt(), ce(), constructor(), Ct() (+54 more)
+Nodes (63): A(), add(), At(), be(), Bt(), ce(), constructor(), Ct() (+55 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.11
-Nodes (17): SetSpecial(), Add(), ComputeRenumbering(), ConfigureEnumerate(), FinishedLoading(), GenericFinished(), HashForVocab(), Insert() (+9 more)
+Cohesion: 0.19
+Nodes (7): Add(), ComputeRenumbering(), ConfigureEnumerate(), HashForVocab(), Insert(), SetupMemory(), Size()
 
 ### Community 11 - "Community 11"
-Cohesion: 0.15
-Nodes (10): ReadEnd(), ActivateLowerMiddle, ActivateUnigram, ApplyBuild(), DispatchBuild(), HashedSearch<BackoffValue>, HashedSearch<RestValue>, InitializeFromARPA() (+2 more)
+Cohesion: 0.16
+Nodes (9): ActivateLowerMiddle, ActivateUnigram, ApplyBuild(), DispatchBuild(), HashedSearch<BackoffValue>, HashedSearch<RestValue>, InitializeFromARPA(), ProbingModel (+1 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.09
-Nodes (34): float, log_line_to_wandb(), Parse a fairseq2 output line and log matching metrics to W&B., _backup_score_file(), check_prerequisites(), _get_score_file(), _log_workspace_snapshot(), main() (+26 more)
+Cohesion: 0.08
+Nodes (36): float, log_gpu_info(), log_line_to_wandb(), Parse a fairseq2 output line and log matching metrics to W&B., Log torch CUDA availability, device names, and VRAM., _backup_score_file(), check_prerequisites(), _get_score_file() (+28 more)
 
 ### Community 13 - "Community 13"
 Cohesion: 0.14
@@ -524,20 +529,20 @@ Cohesion: 0.08
 Nodes (41): _age_group(), bounded_error_rate(), convert_numeral_to_words(), CoRalBenchmarkExample, _dialect(), _empty_filter_stats(), _example_duration_seconds(), example_group_metadata() (+33 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.09
-Nodes (44): Advance(), AdvanceToNonspace(), ConsumeFirstCharacter(), ConsumeSubString(), ConsumeSubStringImpl(), IsCharacterDigitForRadix(), IsDecimalDigitForRadix(), isDigit() (+36 more)
+Cohesion: 0.11
+Nodes (36): Advance(), AdvanceToNonspace(), ConsumeFirstCharacter(), ConsumeSubString(), ConsumeSubStringImpl(), IsCharacterDigitForRadix(), IsDecimalDigitForRadix(), isDigit() (+28 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.09
-Nodes (15): BZip, Complete, DetectCompressedMagic(), DetectMagic(), GZip, IStreamReader, ReadCompressed(), ReadFactory() (+7 more)
+Cohesion: 0.06
+Nodes (21): Arc, Evaluate(), LowerBound(), Vertex, BZip, Complete, Current(), DetectCompressedMagic() (+13 more)
 
 ### Community 20 - "Community 20"
 Cohesion: 0.13
 Nodes (32): ArtifactVersionRow, audit(), _build_arg_parser(), build_artifact_report(), build_run_file_report(), _bytes_to_gib(), collect_artifact_rows(), collect_run_file_rows() (+24 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.18
-Nodes (13): Test(), CPUTime(), DoubleSec(), GetWall(), GuessPhysicalMemory(), ParseNum(), PrintUsage(), RecordStart (+5 more)
+Cohesion: 0.09
+Nodes (20): Immediate, main(), ParallelTestRun(), PrefetchQueue, Size(), Test(), TestRun(), URandom (+12 more)
 
 ### Community 22 - "Community 22"
 Cohesion: 0.15
@@ -568,8 +573,8 @@ Cohesion: 0.19
 Nodes (10): _DummyCTCModel, _DummyProcessor, _DummySeq2SeqInner, _DummySeq2SeqModel, _DummyTokenizer, Tests for the training module., test_ctc_build_processor_uses_vocab_asset(), test_ctc_validation_prefers_normalized_references() (+2 more)
 
 ### Community 29 - "Community 29"
-Cohesion: 0.14
-Nodes (27): cache_dir_for_uri(), main(), _normalise_uri(), parse_args(), Resolve an already-cached fairseq2 asset to a local path without downloading.  T, Mirror fairseq2's cache-key URI normalisation., Mirror fairseq2's cache-key URI normalisation., Return the fairseq2 content-addressed cache directory for ``uri``. (+19 more)
+Cohesion: 0.20
+Nodes (14): main(), _normalise_uri(), parse_args(), Resolve an already-cached fairseq2 asset to a local path without downloading.  T, Mirror fairseq2's cache-key URI normalisation., Mirror fairseq2's cache-key URI normalisation., Resolve a cached fairseq2 asset card field such as ``checkpoint``., Resolve a cached fairseq2 asset card field such as ``checkpoint``. (+6 more)
 
 ### Community 30 - "Community 30"
 Cohesion: 0.15
@@ -596,8 +601,8 @@ Cohesion: 0.21
 Nodes (9): BaseInit(), BaseSize(), BitPackedMiddle(), BitPackedMiddle<ArrayBhiksha>, BitPackedMiddle<DontBhiksha>, Find(), FindBitPacked(), KeyAccessor (+1 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.12
-Nodes (19): normalize_coral_text(), normalize_ctc_text(), Shared text normalization helpers for ASR baselines., Normalize text following CoRal benchmark conventions.      Applied before model-, Normalize text for CTC training and evaluation.      Keep punctuation as-is for, build_ctc_vocab(), iter_training_texts(), main() (+11 more)
+Cohesion: 0.24
+Nodes (10): build_ctc_vocab(), iter_training_texts(), main(), parse_args(), Build a Danish CTC vocabulary for the Wav2Vec2 baseline from CoRal transcripts., Build a deterministic CTC vocabulary from transcript texts., Yield transcript texts from the selected CoRal subsets., Tests for Wav2Vec2 vocabulary generation. (+2 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.03
@@ -704,12 +709,12 @@ Cohesion: 0.83
 Nodes (3): BOOST_AUTO_TEST_CASE(), CheckEncodeDecode(), ExhaustiveTest()
 
 ### Community 77 - "Community 77"
-Cohesion: 0.15
-Nodes (15): ASRInferencePipeline, load_custom_omniasr_ctc_model(), make_inference_pipeline(), Load a custom OmniASR CTC checkpoint using fairseq2's registered family., Load a custom OmniASR CTC checkpoint using fairseq2's registered family., Create an OmniASR inference pipeline for CTC decoding., Create an OmniASR inference pipeline for CTC decoding., Resolve a dtype string with a CPU-safe fallback. (+7 more)
+Cohesion: 0.13
+Nodes (22): _get_cached_tokenizer_path(), load_custom_omniasr_ctc_model(), load_omniasr_tokenizer(), make_inference_pipeline(), Helpers for Danish LM corpus building and CTC + KenLM decoding., Find a cached tokenizer model file using the asset card basename., Load the OmniASR tokenizer, preferring an explicit or cached local model file., Load the OmniASR tokenizer, preferring an explicit or cached local model file. (+14 more)
 
 ### Community 140 - "Community 140"
-Cohesion: 0.11
-Nodes (58): Ac(), ar(), as(), b(), Br(), Cc(), cp(), dp() (+50 more)
+Cohesion: 0.12
+Nodes (56): Ac(), an(), as(), b(), bs(), Cc(), cp(), dp() (+48 more)
 
 ### Community 148 - "Community 148"
 Cohesion: 0.08
@@ -720,8 +725,8 @@ Cohesion: 0.05
 Nodes (41): Claim Discipline, code:bash (bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh full), code:bash (bash scripts/hpc/submit_coral_ctc_kenlm_eval.sh smoke), code:bash (bsub < scripts/hpc/build_lm_corpus.sh), code:text (omniASR_CTC_1B_v2 + E6 recipe + short-utterance CoRal-style ), CoRal Alignment Execution Plan, Decision gate, Decision gate (+33 more)
 
 ### Community 242 - "Community 242"
-Cohesion: 0.12
-Nodes (17): Write benchmark artifacts in a stable, inspectable format., write_benchmark_outputs(), Read UTF-8 text lines without trailing newlines., Construct a pyctcdecode decoder lazily., Read UTF-8 text lines without trailing newlines., Write UTF-8 text lines with trailing newlines., Compute simple WER/CER summaries from aligned prediction/reference lists., Compute simple WER/CER summaries from aligned prediction/reference lists. (+9 more)
+Cohesion: 0.20
+Nodes (10): Read UTF-8 text lines without trailing newlines., Read UTF-8 text lines without trailing newlines., Compute simple WER/CER summaries from aligned prediction/reference lists., Compute simple WER/CER summaries from aligned prediction/reference lists., read_text_lines(), score_predictions(), main(), parse_args() (+2 more)
 
 ### Community 267 - "Community 267"
 Cohesion: 0.05
@@ -732,12 +737,12 @@ Cohesion: 0.05
 Nodes (40): All `#BSUB` options, Array range syntax, Checking queue and node availability, code:bash (bsub < job.sh), code:bash (#!/bin/sh), code:bash (#!/bin/sh), code:bash (#!/bin/sh), code:bash (#BSUB -n 32) (+32 more)
 
 ### Community 269 - "Community 269"
-Cohesion: 0.14
-Nodes (40): _(), an(), Be(), Bn(), cn(), e(), Ei(), Gn() (+32 more)
+Cohesion: 0.10
+Nodes (47): _(), Be(), bi(), Bn(), cn(), e(), Ei(), Fc() (+39 more)
 
 ### Community 270 - "Community 270"
-Cohesion: 0.09
-Nodes (40): Aa(), d(), De(), Dn(), Ea(), El(), eu(), fo() (+32 more)
+Cohesion: 0.08
+Nodes (42): Aa(), De(), Ea(), El(), eu(), fo(), fu(), hn() (+34 more)
 
 ### Community 271 - "Community 271"
 Cohesion: 0.05
@@ -776,8 +781,8 @@ Cohesion: 0.08
 Nodes (24): code:bash (invoke utils.dtu-vpn   # Connect to DTU VPN via openconnect ), code:bash (# Upload), code:bash (ssh userid@login.hpc.dtu.dk), code:bash (cd ~/.ssh), code:bash (ssh s123456@transfer.gbar.dtu.dk mkdir -m 700 -p .ssh), code:bash (ssh -i ~/.ssh/gbar s123456@login.hpc.dtu.dk), code:block6 (Host gbar1), code:bash (puttygen -t ed25519 -o gbar-putty -O private) (+16 more)
 
 ### Community 280 - "Community 280"
-Cohesion: 0.15
-Nodes (25): ba(), bl(), c(), cr(), ct(), fn(), ga(), k() (+17 more)
+Cohesion: 0.13
+Nodes (28): ba(), bl(), c(), cr(), ct(), d(), fn(), ip() (+20 more)
 
 ### Community 281 - "Community 281"
 Cohesion: 0.08
@@ -796,8 +801,8 @@ Cohesion: 0.08
 Nodes (23): 6A: Overall Performance, 6B: Demographic Fairness Analysis, 6C: Comparison with Existing Models, code:bash (getquota_work3.sh          # storagepool 6 must be under 350), code:yaml (regime:), code:yaml (max_audio_len: 480_000       # 30s), code:yaml (max_audio_len: 960_000       # 60s), Conversion field mapping (+15 more)
 
 ### Community 285 - "Community 285"
-Cohesion: 0.11
-Nodes (13): Add(), Chain(), Init(), Link(), Start(), Wait(), FreeAll(), More() (+5 more)
+Cohesion: 0.21
+Nodes (6): Add(), Chain(), Init(), Link(), Start(), Wait()
 
 ### Community 286 - "Community 286"
 Cohesion: 0.11
@@ -808,8 +813,8 @@ Cohesion: 0.12
 Nodes (24): __Pyx_Coroutine_clear(), __Pyx_Coroutine_Close(), __Pyx_Coroutine_Close_Method(), __Pyx_Coroutine_CloseIter(), __Pyx_Coroutine_dealloc(), __Pyx_Coroutine_del(), __Pyx_Coroutine_ExceptionClear(), __Pyx_Coroutine_FinishDelegation() (+16 more)
 
 ### Community 288 - "Community 288"
-Cohesion: 0.10
-Nodes (21): parse_valid_split(), Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``., Remove special-token text artifacts after beam decoding., Remove special-token text artifacts after beam decoding., strip_special_tokens(), main(), parse_args(), Build a KenLM 3-gram model from a prepared text corpus. (+13 more)
+Cohesion: 0.09
+Nodes (23): normalize_lm_text(), parse_valid_split(), Normalize transcript text for LM training without changing Danish orthography., Parse fairseq2 split names such as ``test`` or ``test_coral_v3_read_aloud``., Remove special-token text artifacts after beam decoding., Remove special-token text artifacts after beam decoding., strip_special_tokens(), main() (+15 more)
 
 ### Community 289 - "Community 289"
 Cohesion: 0.14
@@ -824,16 +829,16 @@ Cohesion: 0.09
 Nodes (21): Citation, code:bash (# Clone and setup), code:bash (invoke data.download    # Download CoRal-v3 dataset (cached ), code:bash (# Convert CoRal-v3 to Parquet format (required by fairseq2)), code:bash (invoke quality.ruff    # Lint + format), code:block5 (danish_asr/), code:bibtex (@dataset{coral2024,), Danish ASR (+13 more)
 
 ### Community 292 - "Community 292"
-Cohesion: 0.16
-Nodes (15): CrossPlatformIsNaN(), FilePiece(), FindDelimiterOrEOF(), FirstToken(), Initialize(), InitializeNoRead(), MMapShift(), NamePossiblyFind() (+7 more)
+Cohesion: 0.15
+Nodes (16): EndOfFileException(), CrossPlatformIsNaN(), FilePiece(), FindDelimiterOrEOF(), FirstToken(), Initialize(), InitializeNoRead(), MMapShift() (+8 more)
 
 ### Community 293 - "Community 293"
 Cohesion: 0.09
 Nodes (21): code:bash (invoke --list               # See all available tasks), code:bash (#BSUB -B                                   # Email at job st), code:bash (#!/bin/bash), code:bash (a100sh                      # shared A100 (quick dev)), Commands, Common failure → fix, Danish ASR - Copilot Instructions — Claude Code Instructions, Dataset (+13 more)
 
 ### Community 294 - "Community 294"
-Cohesion: 0.13
-Nodes (22): ao(), au(), cu(), Dt(), es(), Go(), Gr(), he() (+14 more)
+Cohesion: 0.29
+Nodes (11): ao(), au(), cu(), Dt(), Gr(), he(), ou(), va() (+3 more)
 
 ### Community 295 - "Community 295"
 Cohesion: 0.13
@@ -856,12 +861,12 @@ Cohesion: 0.11
 Nodes (18): code:bash (getquota_zhome.sh), code:bash (getquota_work3.sh   # look at storagepool 6 "NVMEs added in ), code:yaml (regime:), code:bash (rm -rf /work3/$USER/wandb/cache/), code:bash (getquota_work3.sh), code:bash (# Upload a directory (resumable, progress bar)), code:block7 ($HOME/danish_asr/                    # Git repo, configs, sc), code:bash (# In scripts/hpc/*.sh — after #BSUB directives:) (+10 more)
 
 ### Community 300 - "Community 300"
-Cohesion: 0.26
-Nodes (17): ExtractNonRolling(), HugeMalloc(), HugeRealloc(), MapOrThrow(), MapRead(), MapZeroedWrite(), ReplaceAndCopy(), reset() (+9 more)
+Cohesion: 0.22
+Nodes (19): CreateOrThrow(), ResizeOrThrow(), ExtractNonRolling(), HugeMalloc(), HugeRealloc(), MapOrThrow(), MapRead(), MapZeroedWrite() (+11 more)
 
 ### Community 301 - "Community 301"
-Cohesion: 0.14
-Nodes (16): chunked(), decode_ctc_logits(), decode_logits_with_argmax(), Read UTF-8 text lines without trailing newlines., Yield fixed-size chunks from a sequence., Apply greedy CTC decoding to a single logit sequence., Apply greedy CTC decoding to a single logit sequence., Decode one CTC logit sequence with greedy or beam search. (+8 more)
+Cohesion: 0.12
+Nodes (20): chunked(), decode_ctc_logits(), decode_logits_with_argmax(), Read UTF-8 text lines without trailing newlines., Yield fixed-size chunks from a sequence., Apply greedy CTC decoding to a single logit sequence., Apply greedy CTC decoding to a single logit sequence., Decode one CTC logit sequence with greedy or beam search. (+12 more)
 
 ### Community 302 - "Community 302"
 Cohesion: 0.11
@@ -880,8 +885,8 @@ Cohesion: 0.12
 Nodes (16): Background, code:bash (bsub < scripts/hpc/legacy/06a_vram_probe_1b.sh), code:bash (# 3B on 80GB node — conservative batch), code:bash (source scripts/hpc/env.sh && setup_omniasr), Decision Criteria, Execution Order, Goal, How to Check Results (+8 more)
 
 ### Community 306 - "Community 306"
-Cohesion: 0.15
-Nodes (17): a(), bs(), Bt(), fs(), gs(), hs(), ls(), ms() (+9 more)
+Cohesion: 0.29
+Nodes (13): cache_dir_for_uri(), Return the fairseq2 content-addressed cache directory for ``uri``., Return the fairseq2 content-addressed cache directory for ``uri``., Resolve a cached fairseq2 asset URI without triggering a download., Resolve a cached fairseq2 asset URI without triggering a download., resolve_cached_asset_uri(), Path, Path (+5 more)
 
 ### Community 307 - "Community 307"
 Cohesion: 0.26
@@ -900,8 +905,8 @@ Cohesion: 0.13
 Nodes (15): bacct — accounting summary, bhist — job history, bjobs (standard LSF), bkill, bpeek — live job output, bstat (DTU custom — preferred), code:bash (bstat                      # all your jobs, compact), code:bash (bjobs                      # all your jobs) (+7 more)
 
 ### Community 311 - "Community 311"
-Cohesion: 0.16
-Nodes (7): Immediate, main(), ParallelTestRun(), PrefetchQueue, Size(), TestRun(), URandom
+Cohesion: 0.18
+Nodes (13): ai(), ci(), Ht(), Jo(), Jr(), li(), nn(), pi() (+5 more)
 
 ### Community 312 - "Community 312"
 Cohesion: 0.24
@@ -924,8 +929,8 @@ Cohesion: 0.22
 Nodes (12): convert_split(), Convert one split from universal → fairseq2 Parquet., _make_fake_hf_dataset(), parquet_dir(), Tests for unified CoRal-v3 preprocessing., Create a mock HF dataset., test_both_targets(), test_corrupt_sample_skipped() (+4 more)
 
 ### Community 318 - "Community 318"
-Cohesion: 0.24
-Nodes (9): Closer, ConvertToSorted(), DiskFlush(), Init(), MergeSortedFiles(), PartialViewProxy, Rewind(), SortedFiles() (+1 more)
+Cohesion: 0.22
+Nodes (10): Closer, ConvertToSorted(), DiskFlush(), Init(), MergeSortedFiles(), PartialViewProxy, Rewind(), SortedFiles() (+2 more)
 
 ### Community 319 - "Community 319"
 Cohesion: 0.23
@@ -933,7 +938,7 @@ Nodes (4): _DuplicateColWarningFilter, Suppress repeated 'DataFrame columns are 
 
 ### Community 320 - "Community 320"
 Cohesion: 0.18
-Nodes (13): bi(), ce(), ec(), get(), le(), Lp(), nt(), oc() (+5 more)
+Nodes (15): ce(), Dn(), ec(), Ic(), le(), Lp(), nt(), oc() (+7 more)
 
 ### Community 321 - "Community 321"
 Cohesion: 0.21
@@ -948,8 +953,8 @@ Cohesion: 0.24
 Nodes (5): double_conversion(), Infinity(), IsDenormal(), NaN(), Single()
 
 ### Community 324 - "Community 324"
-Cohesion: 0.18
-Nodes (5): Arc, Evaluate(), LowerBound(), Vertex, Current()
+Cohesion: 0.24
+Nodes (9): normalize_coral_text(), normalize_ctc_text(), Shared text normalization helpers for ASR baselines., Normalize text following CoRal benchmark conventions.      Applied before model-, Normalize text for CTC training and evaluation.      Keep punctuation as-is for, Tests for text normalization helpers., test_normalize_coral_text_applies_nfkc_and_substitutions(), test_normalize_coral_text_removes_fillers_and_normalizes_spaces() (+1 more)
 
 ### Community 325 - "Community 325"
 Cohesion: 0.20
@@ -972,8 +977,8 @@ Cohesion: 0.18
 Nodes (10): Cluster entry points, code:bash (ssh <userid>@login.hpc.dtu.dk       # login node), code:bash (bsub < job.sh              # submit job), Contents, DTU HPC Documentation, Essential commands, GPU queues, Official links (+2 more)
 
 ### Community 330 - "Community 330"
-Cohesion: 0.27
-Nodes (8): ConsumeNewline(), IsEntirelyWhiteSpace(), ReadARPACounts(), ReadBackoff(), ReadCount(), ReadNGramHeader(), LowerRestBuild(), LowerRestBuild<ProbingModel>
+Cohesion: 0.26
+Nodes (9): ConsumeNewline(), IsEntirelyWhiteSpace(), ReadARPACounts(), ReadBackoff(), ReadCount(), ReadEnd(), ReadNGramHeader(), LowerRestBuild() (+1 more)
 
 ### Community 331 - "Community 331"
 Cohesion: 0.38
@@ -984,16 +989,16 @@ Cohesion: 0.24
 Nodes (5): Write rows to a Parquet file with the required schema., write_parquet(), Tests for CoRal-v3 to Parquet conversion functions., TestWriteParquet, TestWriteStatsTsv
 
 ### Community 333 - "Community 333"
-Cohesion: 0.22
-Nodes (10): build_pyctcdecode_labels(), _get_cached_tokenizer_path(), load_omniasr_tokenizer(), Find a cached tokenizer model file using the asset card basename., Load the OmniASR tokenizer, preferring an explicit or cached local model file., Load the OmniASR tokenizer, preferring an explicit or cached local model file., Build pyctcdecode labels in the exact OmniASR logit order., Build pyctcdecode labels in the exact OmniASR logit order. (+2 more)
+Cohesion: 0.24
+Nodes (8): SetSpecial(), FinishedLoading(), GenericFinished(), InternalFinishedLoading(), LoadedBinary(), Populated(), ReadWords(), Index()
 
 ### Community 334 - "Community 334"
-Cohesion: 0.29
-Nodes (9): collate_decode_records(), DecodeResult, Split decode records into aligned prediction and reference lists., Split decode records into aligned prediction and reference lists., Decoded hypothesis with reference metadata., _decode_batch(), main(), Run standalone CTC decoding for OmniASR checkpoints with greedy or pyctcdecode b (+1 more)
+Cohesion: 0.21
+Nodes (12): collate_decode_records(), DecodeResult, Construct a pyctcdecode decoder lazily., Write UTF-8 text lines with trailing newlines., Split decode records into aligned prediction and reference lists., Split decode records into aligned prediction and reference lists., Decoded hypothesis with reference metadata., write_text_lines() (+4 more)
 
 ### Community 335 - "Community 335"
-Cohesion: 0.31
-Nodes (9): get_device(), Get the best available device. Priority: CUDA > MPS > CPU., _audio_to_tensor(), _decode_batch(), _default_report_label(), main(), parse_args(), Evaluate an OmniASR checkpoint with Alexandra/CoRal-style CER/WER. (+1 more)
+Cohesion: 0.18
+Nodes (14): Write benchmark artifacts in a stable, inspectable format., write_benchmark_outputs(), build_pyctcdecode_labels(), Build pyctcdecode labels in the exact OmniASR logit order., Build pyctcdecode labels in the exact OmniASR logit order., get_device(), Get the best available device. Priority: CUDA > MPS > CPU., _audio_to_tensor() (+6 more)
 
 ### Community 336 - "Community 336"
 Cohesion: 0.20
@@ -1016,12 +1021,12 @@ Cohesion: 0.25
 Nodes (6): MergeWorker, ReunifyBackoff(), BOOST_AUTO_TEST_CASE(), CheckOutput, WriteBackoffs, WriteInput
 
 ### Community 341 - "Community 341"
-Cohesion: 0.25
-Nodes (4): Backend, FullScore(), FullScoreForgotState(), Model()
+Cohesion: 0.29
+Nodes (3): Backend, FullScore(), FullScoreForgotState()
 
 ### Community 342 - "Community 342"
-Cohesion: 0.28
-Nodes (6): BOOST_AUTO_TEST_CASE(), BOOST_AUTO_TEST_CASE(), BOOST_AUTO_TEST_CASE(), FileLocation(), SeekOrThrow(), Read()
+Cohesion: 0.29
+Nodes (5): BOOST_AUTO_TEST_CASE(), BOOST_AUTO_TEST_CASE(), BOOST_AUTO_TEST_CASE(), FileLocation(), SeekOrThrow()
 
 ### Community 343 - "Community 343"
 Cohesion: 0.25
@@ -1064,8 +1069,8 @@ Cohesion: 0.25
 Nodes (7): CTC_KENLM_MANIFEST, DANISH_ASR_PROJECT_DIR, DECODERS, MAX_SAMPLES, OUTPUT_ROOT, OVERWRITE, ctc_kenlm_smoke_common.sh script
 
 ### Community 353 - "Community 353"
-Cohesion: 0.29
-Nodes (8): bu_fn(), cs(), ip(), Pc(), Qs(), Rc(), v(), $()
+Cohesion: 0.40
+Nodes (5): ar(), bu_fn(), cs(), pp(), v()
 
 ### Community 354 - "Community 354"
 Cohesion: 0.32
@@ -1207,18 +1212,34 @@ Nodes (3): __Pyx_Coroutine_patch_module(), __Pyx_patch_abc(), __Pyx_patch_abc_mo
 Cohesion: 0.67
 Nodes (3): __pyx_getprop_5kenlm_15FullScoreReturn_log_prob(), __pyx_pf_5kenlm_15FullScoreReturn_8log_prob___get__(), __pyx_pw_5kenlm_15FullScoreReturn_8log_prob_1__get__()
 
+### Community 448 - "Community 448"
+Cohesion: 0.36
+Nodes (8): main(), ParseBitCount(), ParseFileList(), ParseFloat(), ParseUInt(), ProbingQuantizationUnsupported(), Usage(), ShowSizes()
+
+### Community 449 - "Community 449"
+Cohesion: 0.43
+Nodes (4): call_realloc(), CallocOrThrow(), InspectAddr(), MallocOrThrow()
+
+### Community 450 - "Community 450"
+Cohesion: 0.50
+Nodes (3): ASRInferencePipeline, main(), Pre-download omniASR LLM V2 checkpoint + tokenizer to FAIRSEQ2_CACHE_DIR.  Run o
+
+### Community 451 - "Community 451"
+Cohesion: 0.67
+Nodes (3): FreeAll(), More(), Pool()
+
 ## Knowledge Gaps
-- **667 isolated node(s):** `command`, `args`, `DEFAULT_DATABASE`, `FALKORDB_PATH`, `FALKORDB_SOCKET_PATH` (+662 more)
+- **669 isolated node(s):** `command`, `args`, `DEFAULT_DATABASE`, `FALKORDB_PATH`, `FALKORDB_SOCKET_PATH` (+664 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **220 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **221 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `CoRalDataModule` connect `Community 276` to `Community 3`, `Community 364`, `Community 304`, `Community 282`, `Community 315`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Why does `PreprocessedCoRalDataset` connect `Community 296` to `Community 321`, `Community 3`, `Community 4`, `Community 6`, `Community 364`, `Community 276`, `Community 308`, `Community 282`, `Community 317`?**
-  _High betweenness centrality (0.018) - this node is a cross-community bridge._
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Why does `Any` connect `Community 2` to `Community 12`, `Community 301`, `Community 16`, `Community 17`, `Community 242`, `Community 20`, `Community 52`?**
   _High betweenness centrality (0.014) - this node is a cross-community bridge._
 - **Are the 63 inferred relationships involving `PreprocessedCoRalDataset` (e.g. with `TestCoRalDataset` and `TestCollateFn`) actually correct?**

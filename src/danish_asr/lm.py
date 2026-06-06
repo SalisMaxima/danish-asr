@@ -762,5 +762,5 @@ def decode_ctc_logits(
         msg = "Beam decoder must be initialized when decoder_kind='beam'."
         raise ValueError(msg)
 
-    hypothesis = beam_decoder.decode(logits[:seq_len].float().cpu().numpy(), beam_width=beam_width)
+    hypothesis = beam_decoder.decode(logits[:seq_len].detach().float().cpu().numpy(), beam_width=beam_width)
     return strip_special_tokens(hypothesis, removable_tokens or set())

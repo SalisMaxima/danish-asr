@@ -47,7 +47,7 @@ def test_decode_ctc_logits_beam_uses_seq_len_width_and_strips_tokens() -> None:
             return "<s> hej </s> <pad>"
 
     decoder = FakeBeamDecoder()
-    logits = torch.arange(15, dtype=torch.float32).reshape(5, 3)
+    logits = torch.arange(15, dtype=torch.float32, requires_grad=True).reshape(5, 3)
 
     result = decode_ctc_logits(
         logits,
