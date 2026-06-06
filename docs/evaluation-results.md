@@ -174,25 +174,58 @@ the Alexandra-aligned public comparison. Here we keep the more technical
 decoder terms so it is easier to see how much gain comes from search alone and
 how much comes from KenLM.
 
-Iteration 1 uses an Alexandra-proxy KenLM corpus: Danish ScandiWiki plus Danish
-ScandiReddit, with CoRal-v3 test transcripts excluded. The older CoRal-v3
-train-only LM remains useful as a leakage-safe ablation, but the main
-`CTC LM-enabled` rows should use the Alexandra-proxy artifact.
+The 2026-06-06 run used the existing fairseq2/parquet test splits, not the
+short-utterance CoRal-style benchmark. It is therefore an internal decoder
+analysis for the current long-utterance-trained CTC checkpoints.
 
-| Model | Training | Split | Decoder | LM | Beam | Alpha | Beta | CER | WER | Notes |
-|---|---|---|---|---|---:|---:|---:|---:|---:|---|
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | `greedy` | `none` | — | — | — | pending | pending | direct checkpoint baseline |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | `beam` | `none` | `64` | `0.0` | `0.0` | pending | pending | search-only comparison |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `read_aloud` | `beam + KenLM` | `danish_lm_alexandra_proxy_3gram` | `64` | `0.5` | `1.5` | pending | pending | Alexandra-proxy LM row |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | `greedy` | `none` | — | — | — | pending | pending | direct checkpoint baseline |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | `beam` | `none` | `64` | `0.0` | `0.0` | pending | pending | search-only comparison |
-| `omniASR_CTC_3B_v2` | finetuned E6-3B | `conversation` | `beam + KenLM` | `danish_lm_alexandra_proxy_3gram` | `64` | `0.5` | `1.5` | pending | pending | Alexandra-proxy LM row |
+Setup:
 
-Run the decoder-analysis benchmark with:
+- `beam_width=64`
+- `beam_lm` uses `alpha=0.5`, `beta=1.5`
+- KenLM artifact:
+  `/work3/$USER/artifacts/lm/danish_lm_alexandra_proxy_3gram.bin`
+- LM corpus: Danish ScandiWiki plus Danish ScandiReddit, with CoRal-v3 test
+  transcripts excluded
+- output root: `/work3/$USER/outputs/ctc_kenlm_my_method`
 
-```bash
-bsub < scripts/hpc/benchmark_coral_style_decoder_analysis.sh
-```
+| Model | Split | Greedy WER | Greedy CER | Beam WER | Beam CER | Beam+KenLM WER | Beam+KenLM CER | Initial read |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| `300m_e6_50k` | combined | 31.75% | 12.24% | **31.30%** | **12.10%** | 33.60% | 12.96% | beam helps slightly; proxy LM hurts |
+| `300m_e6_50k` | read_aloud | 28.56% | 9.12% | **28.32%** | **9.03%** | 30.16% | 9.18% | beam helps slightly; proxy LM hurts |
+| `300m_e6_50k` | conversation | 35.19% | 16.73% | **34.53%** | **16.54%** | 37.31% | 18.41% | beam helps; proxy LM hurts strongly |
+| `1b_e6_50k` | combined | 24.42% | 9.39% | **24.03%** | **9.32%** | 26.32% | 10.12% | beam helps slightly; proxy LM hurts |
+| `1b_e6_50k` | read_aloud | 20.99% | 6.66% | **20.75%** | **6.61%** | 21.73% | 6.68% | beam helps slightly; proxy LM hurts |
+| `1b_e6_50k` | conversation | 28.14% | 13.34% | **27.59%** | **13.24%** | 31.30% | 15.09% | beam helps; proxy LM hurts strongly |
+| `3b_e6_30k` | combined | 24.08% | 9.15% | **23.82%** | **9.09%** | 24.30% | 9.41% | best combined result is beam without LM |
+| `3b_e6_30k` | read_aloud | 20.14% | 6.36% | 20.05% | 6.33% | **19.29%** | **6.11%** | proxy LM helps scripted/read-aloud speech |
+| `3b_e6_30k` | conversation | 28.35% | 13.17% | **27.90%** | **13.08%** | 29.73% | 14.17% | beam helps; proxy LM hurts conversation |
+
+Initial interpretation:
+
+- Beam search without LM gives small but consistent improvements over greedy
+  decoding.
+- The current Alexandra-proxy KenLM is mixed: it helps `3b_e6_30k` on
+  `read_aloud`, but hurts conversation and therefore hurts most combined rows.
+- Manual inspection suggests the proxy LM biases outputs toward written Danish:
+  it removes spoken markers such as `oeh`, maps spoken forms such as `ik` toward
+  `ikke`, and can turn spoken number phrases into more written-looking forms.
+- This is evidence of LM/domain or alpha-beta mismatch, not evidence that beam
+  search is broken. The LM was loaded with the expected path, `beam_width=64`,
+  `alpha=0.5`, and `beta=1.5`.
+- For the presentation, report `beam_no_lm` as the best current long-utterance
+  CTC decoder result, and report `beam_lm` separately as an untuned proxy-LM
+  experiment.
+
+Recommended next decoder checks:
+
+1. Tune `alpha`/`beta` on dev only, with lower LM weights such as
+   `alpha in {0.05, 0.1, 0.2, 0.3}` and `beta in {0.0, 0.5, 1.0}`.
+2. Add a unigram list to the pyctcdecode setup; the current run warns that
+   unigrams are not available from the binary LM.
+3. Build a more speech-like LM using CoRal train transcripts or other Danish
+   spoken/conversation text, while still excluding dev/test transcripts.
+4. Keep LM-assisted results split-specific: read-aloud may benefit from the
+   written-text prior, while conversation currently does not.
 
 ## Related Docs
 
