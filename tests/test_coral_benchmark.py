@@ -314,8 +314,10 @@ def test_benchmark_cli_beam_without_lm_uses_no_kenlm_decoder(tmp_path: Path, mon
     )
     monkeypatch.setattr(cli, "build_pyctcdecode_labels", lambda path: (["", "h", "e", "j"], {"<pad>"}))
 
-    def fake_decoder_factory(labels, *, kenlm_model_path, alpha, beta):
-        decoder_calls.append({"labels": labels, "kenlm_model_path": kenlm_model_path, "alpha": alpha, "beta": beta})
+    def fake_decoder_factory(labels, *, kenlm_model_path, unigrams, alpha, beta):
+        decoder_calls.append(
+            {"labels": labels, "kenlm_model_path": kenlm_model_path, "unigrams": unigrams, "alpha": alpha, "beta": beta}
+        )
         return "beam-decoder"
 
     def fake_decode_batch(*, examples, pipeline, decoder_kind, beam_decoder, beam_width, removable_tokens):
@@ -347,7 +349,9 @@ def test_benchmark_cli_beam_without_lm_uses_no_kenlm_decoder(tmp_path: Path, mon
         ]
     )
 
-    assert decoder_calls == [{"labels": ["", "h", "e", "j"], "kenlm_model_path": None, "alpha": 0.5, "beta": 1.5}]
+    assert decoder_calls == [
+        {"labels": ["", "h", "e", "j"], "kenlm_model_path": None, "unigrams": None, "alpha": 0.5, "beta": 1.5}
+    ]
     assert decode_calls == [
         {
             "decoder_kind": "beam",
@@ -379,8 +383,10 @@ def test_benchmark_cli_beam_with_lm_writes_alexandra_label(tmp_path: Path, monke
         lambda *, examples, pipeline, decoder_kind, beam_decoder, beam_width, removable_tokens: ["Hej verden"],
     )
 
-    def fake_decoder_factory(labels, *, kenlm_model_path, alpha, beta):
-        decoder_calls.append({"labels": labels, "kenlm_model_path": kenlm_model_path, "alpha": alpha, "beta": beta})
+    def fake_decoder_factory(labels, *, kenlm_model_path, unigrams, alpha, beta):
+        decoder_calls.append(
+            {"labels": labels, "kenlm_model_path": kenlm_model_path, "unigrams": unigrams, "alpha": alpha, "beta": beta}
+        )
         return "beam-lm-decoder"
 
     monkeypatch.setattr(cli, "make_decoder_factory", fake_decoder_factory)
@@ -405,9 +411,10 @@ def test_benchmark_cli_beam_with_lm_writes_alexandra_label(tmp_path: Path, monke
     )
 
     assert decoder_calls == [
-        {"labels": ["", "h", "e", "j"], "kenlm_model_path": "kenlm.bin", "alpha": 0.5, "beta": 1.5}
+        {"labels": ["", "h", "e", "j"], "kenlm_model_path": "kenlm.bin", "unigrams": None, "alpha": 0.5, "beta": 1.5}
     ]
     score_payload = json.loads((tmp_path / "out" / "scores.json").read_text(encoding="utf-8"))
     assert score_payload["metadata"]["decoder"] == "beam"
     assert score_payload["metadata"]["kenlm_binary"] == "kenlm.bin"
+    assert score_payload["metadata"]["unigrams_path"] is None
     assert score_payload["metadata"]["report_label"] == "CTC LM-enabled"

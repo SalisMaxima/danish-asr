@@ -33,6 +33,7 @@ BEAM_WIDTH="${BEAM_WIDTH:-}"
 ALPHA="${ALPHA:-}"
 BETA="${BETA:-}"
 TOKENIZER_MODEL_PATH="${TOKENIZER_MODEL_PATH:-}"
+UNIGRAMS_PATH="${UNIGRAMS_PATH:-}"
 MIN_SECONDS="${MIN_SECONDS:-}"
 MAX_SECONDS="${MAX_SECONDS:-}"
 
@@ -67,6 +68,7 @@ fi
 echo "=== Alexandra-aligned CTC CoRal-style matrix ==="
 echo "Output root:   $OUTPUT_ROOT"
 echo "KenLM binary:  $KENLM_BINARY"
+echo "Unigrams:      ${UNIGRAMS_PATH:-none}"
 echo "Beam width:    $BEAM_WIDTH"
 echo "Alpha/Beta:    $ALPHA / $BETA"
 echo "Duration:      $MIN_SECONDS < duration < $MAX_SECONDS"
@@ -143,6 +145,9 @@ run_one() {
       --alpha "$ALPHA"
       --beta "$BETA"
     )
+    if [[ -n "$UNIGRAMS_PATH" ]]; then
+      args+=(--unigrams-path "$UNIGRAMS_PATH")
+    fi
   fi
 
   echo "Running $label on $subset with $report_label"

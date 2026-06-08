@@ -25,6 +25,7 @@ ALPHAS="${ALPHAS:-}"
 BETAS="${BETAS:-}"
 BEAM_WIDTH="${BEAM_WIDTH:-}"
 TOKENIZER_MODEL_PATH="${TOKENIZER_MODEL_PATH:-}"
+UNIGRAMS_PATH="${UNIGRAMS_PATH:-}"
 MODELS="${MODELS:-}"
 SPLITS="${SPLITS:-}"
 
@@ -58,6 +59,7 @@ echo "=== CTC + beam + KenLM my-method matrix ==="
 echo "Output root: $OUTPUT_ROOT"
 echo "Dataset root: $DATASET_ROOT"
 echo "KenLM binary: $KENLM_BINARY"
+echo "Unigrams: ${UNIGRAMS_PATH:-none}"
 echo "Decoders: $DECODERS"
 echo "Alphas: ${ALPHAS:-none}"
 echo "Betas: ${BETAS:-none}"
@@ -135,6 +137,10 @@ tokenizer_args=()
 if [[ -n "$TOKENIZER_MODEL_PATH" ]]; then
   tokenizer_args+=(--tokenizer-model-path "$TOKENIZER_MODEL_PATH")
 fi
+unigram_args=()
+if [[ -n "$UNIGRAMS_PATH" ]]; then
+  unigram_args+=(--unigrams-path "$UNIGRAMS_PATH")
+fi
 
 while IFS=$'\t' read -r model_label model_arch checkpoint_path default_batch_size; do
   if ! selected "$MODELS" "$model_label"; then
@@ -192,6 +198,7 @@ while IFS=$'\t' read -r model_label model_arch checkpoint_path default_batch_siz
             "${base_args[@]}" \
             --decoder beam \
             --kenlm-binary "$KENLM_BINARY" \
+            "${unigram_args[@]}" \
             --beam-width "$BEAM_WIDTH" \
             --alpha "$alpha" \
             --beta "$beta" \

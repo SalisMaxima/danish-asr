@@ -25,6 +25,7 @@ from danish_asr.lm import (
     decode_ctc_logits,
     make_decoder_factory,
     make_inference_pipeline,
+    read_unigram_list,
     resolve_dtype,
 )
 from danish_asr.utils import get_device, resolve_project_path
@@ -40,6 +41,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tokenizer-model-path", default=None)
     parser.add_argument("--decoder", choices=("greedy", "beam"), default="greedy")
     parser.add_argument("--kenlm-binary", default=None)
+    parser.add_argument("--unigrams-path", default=None)
     parser.add_argument("--beam-width", type=int, default=64)
     parser.add_argument("--alpha", type=float, default=0.5)
     parser.add_argument("--beta", type=float, default=1.5)
@@ -54,7 +56,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(raw_argv)
     provided_args = set(raw_argv)
     if args.decoder == "greedy":
-        greedy_invalid_options = sorted(provided_args & {"--kenlm-binary", "--beam-width", "--alpha", "--beta"})
+        greedy_invalid_options = sorted(
+            provided_args & {"--kenlm-binary", "--unigrams-path", "--beam-width", "--alpha", "--beta"}
+        )
         if greedy_invalid_options:
             parser.error("Beam/KenLM options require `--decoder beam`: " + ", ".join(greedy_invalid_options))
     return args
@@ -142,9 +146,11 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     removable_tokens: set[str] = set()
     if args.decoder == "beam":
         labels, removable_tokens = build_pyctcdecode_labels(tokenizer_model_path)
+        unigrams = read_unigram_list(args.unigrams_path) if args.unigrams_path else None
         beam_decoder = make_decoder_factory(
             labels,
             kenlm_model_path=args.kenlm_binary,
+            unigrams=unigrams,
             alpha=args.alpha,
             beta=args.beta,
         )
@@ -185,6 +191,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         "decoder": args.decoder,
         "report_label": _default_report_label(args),
         "kenlm_binary": args.kenlm_binary,
+        "unigrams_path": args.unigrams_path,
         "beam_width": args.beam_width,
         "alpha": args.alpha,
         "beta": args.beta,
