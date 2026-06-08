@@ -25,6 +25,8 @@ ALPHAS="${ALPHAS:-}"
 BETAS="${BETAS:-}"
 BEAM_WIDTH="${BEAM_WIDTH:-}"
 TOKENIZER_MODEL_PATH="${TOKENIZER_MODEL_PATH:-}"
+MODELS="${MODELS:-}"
+SPLITS="${SPLITS:-}"
 
 source "$DANISH_ASR_PROJECT_DIR/scripts/hpc/env.sh"
 setup_omniasr
@@ -57,7 +59,12 @@ echo "Output root: $OUTPUT_ROOT"
 echo "Dataset root: $DATASET_ROOT"
 echo "KenLM binary: $KENLM_BINARY"
 echo "Decoders: $DECODERS"
+echo "Alphas: ${ALPHAS:-none}"
+echo "Betas: ${BETAS:-none}"
 echo "Max samples: ${MAX_SAMPLES:-full}"
+echo "Overwrite: $OVERWRITE"
+echo "Model filter: ${MODELS:-all}"
+echo "Split filter: ${SPLITS:-all}"
 echo "Started: $(date)"
 echo "Node: $(hostname)"
 nvidia-smi
@@ -87,6 +94,13 @@ has_decoder() {
   [[ " $DECODERS " == *" $wanted "* ]]
 }
 
+selected() {
+  local choices="$1"
+  local wanted="$2"
+
+  [[ -z "$choices" || " $choices " == *" $wanted "* ]]
+}
+
 run_command() {
   local run_dir="$1"
   shift
@@ -112,17 +126,32 @@ run_command() {
   fi
 }
 
+if has_decoder "beam_lm" && { [[ -z "$ALPHAS" ]] || [[ -z "$BETAS" ]]; }; then
+  echo "ERROR: beam_lm requested but ALPHAS or BETAS is empty." >&2
+  exit 2
+fi
+
 tokenizer_args=()
 if [[ -n "$TOKENIZER_MODEL_PATH" ]]; then
   tokenizer_args+=(--tokenizer-model-path "$TOKENIZER_MODEL_PATH")
 fi
 
 while IFS=$'\t' read -r model_label model_arch checkpoint_path default_batch_size; do
+  if ! selected "$MODELS" "$model_label"; then
+    echo "Skipping model filtered out by MODELS: $model_label"
+    continue
+  fi
+
   batch_size="${BATCH_SIZE:-$default_batch_size}"
   echo ""
   echo "=== Model: $model_label ($model_arch) ==="
 
   while IFS=$'\t' read -r split_label dataset_split; do
+    if ! selected "$SPLITS" "$split_label"; then
+      echo "Skipping split filtered out by SPLITS: $split_label"
+      continue
+    fi
+
     echo ""
     echo "--- Split: $split_label ($dataset_split) ---"
     base_args=(
