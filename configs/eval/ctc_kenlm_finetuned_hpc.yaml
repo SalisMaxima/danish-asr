@@ -42,6 +42,10 @@ models:
     arch: 1b_v2
     checkpoint_path: /work3/${USER}/models/ctc/1b_e6_50k/omniASR_CTC_1B_v2_e6_step50k.pt
     batch_size: 2
+  - label: 1b_e8_short_48k
+    arch: 1b_v2
+    checkpoint_path: /work3/${USER}/outputs/omniasr_e8_1b_short/ws_1.9e571ad6/checkpoints/step_48000/model
+    batch_size: 2
   - label: 3b_e6_30k
     arch: 3b_v2
     checkpoint_path: /work3/${USER}/models/ctc/3b_e6_30k/omniASR_CTC_3B_v2_e6_step30k.pt

@@ -387,6 +387,48 @@ First-pass fixed settings:
 If tuning is needed, tune `alpha` and `beta` on dev only, then freeze the chosen
 setting before evaluating the CoRal-v3 test split.
 
+### Initial 2026-06-06 Result
+
+The first full fairseq2/parquet decoder matrix completed after fixing the beam
+decoder tensor conversion (`detach()` before NumPy conversion). This was not the
+short-utterance CoRal-style benchmark; it was the current long-utterance
+internal eval path for the fixed 300M/1B/3B CTC checkpoints.
+
+Main observations:
+
+- Beam search without LM gives small but consistent gains over greedy decoding.
+- The best combined CTC result is `3b_e6_30k` with beam but no LM:
+  `WER=23.82%`, `CER=9.09%`, compared with greedy `WER=24.08%`, `CER=9.15%`.
+- The fixed Alexandra-proxy KenLM setup (`beam_width=64`, `alpha=0.5`,
+  `beta=1.5`) is mixed: it improves `3b_e6_30k` on `read_aloud`
+  (`WER=19.29%`, `CER=6.11%`) but hurts conversation
+  (`WER=29.73%`, `CER=14.17%`).
+- Manual inspection of `3b_e6_30k/conversation` shows the LM often makes
+  hypotheses more written-like rather than more reference-faithful: it removes
+  spoken markers, maps forms such as `ik` toward `ikke`, and can distort spoken
+  number phrases.
+
+Interpretation:
+
+The KenLM path appears active and correctly wired at the metadata level: it uses
+the expected tokenizer path, binary LM path, beam width, alpha, beta, and full
+split sizes. The result should therefore be read as a domain/tuning finding, not
+as a decoder failure. The current ScandiWiki/ScandiReddit proxy LM is useful as a
+documented Alexandra-style first pass, but it is not yet tuned for spontaneous
+conversation.
+
+Recommended adjustments:
+
+- Tune `alpha`/`beta` on dev, especially lower LM weights such as
+  `alpha in {0.05, 0.1, 0.2, 0.3}` and `beta in {0.0, 0.5, 1.0}`.
+- Add unigrams to the pyctcdecode decoder construction; the current binary LM
+  run warns that unigrams cannot be inferred automatically.
+- Build a more speech-like LM using CoRal train transcripts or other Danish
+  conversational data, while still excluding CoRal dev/test transcripts.
+- Keep LM-assisted rows separate from model-quality rows. For now, report
+  `beam_no_lm` as the best long-utterance CTC decoder and `beam_lm` as an
+  untuned proxy-LM result.
+
 ### Acceptance Criteria
 
 - Main comparison table remains greedy CTC.
