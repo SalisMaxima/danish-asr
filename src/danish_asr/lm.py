@@ -7,11 +7,12 @@ import json
 import os
 import re
 import unicodedata
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 import torch
 
 from danish_asr.utils import configure_project_cache_environment, get_project_fairseq2_cache_dir, resolve_project_path
@@ -69,6 +70,7 @@ DEFAULT_CORPORA = ("coral_v3_read_aloud", "coral_v3_conversation")
 DEFAULT_LANGUAGE = "dan_Latn"
 
 _WHITESPACE_RE = re.compile(r"\s+")
+_EDGE_PUNCT_RE = re.compile(r"^[^\wæøåÆØÅéÉüÜ]+|[^\wæøåÆØÅéÉüÜ]+$")
 _URL_RE = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
 _METADATA_TOKEN_RE = re.compile(
     r"\b(?:speaker_id|speaker|spk|id|uid|utt|segment|timestamp)\b(?:\s*[:=_-]\s*[\w-]+)?",
@@ -553,6 +555,11 @@ def build_pyctcdecode_labels(tokenizer_model_path: Path) -> tuple[list[str], set
     model = load_sentencepiece_model(tokenizer_model_path)
     labels: list[str] = []
     removable_tokens: set[str] = set()
+    special_label_map = {
+        "<pad>": "\ue000",
+        "</s>": "\ue001",
+        "<unk>": "⁇",
+    }
 
     for idx in range(model.vocabulary_size):
         token = model.index_to_token(idx)
@@ -561,10 +568,11 @@ def build_pyctcdecode_labels(tokenizer_model_path: Path) -> tuple[list[str], set
             labels.append("")
             continue
 
-        labels.append(token)
+        label = special_label_map.get(token, token)
+        labels.append(label)
 
-        if token in {"<pad>", "</s>", "<s>"}:
-            removable_tokens.add(token)
+        if token in {"<pad>", "</s>", "<s>", "<unk>"}:
+            removable_tokens.add(label)
 
     return labels, removable_tokens
 
@@ -627,6 +635,43 @@ def make_inference_pipeline(
     return pipeline, resolved_tokenizer_path
 
 
+def run_ctc_forward(pipeline: ASRInferencePipeline, audio_payloads: Sequence[bytes]) -> tuple[Any, Any]:
+    """Build a batch from raw audio bytes and run the CTC model forward.
+
+    Returns ``(logits, output_layout)`` exactly as produced by the OmniASR model, so callers can
+    slice each row to its valid sequence length via ``output_layout.seq_lens``.
+    """
+    from fairseq2.nn.batch_layout import BatchLayout
+
+    audio_tensors = list(pipeline._build_audio_wavform_pipeline(list(audio_payloads)).and_return())
+    batch = pipeline._create_batch_simple([(audio_tensor, None) for audio_tensor in audio_tensors])
+    batch_layout = BatchLayout(
+        batch.source_seqs.shape,
+        seq_lens=batch.source_seq_lens,
+        device=batch.source_seqs.device,
+    )
+    return pipeline.model(batch.source_seqs, batch_layout)
+
+
+def forward_ctc_logits(
+    pipeline: ASRInferencePipeline,
+    audio_payloads: Sequence[bytes],
+    *,
+    dtype: torch.dtype = torch.float16,
+) -> list[np.ndarray]:
+    """Run the CTC model forward and return per-utterance logits as numpy arrays.
+
+    Each array is sliced to its valid sequence length with shape ``[seq_len, vocab]`` in the
+    requested ``dtype``, ready to hand to a pyctcdecode beam decoder.
+    """
+    logits, output_layout = run_ctc_forward(pipeline, audio_payloads)
+    arrays: list[np.ndarray] = []
+    for index in range(logits.shape[0]):
+        seq_len = int(output_layout.seq_lens[index])
+        arrays.append(logits[index, :seq_len].detach().to(dtype).cpu().numpy())
+    return arrays
+
+
 def chunked(items: Sequence[Any], size: int) -> Iterator[Sequence[Any]]:
     """Yield fixed-size chunks from a sequence."""
     for start in range(0, len(items), size):
@@ -643,6 +688,58 @@ def write_text_lines(path: str | Path, lines: Iterable[str]) -> None:
     output_path = resolve_project_path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("".join(f"{line}\n" for line in lines), encoding="utf-8")
+
+
+def read_unigram_list(path: str | Path) -> list[str]:
+    """Read a pyctcdecode unigram list, ignoring blank and commented lines."""
+    unigram_path = resolve_project_path(path)
+    return [
+        line.strip()
+        for line in unigram_path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+
+
+def normalize_lm_unigram(token: str, *, allowed_chars: set[str] | None = None) -> str:
+    """Normalize one whitespace-tokenized LM unigram for pyctcdecode."""
+    normalized = unicodedata.normalize("NFKC", token).lower()
+    normalized = "".join(ch for ch in normalized if not unicodedata.category(ch).startswith("C"))
+    normalized = _EDGE_PUNCT_RE.sub("", normalized).strip()
+    if not normalized or any(ch.isspace() for ch in normalized):
+        return ""
+    if not any(ch.isalnum() for ch in normalized):
+        return ""
+    if allowed_chars is not None and any(ch not in allowed_chars for ch in normalized):
+        return ""
+    return normalized
+
+
+def tokenizer_unigram_characters(tokenizer_model_path: Path) -> set[str]:
+    """Return single-character tokenizer labels suitable for unigram coverage filtering."""
+    _require_fairseq2()
+    model = load_sentencepiece_model(tokenizer_model_path)
+    special_tokens = {"<s>", "<pad>", "</s>", "<unk>"}
+    return {
+        token
+        for idx in range(model.vocabulary_size)
+        if len(token := model.index_to_token(idx)) == 1 and token not in special_tokens
+    }
+
+
+def build_pyctcdecode_unigrams(
+    texts: Iterable[str],
+    *,
+    tokenizer_model_path: Path | None = None,
+) -> list[str]:
+    """Build a cleaned unigram list that agrees with the OmniASR tokenizer alphabet."""
+    allowed_chars = tokenizer_unigram_characters(tokenizer_model_path) if tokenizer_model_path is not None else None
+    unigrams: set[str] = set()
+    for text in texts:
+        for raw_token in normalize_lm_text(text).split():
+            token = normalize_lm_unigram(raw_token, allowed_chars=allowed_chars)
+            if token:
+                unigrams.add(token)
+    return sorted(unigrams)
 
 
 def infer_split_from_eval_config(config_path: str | Path) -> dict[str, Any]:
@@ -668,6 +765,7 @@ def make_decoder_factory(
     labels: Sequence[str],
     *,
     kenlm_model_path: str | Path | None,
+    unigrams: Collection[str] | None = None,
     alpha: float,
     beta: float,
 ) -> Any:
@@ -680,6 +778,7 @@ def make_decoder_factory(
 
     decoder_kwargs: dict[str, Any] = {
         "labels": list(labels),
+        "unigrams": unigrams,
         "alpha": alpha,
         "beta": beta,
     }

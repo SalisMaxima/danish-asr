@@ -20,7 +20,9 @@ from danish_asr.lm import (
     make_decoder_factory,
     make_inference_pipeline,
     parse_valid_split,
+    read_unigram_list,
     resolve_dtype,
+    run_ctc_forward,
     score_predictions,
     write_text_lines,
 )
@@ -39,6 +41,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tokenizer-model-path", "--vocab-path", dest="tokenizer_model_path", default=None)
     parser.add_argument("--decoder", choices=("greedy", "beam"), default="greedy")
     parser.add_argument("--kenlm-binary", default=None)
+    parser.add_argument("--unigrams-path", default=None)
     parser.add_argument("--beam-width", type=int, default=64)
     parser.add_argument("--alpha", type=float, default=0.5)
     parser.add_argument("--beta", type=float, default=1.5)
@@ -49,7 +52,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     args = parser.parse_args(raw_argv)
     provided_args = set(raw_argv)
     if args.decoder == "greedy":
-        greedy_invalid_options = sorted(provided_args & {"--kenlm-binary", "--beam-width", "--alpha", "--beta"})
+        greedy_invalid_options = sorted(
+            provided_args & {"--kenlm-binary", "--unigrams-path", "--beam-width", "--alpha", "--beta"}
+        )
         if greedy_invalid_options:
             parser.error("Beam/KenLM options require `--decoder beam`: " + ", ".join(greedy_invalid_options))
     return args
@@ -96,16 +101,7 @@ def _decode_batch(
     beam_width: int,
     removable_tokens: set[str],
 ) -> list[DecodeResult]:
-    from fairseq2.nn.batch_layout import BatchLayout
-
-    audio_tensors = list(pipeline._build_audio_wavform_pipeline(audio_payloads).and_return())
-    batch = pipeline._create_batch_simple([(audio_tensor, None) for audio_tensor in audio_tensors])
-    batch_layout = BatchLayout(
-        batch.source_seqs.shape,
-        seq_lens=batch.source_seq_lens,
-        device=batch.source_seqs.device,
-    )
-    logits, output_layout = pipeline.model(batch.source_seqs, batch_layout)
+    logits, output_layout = run_ctc_forward(pipeline, audio_payloads)
 
     token_decoder = pipeline.token_decoder
     decoded: list[str] = []
@@ -165,9 +161,11 @@ def main() -> None:
     removable_tokens: set[str] = set()
     if args.decoder == "beam":
         labels, removable_tokens = build_pyctcdecode_labels(tokenizer_model_path)
+        unigrams = read_unigram_list(args.unigrams_path) if args.unigrams_path else None
         beam_decoder = make_decoder_factory(
             labels,
             kenlm_model_path=args.kenlm_binary,
+            unigrams=unigrams,
             alpha=args.alpha,
             beta=args.beta,
         )
@@ -266,6 +264,7 @@ def main() -> None:
         "tokenizer_model_path": str(tokenizer_model_path),
         "decoder": args.decoder,
         "kenlm_binary": args.kenlm_binary,
+        "unigrams_path": args.unigrams_path,
         "beam_width": args.beam_width,
         "alpha": args.alpha,
         "beta": args.beta,
