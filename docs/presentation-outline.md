@@ -669,7 +669,7 @@ uv run python scripts/hpc/collect_ctc_kenlm_results.py
 Summarize internal decoder scores:
 
 ```bash
-python - <<'PY'
+uv run python - <<'PY'
 import json
 import os
 from pathlib import Path
