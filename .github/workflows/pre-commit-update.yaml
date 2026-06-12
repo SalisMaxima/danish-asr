@@ -8,17 +8,21 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write # needed for applying labels to PRs
 
 jobs:
   auto-update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+
       - run: pip install pre-commit
       - run: pre-commit autoupdate
+
       - uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.PAT }}
