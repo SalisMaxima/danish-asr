@@ -118,6 +118,7 @@ import soundfile as sf
 import torch
 import torchaudio
 
+
 def process_audio(audio_dict):
     """Convert HF audio dict to omnilingual ASR format."""
     array = audio_dict["array"]  # numpy float32
@@ -157,14 +158,16 @@ SPLIT_MAP = {"train": "train", "validation": "dev", "test": "test"}
 ROWS_PER_FILE = 5000  # samples per Parquet part file
 ROW_GROUP_SIZE = 100
 
-SCHEMA = pa.schema([
-    ("text", pa.string()),
-    ("audio_bytes", pa.list_(pa.int8())),
-    ("audio_size", pa.int64()),
-    ("corpus", pa.dictionary(pa.int32(), pa.string())),
-    ("split", pa.dictionary(pa.int32(), pa.string())),
-    ("language", pa.dictionary(pa.int32(), pa.string())),
-])
+SCHEMA = pa.schema(
+    [
+        ("text", pa.string()),
+        ("audio_bytes", pa.list_(pa.int8())),
+        ("audio_size", pa.int64()),
+        ("corpus", pa.dictionary(pa.int32(), pa.string())),
+        ("split", pa.dictionary(pa.int32(), pa.string())),
+        ("language", pa.dictionary(pa.int32(), pa.string())),
+    ]
+)
 
 for hf_subset, corpus_name in SUBSETS.items():
     for hf_split, parquet_split in SPLIT_MAP.items():

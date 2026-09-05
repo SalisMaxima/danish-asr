@@ -353,6 +353,7 @@ torch.cuda.memory._record_memory_history(max_entries=100000)
 
 # After a few steps:
 import pickle
+
 snapshot = torch.cuda.memory._snapshot()
 with open("mem_snapshot.pkl", "wb") as f:
     pickle.dump(snapshot, f)
