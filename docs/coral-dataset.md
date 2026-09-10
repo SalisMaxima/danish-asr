@@ -173,7 +173,7 @@ coral_read = load_dataset("CoRal-project/coral-v3", "read_aloud")
 coral_conv = load_dataset("CoRal-project/coral-v3", "conversation")
 
 sample = coral_read["train"][0]
-audio_array = sample["audio"]["array"]      # numpy float32 waveform
+audio_array = sample["audio"]["array"]  # numpy float32 waveform
 sample_rate = sample["audio"]["sampling_rate"]  # 48000 Hz (needs resample to 16kHz)
 text = sample["text"]
 dialect = sample["dialect"]
